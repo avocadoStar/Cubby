@@ -19,8 +19,12 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
   loading: false,
   fetchFolders: async () => {
     set({ loading: true })
-    const folders = await api.getFolders()
-    set({ folders, loading: false })
+    try {
+      const folders = await api.getFolders()
+      set({ folders: Array.isArray(folders) ? folders : [], loading: false })
+    } catch {
+      set({ folders: [], loading: false })
+    }
   },
   createFolder: async (name, parentId) => {
     await api.createFolder({ name, parent_id: parentId })

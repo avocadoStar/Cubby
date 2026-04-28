@@ -23,8 +23,12 @@ export const useBookmarkStore = create<BookmarkStore>((set, get) => ({
   lastParams: {},
   fetchBookmarks: async (params) => {
     set({ loading: true, lastParams: params || get().lastParams })
-    const result = await api.getBookmarks(params || get().lastParams)
-    set({ result, loading: false })
+    try {
+      const result = await api.getBookmarks(params || get().lastParams)
+      set({ result: { ...result, items: Array.isArray(result?.items) ? result.items : [] }, loading: false })
+    } catch {
+      set({ loading: false })
+    }
   },
   createBookmark: async (data) => {
     const bookmark = await api.createBookmark(data)
