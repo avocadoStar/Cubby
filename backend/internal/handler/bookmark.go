@@ -5,6 +5,7 @@ import (
 	"cubby/internal/model"
 	"cubby/internal/repository"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -76,6 +77,10 @@ func (h *BookmarkHandler) Create(c *gin.Context) {
 		SortOrder:   999,
 	}
 	if err := h.repo.Create(b); err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			c.JSON(http.StatusConflict, gin.H{"error": "该 URL 已存在", "code": "DUPLICATE_URL"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
 		return
 	}
@@ -86,7 +91,13 @@ func (h *BookmarkHandler) Create(c *gin.Context) {
 		}
 		h.repo.UpdateMetadata(b.ID, meta.Title, meta.Description, meta.FaviconURL, meta.OGImage)
 	}()
-	c.JSON(http.StatusCreated, b)
+	// Return fresh DB value with correct timestamps
+	saved, _ := h.repo.GetByID(b.ID)
+	if saved != nil {
+		c.JSON(http.StatusCreated, saved)
+	} else {
+		c.JSON(http.StatusCreated, b)
+	}
 }
 
 func (h *BookmarkHandler) Update(c *gin.Context) {
@@ -120,7 +131,9 @@ func (h *BookmarkHandler) Update(c *gin.Context) {
 	if req.Description != "" {
 		b.Description = req.Description
 	}
-	b.FolderID = req.FolderID
+	if req.FolderID != nil {
+		b.FolderID = req.FolderID
+	}
 	if req.IsFavorite != nil {
 		b.IsFavorite = *req.IsFavorite
 	}
@@ -128,7 +141,13 @@ func (h *BookmarkHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
 		return
 	}
-	c.JSON(http.StatusOK, b)
+	// Return fresh DB value
+	updated, _ := h.repo.GetByID(id)
+	if updated != nil {
+		c.JSON(http.StatusOK, updated)
+	} else {
+		c.JSON(http.StatusOK, b)
+	}
 }
 
 func (h *BookmarkHandler) Delete(c *gin.Context) {
@@ -244,4 +263,20 @@ func (h *BookmarkHandler) Import(c *gin.Context) {
 		"skipped":         skipped,
 		"folders_created": folderNames,
 	})
+}
+
+func (h *BookmarkHandler) FetchTitle(c *gin.Context) {
+	var req struct {
+		URL string `json:"url" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "URL 不能为空"})
+		return
+	}
+	meta, err := metadata.Fetch(req.URL)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"title": ""})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"title": meta.Title})
 }

@@ -4,10 +4,15 @@ import (
 	"cubby/internal/ai"
 	"cubby/internal/handler"
 	"cubby/internal/repository"
+	"embed"
+	"io/fs"
 	"log"
 
 	_ "modernc.org/sqlite"
 )
+
+//go:embed all:static
+var staticFiles embed.FS
 
 func main() {
 	db, err := repository.Init("cubby.db")
@@ -21,11 +26,12 @@ func main() {
 
 	folderHandler := handler.NewFolderHandler(folderRepo)
 	bookmarkHandler := handler.NewBookmarkHandler(bookmarkRepo, folderRepo)
-	settingHandler := handler.NewSettingHandler(settingRepo)
 	aiClient := ai.NewClient(settingRepo)
+	settingHandler := handler.NewSettingHandler(settingRepo, aiClient)
 	aiHandler := handler.NewAIHandler(aiClient, bookmarkRepo, folderRepo)
 
-	r := handler.SetupRouter(folderRepo, bookmarkRepo, settingRepo, folderHandler, bookmarkHandler, settingHandler, aiHandler)
+	staticFS, _ := fs.Sub(staticFiles, "static")
+	r := handler.SetupRouter(folderRepo, bookmarkRepo, settingRepo, folderHandler, bookmarkHandler, settingHandler, aiHandler, staticFS)
 
 	log.Println("Cubby server starting on :8080")
 	if err := r.Run(":8080"); err != nil {

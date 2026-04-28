@@ -3,6 +3,7 @@ package metadata
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -17,9 +18,9 @@ type Metadata struct {
 	OGImage     string `json:"og_image"`
 }
 
-func Fetch(url string) (*Metadata, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", url, nil)
+func Fetch(rawURL string) (*Metadata, error) {
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequest("GET", rawURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +41,7 @@ func Fetch(url string) (*Metadata, error) {
 	}
 
 	m := &Metadata{}
-	extractMetadata(doc, url, m)
+	extractMetadata(doc, rawURL, m)
 	return m, nil
 }
 
@@ -96,15 +97,23 @@ func resolveURL(base, ref string) string {
 	if strings.HasPrefix(ref, "//") {
 		return "https:" + ref
 	}
-	return base + ref
+	baseURL, err := url.Parse(base)
+	if err != nil {
+		return ref
+	}
+	refURL, err := url.Parse(ref)
+	if err != nil {
+		return ref
+	}
+	return baseURL.ResolveReference(refURL).String()
 }
 
 var domainRegex = regexp.MustCompile(`https?://([^/]+)`)
 
-func ExtractDomain(url string) string {
-	matches := domainRegex.FindStringSubmatch(url)
+func ExtractDomain(rawURL string) string {
+	matches := domainRegex.FindStringSubmatch(rawURL)
 	if len(matches) > 1 {
 		return matches[1]
 	}
-	return url
+	return rawURL
 }

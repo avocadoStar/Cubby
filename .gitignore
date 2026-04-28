@@ -7,3 +7,7 @@ cubby.db
 .npm-cache/
 .gocache/
 .claude/
+backend/cmd/server/static/
+.idea/
+backend/cubby.db-shm
+backend/cubby.db-wal

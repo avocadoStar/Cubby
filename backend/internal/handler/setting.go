@@ -1,18 +1,21 @@
 package handler
 
 import (
+	"cubby/internal/ai"
 	"cubby/internal/repository"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
 type SettingHandler struct {
-	repo *repository.SettingRepo
+	repo     *repository.SettingRepo
+	aiClient *ai.Client
 }
 
-func NewSettingHandler(repo *repository.SettingRepo) *SettingHandler {
-	return &SettingHandler{repo: repo}
+func NewSettingHandler(repo *repository.SettingRepo, aiClient *ai.Client) *SettingHandler {
+	return &SettingHandler{repo: repo, aiClient: aiClient}
 }
 
 func (h *SettingHandler) GetAll(c *gin.Context) {
@@ -40,4 +43,17 @@ func (h *SettingHandler) Update(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+func (h *SettingHandler) TestAI(c *gin.Context) {
+	if err := h.aiClient.Test(); err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "API Key") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "请先配置 API Key", "code": "NO_API_KEY"})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": errMsg, "code": "AI_ERROR"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "连接成功"})
 }

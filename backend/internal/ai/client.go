@@ -42,6 +42,35 @@ type OrganizeResponse struct {
 	Suggestions []Suggestion `json:"suggestions"`
 }
 
+func (c *Client) Test() error {
+	settings, err := c.settingRepo.GetAll()
+	if err != nil {
+		return err
+	}
+	apiKey := settings["ai_api_key"]
+	if apiKey == "" {
+		return fmt.Errorf("请先在设置中配置 AI API Key")
+	}
+	provider := settings["ai_provider"]
+	modelName := settings["ai_model"]
+	if modelName == "" {
+		modelName = defaultModel(provider)
+	}
+	baseURL := settings["ai_base_url"]
+
+	messages := []map[string]string{
+		{"role": "user", "content": "hi"},
+	}
+
+	switch provider {
+	case "anthropic":
+		_, err = c.callAnthropic(baseURL, apiKey, modelName, messages)
+	default:
+		_, err = c.callOpenAI(baseURL, apiKey, modelName, messages)
+	}
+	return err
+}
+
 func (c *Client) Organize(bookmarks []model.Bookmark, folders []repository.FolderTree, req OrganizeRequest) (*OrganizeResponse, error) {
 	settings, err := c.settingRepo.GetAll()
 	if err != nil {
@@ -218,6 +247,8 @@ func defaultModel(provider string) string {
 		return "qwen3.6-plus"
 	case "anthropic":
 		return "claude-sonnet-4-20250514"
+	case "deepseek":
+		return "deepseek-chat"
 	default:
 		return "gpt-4o-mini"
 	}

@@ -1,122 +1,225 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useThemeMode } from '../hooks/useThemeMode'
 import { useSettingsStore } from '../stores/settingsStore'
+import { getErrorMessage } from '../utils/errors'
+import { Button } from '../components/ui/Button'
+import { Input } from '../components/ui/Input'
+import { Surface } from '../components/ui/Surface'
+
+type FormState = {
+  apiKey: string
+  baseUrl: string
+  model: string
+}
+
+type Feedback = {
+  tone: 'error' | 'success'
+  message: string
+} | null
+
+const defaultForm: FormState = {
+  baseUrl: '',
+  apiKey: '',
+  model: '',
+}
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { settings, fetchSettings, updateSettings, testAI } = useSettingsStore()
-  const [apiKey, setApiKey] = useState('')
-  const [model, setModel] = useState('')
+  const { fetchSettings, updateSettings, testAI, loading, error } = useSettingsStore()
+  const { themeMode, setThemeMode } = useThemeMode()
+  const [form, setForm] = useState<FormState>(defaultForm)
   const [showKey, setShowKey] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
-
-  useEffect(() => { fetchSettings() }, [])
+  const [feedback, setFeedback] = useState<Feedback>(null)
 
   useEffect(() => {
-    if (settings.ai_model) setModel(settings.ai_model)
-    if (settings.ai_api_key && settings.ai_api_key !== '') setApiKey(settings.ai_api_key)
-  }, [settings])
+    void fetchSettings()
+      .then((settings) => {
+        setForm({
+          baseUrl: settings.ai_base_url ?? '',
+          apiKey: settings.ai_api_key && !settings.ai_api_key.includes('****') ? settings.ai_api_key : '',
+          model: settings.ai_model ?? 'gpt-4o-mini',
+        })
+      })
+      .catch((fetchError: unknown) => {
+        setFeedback({ tone: 'error', message: getErrorMessage(fetchError, '加载设置失败') })
+      })
+  }, [fetchSettings])
+
+  const persistSettings = async () => {
+    const payload: Record<string, string> = {
+      ai_provider: 'openai',
+      ai_base_url: form.baseUrl.trim(),
+      ai_model: form.model.trim(),
+    }
+
+    if (form.apiKey.trim() && !form.apiKey.includes('****')) {
+      payload.ai_api_key = form.apiKey.trim()
+    }
+
+    await updateSettings(payload)
+  }
 
   const handleSave = async () => {
-    const data: Record<string, string> = {
-      ai_provider: 'dashscope',
-      ai_base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-      ai_model: model || 'qwen3.6-plus',
+    setSaving(true)
+    setFeedback(null)
+
+    try {
+      await persistSettings()
+      setFeedback({ tone: 'success', message: '设置已保存。' })
+      return true
+    } catch (saveError: unknown) {
+      setFeedback({ tone: 'error', message: getErrorMessage(saveError, '保存设置失败') })
+      return false
+    } finally {
+      setSaving(false)
     }
-    if (apiKey && !apiKey.includes('****')) data.ai_api_key = apiKey
-    await updateSettings(data)
-    alert('保存成功')
   }
 
   const handleTest = async () => {
-    // 先保存再测试
-    await handleSave()
+    const saved = await handleSave()
+    if (!saved) {
+      return
+    }
     setTesting(true)
-    setTestResult(null)
-    const result = await testAI()
-    setTestResult(result)
-    setTesting(false)
+
+    try {
+      const result = await testAI()
+      setFeedback({ tone: result.ok ? 'success' : 'error', message: result.message })
+    } finally {
+      setTesting(false)
+    }
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <header className="flex items-center gap-4 px-7 py-4 border-b border-white/[0.06] bg-white/[0.02] flex-shrink-0">
-        <button className="flex items-center gap-1.5 text-white/50 hover:text-white/80 transition-colors"
-          onClick={() => navigate('/')}>
-          <span className="text-sm">←</span>
-          <span className="text-sm">返回</span>
-        </button>
-        <span className="text-base">⚙️</span>
-        <h1 className="text-lg font-bold tracking-tight text-white">设置</h1>
-      </header>
+    <div className="scroll-fade h-full overflow-y-auto px-5 py-5 lg:px-7 lg:py-6">
+      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-[12px] uppercase tracking-[0.24em] text-[var(--text-quaternary)]">Preference Center</div>
+            <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.05em] text-[var(--text-primary)]">AI 与界面偏好</h1>
+            <p className="mt-2 max-w-2xl text-[14px] leading-7 text-[var(--text-tertiary)]">
+              在这里配置 AI 服务连接、默认模型，以及当前设备上的界面显示模式。保存只会更新现有业务配置，不会改变数据结构。
+            </p>
+          </div>
 
-      <div className="flex-1 overflow-y-auto p-7">
-        <div className="max-w-lg space-y-6">
-          <section>
-            <h2 className="text-base font-semibold mb-4 text-white">AI 配置（阿里云百炼）</h2>
+          <Button leading="←" onClick={() => navigate('/')} variant="secondary">
+            返回首页
+          </Button>
+        </div>
 
-            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] mb-4">
-              <p className="text-sm text-white/40">
-                使用阿里云百炼平台提供的通义千问模型。前往
-                <a href="https://dashscope.console.aliyun.com/" target="_blank" rel="noopener noreferrer"
-                  className="text-[#7C6AEF] hover:underline mx-1">百炼控制台</a>
-                获取 API Key。
+        {feedback ? (
+          <Surface className="px-4 py-3" tone="subtle">
+            <p className={`text-[13px] ${feedback.tone === 'error' ? 'text-[var(--danger)]' : 'text-[var(--success)]'}`}>
+              {feedback.message}
+            </p>
+          </Surface>
+        ) : null}
+
+        {error && !feedback ? (
+          <Surface className="px-4 py-3" tone="subtle">
+            <p className="text-[13px] text-[var(--danger)]">{error}</p>
+          </Surface>
+        ) : null}
+
+        <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
+          <Surface className="space-y-6 p-6 lg:p-7" tone="elevated">
+            <div>
+              <div className="text-[12px] uppercase tracking-[0.22em] text-[var(--text-quaternary)]">AI Connection</div>
+              <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.04em] text-[var(--text-primary)]">服务连接</h2>
+              <p className="mt-2 text-[14px] leading-7 text-[var(--text-tertiary)]">
+                Cubby 会直接使用你在这里填写的 API 参数进行测试和整理操作。未修改的密钥不会重复覆盖。
               </p>
             </div>
 
-            <label className="block mb-3">
-              <span className="text-sm text-white/50 mb-1.5 block">API Key</span>
-              <div className="flex gap-2">
-                <input className="flex-1 py-2.5 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm outline-none focus:border-[#7C6AEF]/40"
-                  type={showKey ? 'text' : 'password'}
-                  placeholder="sk-xxxxxxxx"
-                  value={apiKey} onChange={e => setApiKey(e.target.value)} />
-                <button className="px-3 rounded-xl bg-white/[0.05] border border-white/[0.08] text-sm text-white/50 hover:text-white/70"
-                  onClick={() => setShowKey(!showKey)}>{showKey ? '隐藏' : '显示'}</button>
+            <div className="grid gap-4">
+              <Input
+                helper="支持官方 OpenAI 接口或兼容 OpenAI 的自定义网关。"
+                label="API 地址"
+                onChange={(event) => setForm((current) => ({ ...current, baseUrl: event.target.value }))}
+                placeholder="https://api.openai.com/v1"
+                value={form.baseUrl}
+              />
+
+              <Input
+                helper="如果后端返回的是脱敏密钥，这里留空即可，不会影响保存。"
+                label="API Key"
+                onChange={(event) => setForm((current) => ({ ...current, apiKey: event.target.value }))}
+                placeholder="sk-..."
+                type={showKey ? 'text' : 'password'}
+                value={form.apiKey}
+              />
+
+              <div className="flex justify-end">
+                <Button onClick={() => setShowKey((current) => !current)} size="sm" variant="ghost">
+                  {showKey ? '隐藏密钥' : '显示密钥'}
+                </Button>
               </div>
-            </label>
 
-            <label className="block mb-3">
-              <span className="text-sm text-white/50 mb-1.5 block">模型名称</span>
-              <select className="w-full py-2.5 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm outline-none mb-2"
-                value={model === 'qwen-plus' || model === 'qwen-turbo' ? model : (model || 'qwen3.6-plus')}
-                onChange={e => setModel(e.target.value)}>
-                <option value="qwen3.6-plus">Qwen3.6-Plus（推荐）</option>
-                <option value="qwen-plus">Qwen-Plus</option>
-                <option value="qwen-turbo">Qwen-Turbo（快速）</option>
-                <option value="custom">自定义…</option>
-              </select>
-              {model !== 'qwen3.6-plus' && model !== 'qwen-plus' && model !== 'qwen-turbo' && (
-                <input className="w-full py-2.5 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm outline-none focus:border-[#7C6AEF]/40"
-                  placeholder="输入自定义模型名称" value={model} onChange={e => setModel(e.target.value)} />
-              )}
-            </label>
-
-            <label className="block mb-4">
-              <span className="text-sm text-white/50 mb-1.5 block">API 地址</span>
-              <input className="w-full py-2.5 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white/40 text-sm outline-none"
-                value="https://dashscope.aliyuncs.com/compatible-mode/v1" readOnly />
-            </label>
-
-            {testResult && (
-              <div className={`text-sm py-2 px-4 rounded-xl mb-3 ${testResult.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                {testResult.message}
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <button className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/60 bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.09]"
-                onClick={handleTest} disabled={testing}>
-                {testing ? '测试中…' : '测试连接'}
-              </button>
-              <button className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
-                style={{ background: 'linear-gradient(135deg, #7C6AEF, #5B4FCF)' }}
-                onClick={handleSave}>保存</button>
+              <Input
+                helper="建议填写你计划用于整理与分类的模型名称。"
+                label="模型名称"
+                onChange={(event) => setForm((current) => ({ ...current, model: event.target.value }))}
+                placeholder="gpt-4o-mini"
+                value={form.model}
+              />
             </div>
-          </section>
+
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button disabled={loading || saving || testing} onClick={() => void handleTest()} variant="secondary">
+                {testing ? '测试中…' : '测试连接'}
+              </Button>
+              <Button disabled={loading || saving} onClick={() => void handleSave()} variant="primary">
+                {saving ? '保存中…' : '保存设置'}
+              </Button>
+            </div>
+          </Surface>
+
+          <div className="space-y-6">
+            <Surface className="space-y-5 p-6 lg:p-7" tone="panel">
+              <div>
+                <div className="text-[12px] uppercase tracking-[0.22em] text-[var(--text-quaternary)]">Appearance</div>
+                <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.04em] text-[var(--text-primary)]">显示模式</h2>
+                <p className="mt-2 text-[14px] leading-7 text-[var(--text-tertiary)]">
+                  界面主题是本地偏好，不影响业务数据。切换后会立即生效，并保持当前 Liquid Glass 视觉语言。
+                </p>
+              </div>
+
+              <div className="grid gap-3">
+                <ThemeButton active={themeMode === 'system'} label="跟随系统" onClick={() => setThemeMode('system')} />
+                <ThemeButton active={themeMode === 'light'} label="浅色模式" onClick={() => setThemeMode('light')} />
+                <ThemeButton active={themeMode === 'dark'} label="深色模式" onClick={() => setThemeMode('dark')} />
+              </div>
+            </Surface>
+
+            <Surface className="space-y-4 p-6 lg:p-7" tone="subtle">
+              <div className="text-[12px] uppercase tracking-[0.22em] text-[var(--text-quaternary)]">Notes</div>
+              <ul className="space-y-3 text-[13px] leading-6 text-[var(--text-tertiary)]">
+                <li>连接测试会先保存当前表单，再调用后端的 AI 测试接口。</li>
+                <li>如果没有提供密钥，后端会返回明确的业务错误提示，而不是模糊失败。</li>
+                <li>保存不会扩展业务模型，只会更新现有 `settings` 配置。</li>
+              </ul>
+            </Surface>
+          </div>
         </div>
       </div>
     </div>
+  )
+}
+
+function ThemeButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      className={`flex items-center justify-between rounded-[22px] px-4 py-4 text-left transition ${
+        active ? 'bg-[rgba(0,113,227,0.18)] text-[var(--text-primary)] shadow-soft' : 'bg-white/7 text-[var(--text-secondary)] hover:bg-white/10'
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      <span className="text-[14px] font-medium">{label}</span>
+      <span className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-[var(--accent)]' : 'bg-white/20'}`} />
+    </button>
   )
 }

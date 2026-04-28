@@ -28,7 +28,7 @@ func migrate(db *sql.DB) error {
 		sort_order INTEGER NOT NULL DEFAULT 0,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE CASCADE,
+		FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE SET NULL,
 		UNIQUE(parent_id, name)
 	);
 	CREATE TABLE IF NOT EXISTS bookmarks (
@@ -55,6 +55,30 @@ func migrate(db *sql.DB) error {
 	CREATE INDEX IF NOT EXISTS idx_bookmarks_favorite ON bookmarks(is_favorite);
 	CREATE INDEX IF NOT EXISTS idx_bookmarks_created ON bookmarks(created_at DESC);
 	`
-	_, err := db.Exec(schema)
-	return err
+	if _, err := db.Exec(schema); err != nil {
+		return err
+	}
+
+	// Fix existing DB that has CASCADE on folders.parent_id
+	var cascade int
+	db.QueryRow(`SELECT COUNT(*) FROM pragma_foreign_key_list('folders') WHERE on_delete = 'CASCADE'`).Scan(&cascade)
+	if cascade > 0 {
+		db.Exec("PRAGMA foreign_keys=OFF")
+		db.Exec(`ALTER TABLE folders RENAME TO folders_old`)
+		db.Exec(`CREATE TABLE folders (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			parent_id TEXT,
+			sort_order INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE SET NULL,
+			UNIQUE(parent_id, name)
+		)`)
+		db.Exec(`INSERT INTO folders SELECT * FROM folders_old`)
+		db.Exec(`DROP TABLE folders_old`)
+		db.Exec("PRAGMA foreign_keys=ON")
+	}
+
+	return nil
 }

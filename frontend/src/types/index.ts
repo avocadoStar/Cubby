@@ -23,6 +23,14 @@ export interface Bookmark {
   updated_at: string
 }
 
+export interface BookmarkMutation {
+  title: string
+  url: string
+  description?: string
+  folder_id?: string | null
+  is_favorite?: boolean
+}
+
 export interface BookmarkListResult {
   items: Bookmark[]
   total: number
@@ -37,4 +45,14 @@ export interface AISuggestion {
   new_folder_name?: string
   confidence: number
   reason: string
+}
+
+export interface ImportResult {
+  created: number
+  skipped: number
+  folders_created: string[]
+}
+
+export interface SettingsResponse {
+  settings: Record<string, string>
 }

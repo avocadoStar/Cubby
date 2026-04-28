@@ -1,72 +1,150 @@
-# Cubby — 个人收藏夹管理器
+# Cubby
 
-一个面向个人使用的书签收藏管理 Web 应用，采用 iOS 18 毛玻璃风格暗色主题。
+Cubby 是一个面向个人使用的书签管理器，采用前后端一体化架构实现。
+它支持文件夹整理、全文搜索、浏览器书签导入、AI 辅助归类，并提供
+接近 iOS 18 Liquid Glass 风格的界面体验。
 
-## 功能
+## 主要特性
 
-- **文件夹管理** — 两级嵌套文件夹，拖拽排序，右键菜单
-- **全文搜索** — 按标题、URL、描述搜索书签
-- **元数据抓取** — 自动异步抓取网页标题、描述、Favicon
-- **浏览器导入** — 一键导入 Chrome/Edge/Firefox 导出的 HTML 书签文件
-- **AI 智能整理** — 调用外部 LLM API 自动分类书签（支持全局或指定文件夹）
-- **收藏功能** — 标记 favorite 快速筛选
+- 通过文件夹组织书签，支持层级结构
+- 按标题、URL、描述进行全文搜索
+- 导入浏览器导出的 HTML 书签文件
+- AI 整理建议与一键应用
+- 支持收藏、最近、未分类等视图
+- 支持浅色 / 深色 Liquid Glass 主题
+- 生产环境由 Go 后端直接提供 SPA 页面
 
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 前端 | React 19 + TypeScript + Vite + TailwindCSS v4 + Zustand |
-| 后端 | Go 1.22+ (Gin) + SQLite (modernc.org/sqlite) |
-| AI | OpenAI / Anthropic / 自定义 API |
-
-## 快速开始
-
-```bash
-# 启动后端
-cd backend && go run ./cmd/server
-
-# 启动前端（另开终端）
-cd frontend && npm run dev
-```
-
-- 前端地址：http://localhost:5173
-- 后端 API：http://localhost:8080/api/v1
+- 前端：React 19、TypeScript、Vite、Tailwind CSS v4、Zustand、Framer Motion
+- 后端：Go、Gin、SQLite
+- AI 接入：兼容 OpenAI 风格的 API 配置方式
 
 ## 项目结构
 
-```
-cubby/
-├── backend/
-│   ├── cmd/server/main.go          # 入口
-│   └── internal/
-│       ├── handler/                 # HTTP handlers
-│       ├── repository/              # 数据库操作
-│       ├── model/                   # 数据模型
-│       ├── ai/                      # AI 服务封装
-│       ├── metadata/                # 网页元数据抓取
-│       └── middleware/
-├── frontend/
-│   └── src/
-│       ├── components/              # UI 组件
-│       ├── pages/                   # 页面
-│       ├── services/api.ts          # API 调用
-│       ├── stores/                  # Zustand 状态管理
-│       └── types/                   # TypeScript 类型
-├── docs/                            # 设计文档
-└── Makefile
+```text
+Cubby/
+|-- backend/
+|   |-- cmd/server/
+|   |-- internal/
+|   |   |-- ai/
+|   |   |-- handler/
+|   |   |-- metadata/
+|   |   |-- model/
+|   |   `-- repository/
+|   `-- go.mod
+|-- frontend/
+|   |-- src/
+|   |   |-- components/
+|   |   |-- hooks/
+|   |   |-- pages/
+|   |   |-- services/
+|   |   |-- stores/
+|   |   |-- types/
+|   |   `-- utils/
+|   `-- package.json
+`-- docs/
 ```
 
-## API 概览
+## 本地开发
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | /api/v1/folders | 获取文件夹树 |
-| POST | /api/v1/folders | 创建文件夹 |
-| GET | /api/v1/bookmarks | 获取书签列表（支持搜索/过滤） |
-| POST | /api/v1/bookmarks | 添加书签 |
-| POST | /api/v1/bookmarks/import | 导入浏览器书签 |
-| POST | /api/v1/ai/organize | AI 整理书签 |
-| GET | /api/v1/settings | 获取配置 |
+### 1. 启动后端
+
+```bash
+cd backend
+go run ./cmd/server
+```
+
+默认地址：
+
+```text
+http://localhost:8080
+```
+
+### 2. 启动前端
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+默认地址：
+
+```text
+http://localhost:5173
+```
+
+## 生产构建
+
+### 构建前端
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+### 启动包含 SPA 的后端服务
+
+将前端构建产物放到后端静态资源位置后，启动服务：
+
+```bash
+cd backend
+go run ./cmd/server
+```
+
+后端会处理 `/api/v1/*` API 路由，并对其他非 API 路径返回 SPA 页面。
+
+## 主要 API
+
+### 文件夹
+
+- `GET /api/v1/folders`
+- `POST /api/v1/folders`
+- `PUT /api/v1/folders/:id`
+- `DELETE /api/v1/folders/:id`
+
+### 书签
+
+- `GET /api/v1/bookmarks`
+- `POST /api/v1/bookmarks`
+- `PUT /api/v1/bookmarks/:id`
+- `DELETE /api/v1/bookmarks/:id`
+- `PUT /api/v1/bookmarks/:id/favorite`
+- `POST /api/v1/bookmarks/import`
+- `POST /api/v1/fetch-title`
+
+### 设置与 AI
+
+- `GET /api/v1/settings`
+- `PUT /api/v1/settings`
+- `POST /api/v1/settings/ai/test`
+- `POST /api/v1/ai/organize`
+
+## 质量检查
+
+前端：
+
+```bash
+cd frontend
+npm run build
+npm run lint
+```
+
+后端：
+
+```bash
+cd backend
+go test ./...
+```
+
+## 说明
+
+- 重复书签 URL 会返回明确的业务冲突错误
+- 更新书签时，如果未传 `folder_id`，会保留原有目录归属
+- 文件夹和书签的外键删除策略为 `ON DELETE SET NULL`，尽量保留数据
+- 设置页支持通过后端测试 AI 连接是否可用
 
 ## License
 

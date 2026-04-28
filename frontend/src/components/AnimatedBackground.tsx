@@ -1,38 +1,33 @@
-export function AnimatedBackground() {
+import type { ResolvedTheme } from '../hooks/useThemeMode'
+
+type AnimatedBackgroundProps = {
+  theme: ResolvedTheme
+}
+
+export function AnimatedBackground({ theme }: AnimatedBackgroundProps) {
+  const opacity = theme === 'dark' ? 0.9 : 0.65
+
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden">
+    <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
+      <div className="absolute inset-0 bg-[var(--app-background)]" />
+      <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'var(--noise-texture)' }} />
+
       <div
-        className="absolute rounded-full opacity-35"
-        style={{
-          width: 600, height: 600,
-          background: 'radial-gradient(circle, #4f46e5, transparent 70%)',
-          top: '-15%', left: '-10%',
-          filter: 'blur(120px)',
-          animation: 'orbFloat 20s ease-in-out infinite',
-        }}
+        className="absolute -left-24 top-[-8%] h-[38rem] w-[38rem] rounded-full blur-[120px]"
+        style={{ background: 'radial-gradient(circle, rgba(0,113,227,0.32), transparent 68%)', opacity }}
       />
       <div
-        className="absolute rounded-full opacity-35"
-        style={{
-          width: 500, height: 500,
-          background: 'radial-gradient(circle, #7c3aed, transparent 70%)',
-          bottom: '-10%', right: '-5%',
-          filter: 'blur(120px)',
-          animation: 'orbFloat 20s ease-in-out infinite',
-          animationDelay: '-7s',
-        }}
+        className="absolute right-[-10%] top-[8%] h-[34rem] w-[34rem] rounded-full blur-[140px]"
+        style={{ background: 'radial-gradient(circle, rgba(124,154,255,0.24), transparent 72%)', opacity: opacity * 0.8 }}
       />
       <div
-        className="absolute rounded-full opacity-20"
-        style={{
-          width: 400, height: 400,
-          background: 'radial-gradient(circle, #2563eb, transparent 70%)',
-          top: '40%', left: '30%',
-          filter: 'blur(120px)',
-          animation: 'orbFloat 20s ease-in-out infinite',
-          animationDelay: '-14s',
-        }}
+        className="absolute bottom-[-14%] left-[18%] h-[28rem] w-[28rem] rounded-full blur-[130px]"
+        style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.32), transparent 70%)', opacity: opacity * 0.6 }}
       />
+
+      <div className="bg-orb-primary" />
+      <div className="bg-orb-secondary" />
+      <div className="bg-orb-tertiary" />
     </div>
   )
 }

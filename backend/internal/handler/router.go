@@ -2,6 +2,7 @@ package handler
 
 import (
 	"cubby/internal/repository"
+	"io/fs"
 	"net/http"
 	"strings"
 
@@ -16,6 +17,7 @@ func SetupRouter(
 	bookmarkHandler *BookmarkHandler,
 	settingHandler *SettingHandler,
 	aiHandler *AIHandler,
+	staticFS fs.FS,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -44,10 +46,13 @@ func SetupRouter(
 			bookmarks.POST("/import", bookmarkHandler.Import)
 		}
 
+		api.POST("/fetch-title", bookmarkHandler.FetchTitle)
+
 		settings := api.Group("/settings")
 		{
 			settings.GET("", settingHandler.GetAll)
 			settings.PUT("", settingHandler.Update)
+			settings.POST("/ai/test", settingHandler.TestAI)
 		}
 
 		aiGroup := api.Group("/ai")
@@ -56,9 +61,21 @@ func SetupRouter(
 		}
 	}
 
+	// Serve SPA: static assets directly, everything else falls back to index.html
+	fileServer := http.FileServer(http.FS(staticFS))
 	r.NoRoute(func(c *gin.Context) {
-		if c.Request.Method == http.MethodGet && !strings.HasPrefix(c.Request.URL.Path, "/api") {
-			c.JSON(http.StatusOK, gin.H{"app": "cubby"})
+		path := c.Request.URL.Path
+		if c.Request.Method == http.MethodGet && !strings.HasPrefix(path, "/api") {
+			// Try serving the exact file first
+			f, err := staticFS.Open(strings.TrimPrefix(path, "/"))
+			if err == nil {
+				f.Close()
+				fileServer.ServeHTTP(c.Writer, c.Request)
+				return
+			}
+			// SPA fallback: serve index.html for client-side routing
+			c.Request.URL.Path = "/"
+			fileServer.ServeHTTP(c.Writer, c.Request)
 			return
 		}
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
