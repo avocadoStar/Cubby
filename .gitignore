@@ -11,3 +11,6 @@ backend/cmd/server/static/
 .idea/
 backend/cubby.db-shm
 backend/cubby.db-wal
+*.db-wal
+*.db-shm
+*.exe~
