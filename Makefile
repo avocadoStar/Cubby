@@ -1,4 +1,7 @@
-.PHONY: dev dev-frontend dev-backend build clean
+.PHONY: dev dev-frontend dev-backend build build-frontend build-backend clean
+
+dev:
+	@echo "Run 'make dev-backend' and 'make dev-frontend' in separate terminals."
 
 dev-frontend:
 	cd frontend && npm run dev
