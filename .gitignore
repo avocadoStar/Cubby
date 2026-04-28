@@ -1,0 +1,7 @@
+node_modules/
+dist/
+cubby
+cubby.db
+*.exe
+.superpowers/
+.npm-cache/
