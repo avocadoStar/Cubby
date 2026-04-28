@@ -100,6 +100,11 @@ func (c *Client) Organize(bookmarks []model.Bookmark, folders []repository.Folde
 	switch provider {
 	case "anthropic":
 		respBody, err = c.callAnthropic(baseURL, apiKey, modelName, messages)
+	case "dashscope":
+		if baseURL == "" {
+			baseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+		}
+		respBody, err = c.callOpenAI(baseURL, apiKey, modelName, messages)
 	default:
 		respBody, err = c.callOpenAI(baseURL, apiKey, modelName, messages)
 	}
@@ -209,6 +214,8 @@ func (c *Client) callAnthropic(baseURL, apiKey, model string, messages []map[str
 
 func defaultModel(provider string) string {
 	switch provider {
+	case "dashscope":
+		return "qwen3.6-plus"
 	case "anthropic":
 		return "claude-sonnet-4-20250514"
 	default:

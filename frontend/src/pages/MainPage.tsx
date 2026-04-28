@@ -12,11 +12,27 @@ export function MainPage() {
   const [showImport, setShowImport] = useState(false)
   const [addUrl, setAddUrl] = useState('')
   const [addTitle, setAddTitle] = useState('')
+  const [addFetching, setAddFetching] = useState(false)
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([])
   const [aiLoading, setAiLoading] = useState(false)
   const [importResult, setImportResult] = useState<any>(null)
 
   useEffect(() => { fetchBookmarks({}) }, [])
+
+  // 输入 URL 后自动抓取标题
+  const handleUrlBlur = async () => {
+    if (!addUrl.trim() || addTitle) return
+    setAddFetching(true)
+    try {
+      const resp = await fetch(addUrl.trim())
+      const html = await resp.text()
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(html, 'text/html')
+      const title = doc.querySelector('title')?.textContent?.trim()
+      if (title) setAddTitle(title)
+    } catch {}
+    setAddFetching(false)
+  }
 
   const handleAdd = async () => {
     if (!addUrl.trim()) return
@@ -60,7 +76,7 @@ export function MainPage() {
       <header className="flex items-center gap-4 px-7 py-4 border-b border-white/[0.06] bg-white/[0.02] backdrop-blur-[40px] flex-shrink-0">
         <div className="flex items-center gap-2.5">
           <span className="text-base">🔗</span>
-          <h1 className="text-lg font-bold tracking-tight">全部收藏</h1>
+          <h1 className="text-lg font-bold tracking-tight text-white">全部收藏</h1>
           <span className="bg-white/[0.06] px-2.5 py-0.5 rounded-full text-xs text-white/40 font-semibold">{result.total}</span>
         </div>
         <div className="ml-auto flex gap-2">
@@ -72,7 +88,7 @@ export function MainPage() {
             ✨ AI 整理
           </button>
           <button className="px-4 py-2 rounded-[10px] text-sm font-semibold bg-white/[0.07] border border-white/[0.08] text-white hover:bg-white/[0.12] transition-all hover:-translate-y-0.5"
-            onClick={() => setShowAdd(true)}>＋ 添加收藏</button>
+            onClick={() => { setShowAdd(true); setAddUrl(''); setAddTitle('') }}>＋ 添加收藏</button>
         </div>
       </header>
 
@@ -99,9 +115,14 @@ export function MainPage() {
       {showAdd && (
         <Dialog title="添加收藏" onClose={() => setShowAdd(false)}>
           <input className="w-full py-2.5 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm outline-none focus:border-[#7C6AEF]/40 mb-3"
-            placeholder="URL（必填）" value={addUrl} onChange={e => setAddUrl(e.target.value)} />
-          <input className="w-full py-2.5 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm outline-none focus:border-[#7C6AEF]/40 mb-4"
-            placeholder="标题（可选，默认使用 URL）" value={addTitle} onChange={e => setAddTitle(e.target.value)} />
+            placeholder="输入 URL（如 https://example.com）" value={addUrl}
+            onChange={e => setAddUrl(e.target.value)}
+            onBlur={handleUrlBlur} />
+          <div className="relative mb-4">
+            <input className="w-full py-2.5 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm outline-none focus:border-[#7C6AEF]/40 pr-20"
+              placeholder="标题（输入 URL 后自动抓取）" value={addTitle} onChange={e => setAddTitle(e.target.value)} />
+            {addFetching && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#7C6AEF]">抓取中…</span>}
+          </div>
           <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
             style={{ background: 'linear-gradient(135deg, #7C6AEF, #5B4FCF)' }}
             onClick={handleAdd}>添加</button>
@@ -116,7 +137,7 @@ export function MainPage() {
               <p className="text-white/40 text-sm text-center py-4">暂无建议</p>
             ) : aiSuggestions.map(s => (
               <div key={s.bookmark_id} className="p-3 rounded-xl bg-white/[0.04] border border-white/[0.06]">
-                <div className="font-medium text-sm">{s.title}</div>
+                <div className="font-medium text-sm text-white">{s.title}</div>
                 <div className="text-xs text-[#a78bfa] mt-1">→ {s.suggested_folder} <span className="text-white/30">({Math.round(s.confidence * 100)}%)</span></div>
                 <div className="text-xs text-white/40 mt-1">{s.reason}</div>
               </div>
@@ -195,7 +216,7 @@ function BookmarkCard({ bookmark, onFavorite, onDelete, domain }: {
           {bookmark.favicon_url ? <img src={bookmark.favicon_url} className="w-6 h-6 rounded" alt="" /> : '🌐'}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-[14.5px] tracking-tight truncate">{bookmark.title}</div>
+          <div className="font-semibold text-[14.5px] tracking-tight truncate text-white">{bookmark.title}</div>
           <div className="text-xs text-white/30 mt-0.5 truncate">{domain}</div>
         </div>
       </div>
@@ -212,7 +233,7 @@ function Dialog({ title, children, onClose }: { title: string; children: React.R
       <div className="w-full max-w-md bg-[#161b22]/95 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-6 shadow-2xl"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold">{title}</h2>
+          <h2 className="text-lg font-bold text-white">{title}</h2>
           <button className="text-white/30 hover:text-white/60 text-xl" onClick={onClose}>✕</button>
         </div>
         {children}
