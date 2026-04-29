@@ -108,6 +108,54 @@ func (h *FolderHandler) Reorder(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
+func (h *FolderHandler) Move(c *gin.Context) {
+	id := c.Param("id")
+
+	var req struct {
+		ParentID  *string `json:"parent_id"`
+		SortOrder int     `json:"sort_order"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求格式错误", "code": "INVALID_REQUEST"})
+		return
+	}
+
+	if req.ParentID != nil {
+		if *req.ParentID == id {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "不能移动到自己下面", "code": "INVALID_PARENT"})
+			return
+		}
+		exists, err := h.repo.Exists(*req.ParentID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
+			return
+		}
+		if !exists {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "父文件夹不存在", "code": "PARENT_NOT_FOUND"})
+			return
+		}
+
+		descendantIDs, err := h.repo.GetDescendantIDs(id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
+			return
+		}
+		for _, descendantID := range descendantIDs {
+			if descendantID == *req.ParentID {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "不能移动到子文件夹下面", "code": "INVALID_PARENT"})
+				return
+			}
+		}
+	}
+
+	if err := h.repo.Move(id, req.ParentID, req.SortOrder); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
 func parseIntDefault(s string, def int) int {
 	v, err := strconv.Atoi(s)
 	if err != nil {

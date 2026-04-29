@@ -3,9 +3,9 @@ import type { ComponentPropsWithoutRef, ElementType, ReactNode } from 'react'
 type SurfaceTone = 'panel' | 'elevated' | 'subtle'
 
 const toneClasses: Record<SurfaceTone, string> = {
-  panel: 'glass-panel shadow-soft',
-  elevated: 'glass-panel glass-panel-elevated shadow-float',
-  subtle: 'glass-panel glass-panel-subtle shadow-soft',
+  panel: 'surface-panel',
+  elevated: 'surface-elevated',
+  subtle: 'surface-subtle',
 }
 
 type SurfaceProps<T extends ElementType> = {

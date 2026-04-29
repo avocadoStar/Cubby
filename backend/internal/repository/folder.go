@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"database/sql"
 	"cubby/internal/model"
+	"database/sql"
 )
 
 type FolderRepo struct {
@@ -16,43 +16,46 @@ type FolderTree struct {
 	Children []FolderTree `json:"children"`
 }
 
+type FolderPosition struct {
+	ID        string  `json:"id"`
+	ParentID  *string `json:"parent_id"`
+	SortOrder int     `json:"sort_order"`
+}
+
 func (r *FolderRepo) GetTree() ([]FolderTree, error) {
-	rows, err := r.db.Query(
-		`SELECT id, name, parent_id, sort_order, created_at, updated_at
-		 FROM folders ORDER BY sort_order, name`)
+	flat, err := r.listAll()
 	if err != nil {
 		return nil, err
-	}
-	defer rows.Close()
-
-	var flat []model.Folder
-	for rows.Next() {
-		var f model.Folder
-		if err := rows.Scan(&f.ID, &f.Name, &f.ParentID, &f.SortOrder, &f.CreatedAt, &f.UpdatedAt); err != nil {
-			return nil, err
-		}
-		flat = append(flat, f)
 	}
 	return buildTree(flat), nil
 }
 
 func buildTree(flat []model.Folder) []FolderTree {
-	m := make(map[string]*FolderTree, len(flat))
-	for i := range flat {
-		m[flat[i].ID] = &FolderTree{Folder: flat[i]}
-	}
-	var roots []FolderTree
-	for i := range flat {
-		ft := m[flat[i].ID]
-		if flat[i].ParentID != nil {
-			if parent, ok := m[*flat[i].ParentID]; ok {
-				parent.Children = append(parent.Children, *ft)
-				continue
-			}
+	childrenByParent := make(map[string][]model.Folder, len(flat))
+	var roots []model.Folder
+
+	for _, folder := range flat {
+		if folder.ParentID == nil {
+			roots = append(roots, folder)
+			continue
 		}
-		roots = append(roots, *ft)
+		childrenByParent[*folder.ParentID] = append(childrenByParent[*folder.ParentID], folder)
 	}
-	return roots
+
+	var buildBranch func(folder model.Folder) FolderTree
+	buildBranch = func(folder model.Folder) FolderTree {
+		node := FolderTree{Folder: folder}
+		for _, child := range childrenByParent[folder.ID] {
+			node.Children = append(node.Children, buildBranch(child))
+		}
+		return node
+	}
+
+	tree := make([]FolderTree, 0, len(roots))
+	for _, root := range roots {
+		tree = append(tree, buildBranch(root))
+	}
+	return tree
 }
 
 func (r *FolderRepo) Create(f *model.Folder) error {
@@ -71,8 +74,38 @@ func (r *FolderRepo) Update(id, name string, parentID *string, sortOrder int) er
 }
 
 func (r *FolderRepo) Delete(id string) error {
-	_, err := r.db.Exec(`DELETE FROM folders WHERE id=?`, id)
-	return err
+	folderIDs, err := r.GetDescendantIDs(id)
+	if err != nil {
+		return err
+	}
+	if len(folderIDs) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	placeholders := make([]string, len(folderIDs))
+	args := make([]any, len(folderIDs))
+	for i, folderID := range folderIDs {
+		placeholders[i] = "?"
+		args[i] = folderID
+	}
+
+	updateQuery := `UPDATE bookmarks SET folder_id=NULL, updated_at=CURRENT_TIMESTAMP WHERE folder_id IN (` + joinComma(placeholders) + `)`
+	if _, err := tx.Exec(updateQuery, args...); err != nil {
+		return err
+	}
+
+	deleteQuery := `DELETE FROM folders WHERE id IN (` + joinComma(placeholders) + `)`
+	if _, err := tx.Exec(deleteQuery, args...); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *FolderRepo) Exists(id string) (bool, error) {
@@ -95,38 +128,75 @@ func (r *FolderRepo) Reorder(ids []string) error {
 	return tx.Commit()
 }
 
+func (r *FolderRepo) Move(id string, parentID *string, sortOrder int) error {
+	_, err := r.db.Exec(
+		`UPDATE folders SET parent_id=?, sort_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+		parentID, sortOrder, id,
+	)
+	return err
+}
+
 func (r *FolderRepo) GetDescendantIDs(folderID string) ([]string, error) {
-	ids := []string{folderID}
-	rows, err := r.db.Query(`SELECT id FROM folders WHERE parent_id=?`, folderID)
+	flat, err := r.listAll()
 	if err != nil {
 		return nil, err
 	}
-	var childIDs []string
-	for rows.Next() {
-		var cid string
-		if err := rows.Scan(&cid); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		childIDs = append(childIDs, cid)
-		ids = append(ids, cid)
-	}
-	rows.Close()
 
-	for _, cid := range childIDs {
-		rows, err := r.db.Query(`SELECT id FROM folders WHERE parent_id=?`, cid)
-		if err != nil {
+	childrenByParent := make(map[string][]string, len(flat))
+	exists := false
+	for _, folder := range flat {
+		if folder.ID == folderID {
+			exists = true
+		}
+		if folder.ParentID != nil {
+			childrenByParent[*folder.ParentID] = append(childrenByParent[*folder.ParentID], folder.ID)
+		}
+	}
+	if !exists {
+		return nil, nil
+	}
+
+	ids := []string{folderID}
+	stack := append([]string(nil), childrenByParent[folderID]...)
+	for len(stack) > 0 {
+		last := len(stack) - 1
+		current := stack[last]
+		stack = stack[:last]
+		ids = append(ids, current)
+		stack = append(stack, childrenByParent[current]...)
+	}
+
+	return ids, nil
+}
+
+func (r *FolderRepo) listAll() ([]model.Folder, error) {
+	rows, err := r.db.Query(
+		`SELECT id, name, parent_id, sort_order, created_at, updated_at
+		 FROM folders ORDER BY sort_order, name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var flat []model.Folder
+	for rows.Next() {
+		var folder model.Folder
+		if err := rows.Scan(&folder.ID, &folder.Name, &folder.ParentID, &folder.SortOrder, &folder.CreatedAt, &folder.UpdatedAt); err != nil {
 			return nil, err
 		}
-		for rows.Next() {
-			var gcid string
-			if err := rows.Scan(&gcid); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			ids = append(ids, gcid)
-		}
-		rows.Close()
+		flat = append(flat, folder)
 	}
-	return ids, nil
+	return flat, nil
+}
+
+func joinComma(items []string) string {
+	if len(items) == 0 {
+		return ""
+	}
+
+	result := items[0]
+	for i := 1; i < len(items); i++ {
+		result += "," + items[i]
+	}
+	return result
 }

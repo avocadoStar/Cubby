@@ -53,6 +53,27 @@ export interface ImportResult {
   folders_created: string[]
 }
 
+export type ImportTaskStatus = 'queued' | 'running' | 'completed' | 'failed'
+
+export type ImportTaskStage =
+  | 'queued'
+  | 'file_received'
+  | 'parsing'
+  | 'creating_folders'
+  | 'importing_bookmarks'
+  | 'completed'
+  | 'failed'
+
+export interface ImportTaskSnapshot {
+  error?: string
+  message?: string
+  progress: number
+  result?: ImportResult
+  stage: ImportTaskStage
+  status: ImportTaskStatus
+  task_id: string
+}
+
 export interface SettingsResponse {
   settings: Record<string, string>
 }

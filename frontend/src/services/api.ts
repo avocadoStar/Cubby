@@ -5,7 +5,7 @@ import type {
   BookmarkListResult,
   BookmarkMutation,
   Folder,
-  ImportResult,
+  ImportTaskSnapshot,
   SettingsResponse,
 } from '../types'
 
@@ -17,6 +17,10 @@ export const createFolder = (data: { name: string; parent_id?: string | null }) 
 export const updateFolder = (id: string, data: { name: string; parent_id?: string | null }) =>
   api.put(`/folders/${id}`, data).then((response) => response.data)
 export const deleteFolder = (id: string) => api.delete(`/folders/${id}`).then((response) => response.data)
+export const moveFolder = (id: string, data: { parent_id?: string | null; sort_order: number }) =>
+  api.put(`/folders/${id}/move`, data).then((response) => response.data)
+export const reorderFolders = (ids: string[]) =>
+  api.put('/folders/reorder', { ids }).then((response) => response.data)
 
 export const getBookmarks = (params?: Record<string, string>) =>
   api.get<BookmarkListResult>('/bookmarks', { params }).then((response) => response.data)
@@ -27,10 +31,45 @@ export const updateBookmark = (id: string, data: Partial<BookmarkMutation>) =>
 export const deleteBookmark = (id: string) => api.delete(`/bookmarks/${id}`).then((response) => response.data)
 export const toggleFavorite = (id: string) =>
   api.put(`/bookmarks/${id}/favorite`).then((response) => response.data)
-export const importBookmarks = (file: File) => {
+export const reorderBookmarks = (ids: string[]) =>
+  api.put('/bookmarks/reorder', { ids }).then((response) => response.data)
+export const moveBookmark = (id: string, data: { folder_id?: string | null }) =>
+  api.put(`/bookmarks/${id}/folder`, data).then((response) => response.data)
+export const batchDeleteBookmarks = (ids: string[]) =>
+  api.post('/bookmarks/batch/delete', { ids }).then((response) => response.data)
+export const batchMoveBookmarks = (ids: string[], folderId?: string | null) =>
+  api.post('/bookmarks/batch/move', { ids, folder_id: folderId ?? null }).then((response) => response.data)
+export const batchFavoriteBookmarks = (ids: string[], isFavorite: boolean) =>
+  api.post('/bookmarks/batch/favorite', { ids, is_favorite: isFavorite }).then((response) => response.data)
+export const startImportBookmarks = (file: File) => {
   const formData = new FormData()
   formData.append('file', file)
-  return api.post<ImportResult>('/bookmarks/import', formData).then((response) => response.data)
+  return api.post<ImportTaskSnapshot>('/bookmarks/import', formData).then((response) => response.data)
+}
+
+export const subscribeImportProgress = (
+  taskId: string,
+  handlers: {
+    onError?: () => void
+    onMessage: (snapshot: ImportTaskSnapshot) => void
+  },
+) => {
+  const source = new EventSource(`/api/v1/bookmarks/import/${encodeURIComponent(taskId)}/events`)
+
+  source.onmessage = (event) => {
+    try {
+      const snapshot = JSON.parse(event.data) as ImportTaskSnapshot
+      handlers.onMessage(snapshot)
+    } catch {
+      handlers.onError?.()
+    }
+  }
+
+  source.onerror = () => {
+    handlers.onError?.()
+  }
+
+  return source
 }
 
 export const aiOrganize = (folderId?: string, action: 'suggest' | 'apply' = 'suggest') =>

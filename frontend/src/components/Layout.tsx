@@ -1,35 +1,49 @@
 import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useThemeMode } from '../hooks/useThemeMode'
 import { AnimatedBackground } from './AnimatedBackground'
 import { Sidebar } from './Sidebar'
-import { Surface } from './ui/Surface'
 import { TopBar } from './TopBar'
-import { useThemeMode } from '../hooks/useThemeMode'
 
 const pageCopy: Record<string, { title: string; subtitle: string }> = {
   '/': {
-    title: '收藏空间',
-    subtitle: '把高频链接整理成轻盈、清晰、可持续维护的个人工作台。',
+    title: '书签',
+    subtitle: '整理、搜索和管理你的常用链接。',
   },
   '/settings': {
-    title: '偏好设置',
-    subtitle: '管理 AI 提供商、模型配置和界面主题偏好。',
+    title: '设置',
+    subtitle: '管理 AI、主题和工作区偏好。',
   },
 }
 
 export function Layout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [contentScrolled, setContentScrolled] = useState(false)
   const { resolvedTheme, themeMode, toggleResolvedTheme } = useThemeMode()
   const routeCopy = pageCopy[location.pathname] ?? pageCopy['/']
+  const hideRouteCopy = location.pathname === '/'
+
+  useEffect(() => {
+    const syncScroll = () => {
+      setContentScrolled(window.scrollY > 8)
+    }
+
+    syncScroll()
+    window.addEventListener('scroll', syncScroll, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', syncScroll)
+    }
+  }, [])
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--app-background)] text-[var(--text-primary)]">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
       <AnimatedBackground theme={resolvedTheme} />
 
-      <div className="relative z-10 flex min-h-screen">
-        <div className="hidden px-4 py-4 lg:block">
+      <div className="relative z-10 min-h-screen lg:grid lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
+        <div className="hidden border-r border-[var(--color-border)] lg:block">
           <Sidebar />
         </div>
 
@@ -37,18 +51,19 @@ export function Layout() {
           {sidebarOpen ? (
             <motion.div
               animate={{ opacity: 1 }}
-              className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-50 bg-[var(--color-overlay)] lg:hidden"
               exit={{ opacity: 0 }}
               initial={{ opacity: 0 }}
               onClick={() => setSidebarOpen(false)}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
             >
               <motion.div
                 animate={{ x: 0 }}
-                className="h-full w-full max-w-[340px] p-4"
-                exit={{ x: -24 }}
-                initial={{ x: -32 }}
+                className="h-full"
+                exit={{ x: -16 }}
+                initial={{ x: -16 }}
                 onClick={(event) => event.stopPropagation()}
-                transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
               >
                 <Sidebar mobile onNavigate={() => setSidebarOpen(false)} />
               </motion.div>
@@ -56,31 +71,22 @@ export function Layout() {
           ) : null}
         </AnimatePresence>
 
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col px-4 pb-4 pt-4 lg:pl-0">
+        <div className="min-w-0">
           <TopBar
+            hideRouteCopy={hideRouteCopy}
             onOpenSidebar={() => setSidebarOpen(true)}
             onToggleTheme={toggleResolvedTheme}
             routeSubtitle={routeCopy.subtitle}
             routeTitle={routeCopy.title}
+            scrolled={contentScrolled}
             themeMode={themeMode}
           />
 
-          <div className="flex min-h-0 flex-1 pt-4">
-            <AnimatePresence mode="wait">
-              <motion.div
-                animate={{ opacity: 1, y: 0 }}
-                className="min-h-0 flex-1"
-                exit={{ opacity: 0, y: 10 }}
-                initial={{ opacity: 0, y: 16 }}
-                key={location.pathname}
-                transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <Surface className="h-full overflow-hidden p-0" tone="subtle">
-                  <Outlet />
-                </Surface>
-              </motion.div>
-            </AnimatePresence>
-          </div>
+          <main className="px-4 pb-8 pt-6 sm:px-6 sm:pt-8 lg:px-8">
+            <div className="w-full">
+              <Outlet />
+            </div>
+          </main>
         </div>
       </div>
     </div>

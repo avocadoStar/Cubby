@@ -1,36 +1,28 @@
-import { motion } from 'framer-motion'
-import { useDeferredValue, useEffect, useState } from 'react'
-import type { ChangeEvent, FormEvent, ReactNode } from 'react'
-import * as api from '../services/api'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { AIModal } from '../components/bookmarks/AIModal'
+import { BatchActionBar } from '../components/bookmarks/BatchActionBar'
+import { BookmarkGrid } from '../components/bookmarks/BookmarkGrid'
+import { BookmarkList } from '../components/bookmarks/BookmarkList'
+import { CreateBookmarkModal } from '../components/bookmarks/CreateBookmarkModal'
+import { EditBookmarkModal } from '../components/bookmarks/EditBookmarkModal'
+import { ImportModal } from '../components/bookmarks/ImportModal'
+import type { BookmarkDraft } from '../components/bookmarks/types'
 import { Button } from '../components/ui/Button'
-import { Input } from '../components/ui/Input'
-import { Modal } from '../components/ui/Modal'
-import { Surface } from '../components/ui/Surface'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { Icon } from '../components/ui/Icon'
+import { NoticeBanner } from '../components/ui/NoticeBanner'
+import type { Notice } from '../components/ui/NoticeBanner'
+import { StatePanel } from '../components/ui/StatePanel'
+import * as api from '../services/api'
+import { useBookmarkMutations, useInfiniteBookmarks } from '../hooks/useBookmarkQueries'
+import { folderQueryKey, useFoldersQuery } from '../hooks/useFolderQueries'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
-import type { AISuggestion, Bookmark, BookmarkMutation, ImportResult } from '../types'
-import { findFolderName, flattenFolders, getActionableFolderId, buildBookmarkParams } from '../utils/bookmarkFilters'
+import type { AISuggestion, Bookmark, BookmarkMutation, ImportTaskSnapshot } from '../types'
 import { getErrorMessage } from '../utils/errors'
-
-type BookmarkDraft = {
-  description: string
-  folderId: string
-  id?: string
-  isFavorite: boolean
-  title: string
-  url: string
-}
-
-type Notice = {
-  tone: 'error' | 'success'
-  message: string
-} | null
-
-const pseudoLabels: Record<string, { title: string; description: string }> = {
-  recent: { title: '最近添加', description: '按最近加入时间排序，方便快速回看。' },
-  favorites: { title: '我的收藏', description: '集中查看最常用、最值得反复打开的链接。' },
-  unsorted: { title: '未分类', description: '这里是还没归档的内容，适合继续整理。' },
-}
+import { findFolderName, flattenFolders, getActionableFolderId } from '../utils/bookmarkFilters'
 
 const emptyDraft: BookmarkDraft = {
   title: '',
@@ -40,58 +32,209 @@ const emptyDraft: BookmarkDraft = {
   isFavorite: false,
 }
 
+const pseudoLabels: Record<string, { description: string; title: string }> = {
+  recent: { title: '最近添加', description: '按最近加入时间查看，适合快速回看新内容。' },
+  favorites: { title: '我的收藏', description: '集中查看你最常打开、最值得保留的链接。' },
+  unsorted: { title: '未分类', description: '这里是还没有归档的内容，适合继续整理。' },
+}
+
 export function MainPage() {
-  const {
-    result,
-    loading,
-    error,
-    viewMode,
-    lastParams,
-    fetchBookmarks,
-    createBookmark,
-    updateBookmark,
-    deleteBookmark,
-    toggleFavorite,
-    setViewMode,
-  } = useBookmarkStore()
-  const { folders, selectedFolderId } = useFolderStore()
-  const [searchQuery, setSearchQuery] = useState(lastParams.q ?? '')
-  const [notice, setNotice] = useState<Notice>(null)
+  const queryClient = useQueryClient()
+  const { selectedFolderId } = useFolderStore()
+  const { viewMode, setViewMode } = useBookmarkStore()
+  const { data: folders = [] } = useFoldersQuery()
+  const [searchInputValue, setSearchInputValue] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [notice, setNotice] = useState<Notice | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [titleFetching, setTitleFetching] = useState(false)
   const [createDraft, setCreateDraft] = useState<BookmarkDraft>(emptyDraft)
   const [editDraft, setEditDraft] = useState<BookmarkDraft>(emptyDraft)
+  const [titleFetching, setTitleFetching] = useState(false)
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([])
   const [aiLoading, setAiLoading] = useState(false)
-  const [aiApplying, setAiApplying] = useState(false)
-  const [importing, setImporting] = useState(false)
-  const [importResult, setImportResult] = useState<ImportResult | null>(null)
-  const deferredQuery = useDeferredValue(searchQuery)
+  const [selectionState, setSelectionState] = useState<{ ids: string[]; scopeKey: string }>({
+    ids: [],
+    scopeKey: 'all::',
+  })
+  const [moveTarget, setMoveTarget] = useState('')
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([])
+  const [importConnectionError, setImportConnectionError] = useState<string | null>(null)
+  const [importTask, setImportTask] = useState<ImportTaskSnapshot | null>(null)
+
+  const selectionScopeKey = useMemo(
+    () => `${selectedFolderId ?? 'all'}::${searchQuery.trim()}`,
+    [searchQuery, selectedFolderId],
+  )
+  const queryInput = useMemo(
+    () => ({ query: searchQuery.trim(), selection: selectedFolderId }),
+    [searchQuery, selectedFolderId],
+  )
   const actionableFolderId = getActionableFolderId(selectedFolderId)
-  const folderOptions = flattenFolders(folders)
+  const folderOptions = useMemo(
+    () =>
+      flattenFolders(folders).map((folder) => ({
+        label: `${'· '.repeat(folder.depth)}${folder.name}`,
+        value: folder.id,
+      })),
+    [folders],
+  )
+
+  const { data, error, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteBookmarks(queryInput)
+  const mutations = useBookmarkMutations(queryInput)
+  const bookmarks = useMemo(() => data?.pages.flatMap((page) => page.items ?? []) ?? [], [data])
+  const bookmarkIdSet = useMemo(() => new Set(bookmarks.map((bookmark) => bookmark.id)), [bookmarks])
+  const selectedIds = useMemo(() => {
+    if (selectionState.scopeKey !== selectionScopeKey) {
+      return []
+    }
+
+    return selectionState.ids.filter((id) => bookmarkIdSet.has(id))
+  }, [bookmarkIdSet, selectionScopeKey, selectionState.ids, selectionState.scopeKey])
+
+  const total = data?.pages[0]?.total ?? 0
+  const hasSelection = selectedIds.length > 0
   const selectionLabel = selectedFolderId
     ? pseudoLabels[selectedFolderId]?.title ?? findFolderName(folders, selectedFolderId) ?? '当前视图'
-    : '全部收藏'
+    : '全部书签'
   const selectionDescription = selectedFolderId
-    ? pseudoLabels[selectedFolderId]?.description ?? '当前文件夹上下文中的书签列表。'
-    : '你的全部书签、收藏与灵感入口都在这里。'
+    ? pseudoLabels[selectedFolderId]?.description ?? '当前文件夹中的书签列表。'
+    : '整理、搜索和管理你的常用链接。'
+  const headerTitle = selectedFolderId ? selectionLabel : '书签'
+  const headerMeta = selectedFolderId ? `${total} 条结果` : `${total} 条结果 · 全部内容`
+  const canReorder = selectedFolderId !== 'recent' && searchQuery.trim() === ''
+  const gridSentinelRef = useRef<HTMLDivElement | null>(null)
+  const createTitleRequestRef = useRef<{ promise: Promise<string>; url: string } | null>(null)
+  const importEventSourceRef = useRef<EventSource | null>(null)
+  const completedImportTaskRef = useRef<string | null>(null)
 
   useEffect(() => {
-    void fetchBookmarks(buildBookmarkParams(selectedFolderId, deferredQuery))
-  }, [deferredQuery, fetchBookmarks, selectedFolderId])
+    if (!notice || notice.tone !== 'success') {
+      return
+    }
 
-  const bookmarkCount = result.items.length
+    const timer = window.setTimeout(() => {
+      setNotice(null)
+    }, 4000)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [notice])
+
+  useEffect(() => {
+    if (viewMode !== 'grid' || !hasNextPage || isFetchingNextPage) {
+      return
+    }
+
+    const node = gridSentinelRef.current
+    if (!node) {
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void fetchNextPage()
+        }
+      },
+      { rootMargin: '200px' },
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, viewMode])
+
+  const closeImportEventSource = () => {
+    importEventSourceRef.current?.close()
+    importEventSourceRef.current = null
+  }
+
+  useEffect(() => {
+    const importTaskId = importTask?.task_id
+    const importTaskStatus = importTask?.status
+
+    if (!importOpen || !importTaskId || importTaskStatus === 'completed' || importTaskStatus === 'failed') {
+      closeImportEventSource()
+      return
+    }
+
+    closeImportEventSource()
+
+    const source = api.subscribeImportProgress(importTaskId, {
+      onMessage: (snapshot) => {
+        setImportTask(snapshot)
+        setImportConnectionError(null)
+
+        if (snapshot.status === 'failed') {
+          setNotice({ tone: 'error', message: snapshot.error || '导入书签失败' })
+        }
+
+        if (snapshot.status === 'completed' || snapshot.status === 'failed') {
+          source.close()
+          importEventSourceRef.current = null
+        }
+      },
+      onError: () => {
+        setImportConnectionError('导入进度连接已中断，重新打开弹窗后会继续同步最新状态。')
+      },
+    })
+
+    importEventSourceRef.current = source
+
+    return () => {
+      source.close()
+      if (importEventSourceRef.current === source) {
+        importEventSourceRef.current = null
+      }
+    }
+  }, [importOpen, importTask])
+
+  useEffect(() => {
+    if (importTask?.status !== 'completed' || !importTask.result) {
+      return
+    }
+    if (completedImportTaskRef.current === importTask.task_id) {
+      return
+    }
+
+    completedImportTaskRef.current = importTask.task_id
+    void queryClient.invalidateQueries({ queryKey: ['bookmarks'] })
+    void queryClient.invalidateQueries({ queryKey: folderQueryKey })
+    setNotice({ tone: 'success', message: '浏览器书签已导入。' })
+  }, [importTask, queryClient])
+
+  useEffect(() => () => closeImportEventSource(), [])
+
+  const updateSelectionIds = (updater: (current: string[]) => string[]) => {
+    setSelectionState((current) => {
+      const baseIds =
+        current.scopeKey === selectionScopeKey ? current.ids.filter((id) => bookmarkIdSet.has(id)) : []
+
+      return {
+        ids: Array.from(new Set(updater(baseIds))),
+        scopeKey: selectionScopeKey,
+      }
+    })
+  }
+
+  const submitSearch = () => {
+    setSearchQuery(searchInputValue.trim())
+  }
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') {
+      return
+    }
+    event.preventDefault()
+    submitSearch()
+  }
 
   const openCreateModal = () => {
     setNotice(null)
-    setCreateDraft({
-      ...emptyDraft,
-      folderId: actionableFolderId || '',
-    })
+    setCreateDraft({ ...emptyDraft, folderId: actionableFolderId || '' })
     setCreateOpen(true)
   }
 
@@ -108,49 +251,87 @@ export function MainPage() {
     setEditOpen(true)
   }
 
-  const populateTitle = async (url: string, currentTitle: string, setter: (title: string) => void) => {
-    if (!url.trim() || currentTitle.trim()) {
-      return
+  const requestCreateTitle = (rawUrl: string) => {
+    const normalizedUrl = rawUrl.trim()
+    if (!normalizedUrl) {
+      return Promise.resolve('')
+    }
+
+    if (createTitleRequestRef.current?.url === normalizedUrl) {
+      return createTitleRequestRef.current.promise
     }
 
     setTitleFetching(true)
-    try {
-      const response = await api.fetchTitle(url.trim())
-      if (response.title) {
-        setter(response.title)
-      }
-    } catch {
-      // Title fetching is a progressive enhancement. The user can still type it manually.
-    } finally {
-      setTitleFetching(false)
+    const promise = api
+      .fetchTitle(normalizedUrl)
+      .then((response) => response.title?.trim() ?? '')
+      .catch(() => '')
+      .finally(() => {
+        if (createTitleRequestRef.current?.url === normalizedUrl) {
+          createTitleRequestRef.current = null
+        }
+        setTitleFetching(false)
+      })
+
+    createTitleRequestRef.current = { url: normalizedUrl, promise }
+    return promise
+  }
+
+  const handleCreateUrlBlur = async () => {
+    const normalizedUrl = createDraft.url.trim()
+    if (!normalizedUrl || createDraft.title.trim()) {
+      return
     }
+
+    const fetchedTitle = await requestCreateTitle(normalizedUrl)
+    if (!fetchedTitle) {
+      return
+    }
+
+    setCreateDraft((current) => {
+      if (current.title.trim() || current.url.trim() !== normalizedUrl) {
+        return current
+      }
+      return { ...current, title: fetchedTitle }
+    })
   }
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!createDraft.url.trim()) {
-      setNotice({ tone: 'error', message: '请先填写有效的链接地址。' })
+    const normalizedUrl = createDraft.url.trim()
+    if (!normalizedUrl) {
+      setNotice({ tone: 'error', message: '请先填写有效的网址。' })
       return
     }
 
+    let resolvedTitle = createDraft.title.trim()
+    if (!resolvedTitle) {
+      resolvedTitle = await requestCreateTitle(normalizedUrl)
+      if (resolvedTitle) {
+        setCreateDraft((current) => {
+          if (current.title.trim() || current.url.trim() !== normalizedUrl) {
+            return current
+          }
+          return { ...current, title: resolvedTitle }
+        })
+      }
+    }
+
     const payload: BookmarkMutation = {
-      title: createDraft.title.trim() || createDraft.url.trim(),
-      url: createDraft.url.trim(),
+      title: resolvedTitle,
+      url: normalizedUrl,
       description: createDraft.description.trim(),
       folder_id: createDraft.folderId || null,
       is_favorite: createDraft.isFavorite,
     }
 
-    setSubmitting(true)
     try {
-      await createBookmark(payload)
+      await mutations.createBookmark.mutateAsync(payload)
       setCreateOpen(false)
-      setNotice({ tone: 'success', message: '书签已加入当前工作区。' })
       setCreateDraft(emptyDraft)
+      setNotice({ tone: 'success', message: '书签已添加。' })
     } catch (error: unknown) {
       setNotice({ tone: 'error', message: getErrorMessage(error, '添加书签失败') })
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -160,21 +341,21 @@ export function MainPage() {
       return
     }
 
-    setSubmitting(true)
     try {
-      await updateBookmark(editDraft.id, {
-        title: editDraft.title.trim() || editDraft.url.trim(),
-        url: editDraft.url.trim(),
-        description: editDraft.description.trim(),
-        folder_id: editDraft.folderId || null,
-        is_favorite: editDraft.isFavorite,
+      await mutations.updateBookmark.mutateAsync({
+        id: editDraft.id,
+        data: {
+          title: editDraft.title.trim() || editDraft.url.trim(),
+          url: editDraft.url.trim(),
+          description: editDraft.description.trim(),
+          folder_id: editDraft.folderId || null,
+          is_favorite: editDraft.isFavorite,
+        },
       })
       setEditOpen(false)
-      setNotice({ tone: 'success', message: '书签信息已更新。' })
+      setNotice({ tone: 'success', message: '书签已更新。' })
     } catch (error: unknown) {
       setNotice({ tone: 'error', message: getErrorMessage(error, '更新书签失败') })
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -184,17 +365,15 @@ export function MainPage() {
       return
     }
 
-    setNotice(null)
-    setImporting(true)
     try {
-      const response = await api.importBookmarks(file)
-      setImportResult(response)
-      setNotice({ tone: 'success', message: '浏览器书签已导入。' })
-      await fetchBookmarks(buildBookmarkParams(selectedFolderId, deferredQuery))
+      closeImportEventSource()
+      setImportConnectionError(null)
+      completedImportTaskRef.current = null
+      const task = await mutations.importBookmarks.mutateAsync(file)
+      setImportTask(task)
     } catch (error: unknown) {
       setNotice({ tone: 'error', message: getErrorMessage(error, '导入书签失败') })
     } finally {
-      setImporting(false)
       event.target.value = ''
     }
   }
@@ -209,511 +388,401 @@ export function MainPage() {
       setAiSuggestions(response.suggestions ?? [])
     } catch (error: unknown) {
       setAiSuggestions([])
-      setNotice({ tone: 'error', message: getErrorMessage(error, 'AI 整理建议获取失败') })
+      setNotice({ tone: 'error', message: getErrorMessage(error, '获取 AI 整理建议失败') })
     } finally {
       setAiLoading(false)
     }
   }
 
   const handleAIApply = async () => {
-    setAiApplying(true)
     try {
-      await api.aiOrganize(actionableFolderId ?? undefined, 'apply')
-      await fetchBookmarks(buildBookmarkParams(selectedFolderId, deferredQuery))
-      setNotice({ tone: 'success', message: 'AI 建议已应用到当前数据。' })
+      await mutations.applyAISuggestions.mutateAsync(actionableFolderId ?? undefined)
       setAiOpen(false)
+      setNotice({ tone: 'success', message: 'AI 建议已应用。' })
     } catch (error: unknown) {
       setNotice({ tone: 'error', message: getErrorMessage(error, '应用 AI 建议失败') })
-    } finally {
-      setAiApplying(false)
-    }
-  }
-
-  const handleDelete = async (bookmarkId: string) => {
-    try {
-      await deleteBookmark(bookmarkId)
-      setNotice({ tone: 'success', message: '书签已删除。' })
-    } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '删除书签失败') })
     }
   }
 
   const handleFavoriteToggle = async (bookmarkId: string) => {
     try {
-      await toggleFavorite(bookmarkId)
+      await mutations.toggleFavorite.mutateAsync(bookmarkId)
     } catch (error: unknown) {
       setNotice({ tone: 'error', message: getErrorMessage(error, '更新收藏状态失败') })
     }
   }
 
+  const handleDeleteConfirmed = async () => {
+    const ids = pendingDeleteIds
+    if (ids.length === 0) {
+      return
+    }
+
+    try {
+      if (ids.length === 1) {
+        await mutations.deleteBookmark.mutateAsync(ids[0])
+      } else {
+        await mutations.batchDeleteBookmarks.mutateAsync(ids)
+        updateSelectionIds((current) => current.filter((id) => !ids.includes(id)))
+      }
+
+      setPendingDeleteIds([])
+      setNotice({
+        tone: 'success',
+        message: ids.length === 1 ? '书签已删除。' : `已删除 ${ids.length} 条书签。`,
+      })
+    } catch (error: unknown) {
+      setNotice({ tone: 'error', message: getErrorMessage(error, '删除书签失败') })
+    }
+  }
+
+  const handleReorder = async (activeId: string, overId: string | null, position: 'before' | 'after' | 'end') => {
+    const ids = bookmarks.map((bookmark) => bookmark.id)
+    const fromIndex = ids.indexOf(activeId)
+    if (fromIndex === -1) {
+      return
+    }
+
+    ids.splice(fromIndex, 1)
+    if (position === 'end' || overId === null) {
+      ids.push(activeId)
+    } else {
+      const targetIndex = ids.indexOf(overId)
+      if (targetIndex === -1) {
+        return
+      }
+      ids.splice(position === 'after' ? targetIndex + 1 : targetIndex, 0, activeId)
+    }
+
+    try {
+      await mutations.reorderBookmarks.mutateAsync(ids)
+      setNotice({ tone: 'success', message: '书签顺序已更新。' })
+    } catch (error: unknown) {
+      setNotice({ tone: 'error', message: getErrorMessage(error, '更新顺序失败') })
+    }
+  }
+
+  const loadedAllSelected = bookmarks.length > 0 && bookmarks.every((bookmark) => selectedIds.includes(bookmark.id))
+
+  const selectLoaded = () => {
+    if (loadedAllSelected) {
+      setSelectionState({ ids: [], scopeKey: selectionScopeKey })
+      return
+    }
+
+    setSelectionState({
+      ids: bookmarks.map((bookmark) => bookmark.id),
+      scopeKey: selectionScopeKey,
+    })
+  }
+
+  const toggleSelection = (bookmarkId: string) => {
+    updateSelectionIds((current) =>
+      current.includes(bookmarkId) ? current.filter((id) => id !== bookmarkId) : [...current, bookmarkId],
+    )
+  }
+
+  const handleBatchMove = async () => {
+    if (selectedIds.length === 0) {
+      return
+    }
+
+    try {
+      await mutations.batchMoveBookmarks.mutateAsync({ ids: selectedIds, folderId: moveTarget || null })
+      setNotice({ tone: 'success', message: `已移动 ${selectedIds.length} 条书签。` })
+      setSelectionState({ ids: [], scopeKey: selectionScopeKey })
+      setMoveTarget('')
+    } catch (error: unknown) {
+      setNotice({ tone: 'error', message: getErrorMessage(error, '批量移动失败') })
+    }
+  }
+
+  const handleBatchFavorite = async (isFavorite: boolean) => {
+    if (selectedIds.length === 0) {
+      return
+    }
+
+    try {
+      await mutations.batchFavoriteBookmarks.mutateAsync({ ids: selectedIds, isFavorite })
+      setNotice({
+        tone: 'success',
+        message: isFavorite ? '已加入收藏。' : '已取消收藏。',
+      })
+      setSelectionState({ ids: [], scopeKey: selectionScopeKey })
+    } catch (error: unknown) {
+      setNotice({ tone: 'error', message: getErrorMessage(error, '批量更新收藏失败') })
+    }
+  }
+
+  const contentError = error instanceof Error ? error.message : null
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="surface-divider flex flex-col gap-5 px-5 py-5 lg:px-7 lg:py-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="status-pill">{selectionLabel}</span>
-              <span className="rounded-full bg-white/8 px-3 py-1 text-[12px] font-medium text-[var(--text-secondary)]">
-                {result.total} 条
-              </span>
+    <div className="space-y-4">
+      <section className="page-section p-3">
+        {hasSelection ? (
+          <BatchActionBar
+            folderOptions={folderOptions}
+            moveTarget={moveTarget}
+            onClear={() => setSelectionState({ ids: [], scopeKey: selectionScopeKey })}
+            onDelete={() => setPendingDeleteIds(selectedIds)}
+            onMoveTargetChange={setMoveTarget}
+            onMoveToFolder={() => void handleBatchMove()}
+            onSetFavorite={(value) => void handleBatchFavorite(value)}
+            selectedCount={selectedIds.length}
+          />
+        ) : (
+          <div className="space-y-3">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-[18px] font-semibold leading-6 text-[var(--color-text)]">{headerTitle}</h1>
+                <span className="text-[12px] leading-4 text-[var(--color-text-secondary)]">{headerMeta}</span>
+              </div>
+              <p className="max-w-[720px] text-[13px] leading-5 text-[var(--color-text-secondary)]">
+                {selectionDescription}
+              </p>
             </div>
-            <h1 className="text-[28px] font-semibold tracking-[-0.05em] text-[var(--text-primary)]">{selectionLabel}</h1>
-            <p className="mt-2 max-w-2xl text-[14px] leading-6 text-[var(--text-tertiary)]">{selectionDescription}</p>
+
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="relative">
+                  <input
+                    aria-label="搜索书签"
+                    className="input-flat h-9 pl-3 pr-11 text-[14px]"
+                    onChange={(event) => setSearchInputValue(event.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    placeholder="搜索标题、域名或备注"
+                    value={searchInputValue}
+                  />
+                  <button
+                    aria-label="执行搜索"
+                    className="search-submit-button"
+                    onClick={submitSearch}
+                    type="button"
+                  >
+                    <Icon className="text-[14px]" name="search" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-bg-muted)] p-1">
+                  <Button
+                    leading={<Icon className="text-[14px]" name="list" />}
+                    onClick={() => setViewMode('list')}
+                    size="sm"
+                    variant={viewMode === 'list' ? 'primary' : 'ghost'}
+                  >
+                    列表
+                  </Button>
+                  <Button
+                    leading={<Icon className="text-[14px]" name="grid" />}
+                    onClick={() => setViewMode('grid')}
+                    size="sm"
+                    variant={viewMode === 'grid' ? 'primary' : 'ghost'}
+                  >
+                    卡片
+                  </Button>
+                </div>
+                <Button onClick={selectLoaded} size="sm" variant="ghost">
+                  {loadedAllSelected ? '取消全选' : '全选已加载'}
+                </Button>
+                <Button
+                  leading={<Icon className="text-[14px]" name="upload" />}
+                  onClick={() => setImportOpen(true)}
+                  size="sm"
+                  variant="secondary"
+                >
+                  导入
+                </Button>
+                <Button
+                  leading={<Icon className="text-[14px]" name="sparkles" />}
+                  onClick={() => void handleAIReview()}
+                  size="sm"
+                  variant="secondary"
+                >
+                  AI 整理
+                </Button>
+                <Button
+                  leading={<Icon className="text-[14px]" name="plus" />}
+                  onClick={openCreateModal}
+                  size="sm"
+                  variant="primary"
+                >
+                  添加书签
+                </Button>
+              </div>
+            </div>
+
+            <div className="text-[12px] leading-4 text-[var(--color-text-secondary)]">
+              {bookmarks.length} 条已加载 · {viewMode === 'list' ? '列表视图' : '卡片视图'}
+              {!canReorder ? ' · 当前视图不支持排序' : null}
+            </div>
           </div>
+        )}
+      </section>
 
-          <div className="grid grid-cols-2 gap-3 sm:flex">
-            <Button className="justify-center" leading="↓" onClick={() => setImportOpen(true)} variant="secondary">
-              导入
-            </Button>
-            <Button className="justify-center" leading="✦" onClick={() => void handleAIReview()} variant="primary">
-              AI 整理
-            </Button>
-            <Button className="col-span-2 justify-center sm:col-span-1" leading="+" onClick={openCreateModal} variant="ghost">
-              添加书签
-            </Button>
-          </div>
-        </div>
+      {notice ? <NoticeBanner notice={notice} onClose={() => setNotice(null)} /> : null}
 
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="w-full max-w-xl">
-            <Input
-              helper="支持标题、URL 和描述搜索，切换视图时会保留当前关键词。"
-              label="搜索"
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="搜索标题、域名或备注"
-              value={searchQuery}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 self-start">
-            <Button
-              className="min-w-[96px] justify-center"
-              onClick={() => setViewMode('grid')}
-              size="sm"
-              variant={viewMode === 'grid' ? 'primary' : 'secondary'}
-            >
-              网格
-            </Button>
-            <Button
-              className="min-w-[96px] justify-center"
-              onClick={() => setViewMode('list')}
-              size="sm"
-              variant={viewMode === 'list' ? 'primary' : 'secondary'}
-            >
-              列表
-            </Button>
-          </div>
-        </div>
-
-        {notice ? (
-          <Surface className="flex items-center justify-between gap-3 px-4 py-3" tone="subtle">
-            <p className={`text-[13px] ${notice.tone === 'error' ? 'text-[var(--danger)]' : 'text-[var(--success)]'}`}>
-              {notice.message}
-            </p>
-            <button
-              className="text-[12px] text-[var(--text-quaternary)] transition hover:text-[var(--text-primary)]"
-              onClick={() => setNotice(null)}
-              type="button"
-            >
-              关闭
-            </button>
-          </Surface>
-        ) : null}
-      </div>
-
-      <div className="scroll-fade min-h-0 flex-1 overflow-y-auto px-5 py-5 lg:px-7 lg:py-6">
-        {error ? (
+      <section>
+        {contentError ? (
           <StatePanel
             action={
-              <Button onClick={() => void fetchBookmarks(buildBookmarkParams(selectedFolderId, deferredQuery))} variant="primary">
+              <Button
+                leading={<Icon className="text-[14px]" name="sparkles" />}
+                onClick={() => window.location.reload()}
+                size="sm"
+                variant="primary"
+              >
                 重新加载
               </Button>
             }
-            description={error}
+            description={contentError}
             title="书签列表暂时不可用"
           />
-        ) : loading ? (
-          <div className={`grid gap-4 ${viewMode === 'grid' ? 'lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1'}`}>
-            {Array.from({ length: viewMode === 'grid' ? 6 : 4 }).map((_, index) => (
-              <Surface className="animate-pulse p-5" key={index} tone="subtle">
-                <div className="h-4 w-24 rounded-full bg-white/12" />
-                <div className="mt-4 h-6 w-3/4 rounded-full bg-white/10" />
-                <div className="mt-3 h-4 w-full rounded-full bg-white/8" />
-                <div className="mt-2 h-4 w-2/3 rounded-full bg-white/8" />
-              </Surface>
-            ))}
-          </div>
-        ) : bookmarkCount === 0 ? (
+        ) : isLoading ? (
+          <LoadingState viewMode={viewMode} />
+        ) : bookmarks.length === 0 ? (
           <StatePanel
             action={
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Button onClick={openCreateModal} variant="primary">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button leading={<Icon className="text-[14px]" name="plus" />} onClick={openCreateModal} size="sm" variant="primary">
                   立即添加
                 </Button>
-                <Button onClick={() => setImportOpen(true)} variant="secondary">
-                  导入浏览器书签
+                <Button leading={<Icon className="text-[14px]" name="upload" />} onClick={() => setImportOpen(true)} size="sm" variant="secondary">
+                  导入书签
                 </Button>
               </div>
             }
-            description="当前视图下还没有内容。你可以手动添加，也可以直接导入浏览器导出的书签文件。"
+            description="当前视图下还没有内容。你可以手动添加，也可以从浏览器导入。"
             title="这里还没有书签"
           />
+        ) : viewMode === 'list' ? (
+          <BookmarkList
+            bookmarks={bookmarks}
+            canReorder={canReorder}
+            getFolderName={(folderId) => findFolderName(folders, folderId)}
+            hasNextPage={Boolean(hasNextPage)}
+            isFetchingNextPage={isFetchingNextPage}
+            onDelete={(bookmarkId) => setPendingDeleteIds([bookmarkId])}
+            onEdit={openEditModal}
+            onFavorite={(bookmarkId) => void handleFavoriteToggle(bookmarkId)}
+            onFetchNextPage={() => void fetchNextPage()}
+            onReorder={(activeId, overId, position) => void handleReorder(activeId, overId, position)}
+            onToggleSelect={toggleSelection}
+            searchQuery={searchQuery}
+            selectedIds={new Set(selectedIds)}
+          />
         ) : (
-          <div className={`grid gap-4 ${viewMode === 'grid' ? 'grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1'}`}>
-            {result.items.map((bookmark, index) => (
-              <BookmarkCard
-                bookmark={bookmark}
-                folderName={bookmark.folder_id ? findFolderName(folders, bookmark.folder_id) : '未分类'}
-                key={bookmark.id}
-                onDelete={() => void handleDelete(bookmark.id)}
-                onEdit={() => openEditModal(bookmark)}
-                onFavorite={() => void handleFavoriteToggle(bookmark.id)}
-                priorityIndex={index}
-                viewMode={viewMode}
-              />
-            ))}
-          </div>
+          <>
+            <BookmarkGrid
+              bookmarks={bookmarks}
+              getFolderName={(folderId) => findFolderName(folders, folderId)}
+              onDelete={(bookmarkId) => setPendingDeleteIds([bookmarkId])}
+              onEdit={openEditModal}
+              onFavorite={(bookmarkId) => void handleFavoriteToggle(bookmarkId)}
+              searchQuery={searchQuery}
+            />
+            <div ref={gridSentinelRef} />
+            {isFetchingNextPage ? (
+              <div className="text-[12px] leading-4 text-[var(--color-text-secondary)]">正在加载更多书签…</div>
+            ) : null}
+          </>
         )}
-      </div>
+      </section>
 
-      <Modal onClose={() => setCreateOpen(false)} open={createOpen} title="添加书签" width="md">
-        <form className="space-y-4" onSubmit={handleCreate}>
-          <Input
-            label="链接地址"
-            onBlur={() => void populateTitle(createDraft.url, createDraft.title, (title) => setCreateDraft((current) => ({ ...current, title })))}
-            onChange={(event) => setCreateDraft((current) => ({ ...current, url: event.target.value }))}
-            placeholder="https://example.com"
-            value={createDraft.url}
-          />
-          <Input
-            label="标题"
-            onChange={(event) => setCreateDraft((current) => ({ ...current, title: event.target.value }))}
-            placeholder="未填写时会尝试自动抓取"
-            trailing={titleFetching ? <span className="text-[11px] text-[var(--accent)]">抓取中</span> : null}
-            value={createDraft.title}
-          />
-          <Input
-            label="备注"
-            multiline
-            onChange={(event) => setCreateDraft((current) => ({ ...current, description: event.target.value }))}
-            placeholder="可选：补充用途、关键点或使用场景"
-            value={createDraft.description}
-          />
-          <label className="block space-y-2">
-            <span className="text-[12px] font-medium text-[var(--text-tertiary)]">归档位置</span>
-            <select
-              className="input-liquid h-12"
-              onChange={(event) => setCreateDraft((current) => ({ ...current, folderId: event.target.value }))}
-              value={createDraft.folderId}
-            >
-              <option value="">未分类</option>
-              {folderOptions.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {'　'.repeat(folder.depth)}
-                  {folder.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-3 rounded-[18px] bg-white/6 px-4 py-3 text-[13px] text-[var(--text-secondary)]">
-            <input
-              checked={createDraft.isFavorite}
-              className="h-4 w-4 accent-[var(--accent)]"
-              onChange={(event) => setCreateDraft((current) => ({ ...current, isFavorite: event.target.checked }))}
-              type="checkbox"
-            />
-            添加后立即标记为收藏
-          </label>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button onClick={() => setCreateOpen(false)} type="button" variant="secondary">
-              取消
-            </Button>
-            <Button disabled={submitting} type="submit" variant="primary">
-              {submitting ? '保存中…' : '保存书签'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <CreateBookmarkModal
+        draft={createDraft}
+        folders={folders}
+        onChange={(patch) => setCreateDraft((current) => ({ ...current, ...patch }))}
+        onClose={() => setCreateOpen(false)}
+        onSubmit={handleCreate}
+        onUrlBlur={() => void handleCreateUrlBlur()}
+        open={createOpen}
+        submitting={mutations.createBookmark.isPending}
+        titleFetching={titleFetching}
+      />
 
-      <Modal onClose={() => setEditOpen(false)} open={editOpen} title="编辑书签" width="md">
-        <form className="space-y-4" onSubmit={handleSaveEdit}>
-          <Input
-            label="标题"
-            onChange={(event) => setEditDraft((current) => ({ ...current, title: event.target.value }))}
-            value={editDraft.title}
-          />
-          <Input
-            label="链接地址"
-            onChange={(event) => setEditDraft((current) => ({ ...current, url: event.target.value }))}
-            value={editDraft.url}
-          />
-          <Input
-            label="备注"
-            multiline
-            onChange={(event) => setEditDraft((current) => ({ ...current, description: event.target.value }))}
-            value={editDraft.description}
-          />
-          <label className="block space-y-2">
-            <span className="text-[12px] font-medium text-[var(--text-tertiary)]">所在文件夹</span>
-            <select
-              className="input-liquid h-12"
-              onChange={(event) => setEditDraft((current) => ({ ...current, folderId: event.target.value }))}
-              value={editDraft.folderId}
-            >
-              <option value="">未分类</option>
-              {folderOptions.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {'　'.repeat(folder.depth)}
-                  {folder.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-3 rounded-[18px] bg-white/6 px-4 py-3 text-[13px] text-[var(--text-secondary)]">
-            <input
-              checked={editDraft.isFavorite}
-              className="h-4 w-4 accent-[var(--accent)]"
-              onChange={(event) => setEditDraft((current) => ({ ...current, isFavorite: event.target.checked }))}
-              type="checkbox"
-            />
-            置顶到我的收藏
-          </label>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button onClick={() => setEditOpen(false)} type="button" variant="secondary">
-              取消
-            </Button>
-            <Button disabled={submitting} type="submit" variant="primary">
-              {submitting ? '保存中…' : '更新书签'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <EditBookmarkModal
+        draft={editDraft}
+        folders={folders}
+        onChange={(patch) => setEditDraft((current) => ({ ...current, ...patch }))}
+        onClose={() => setEditOpen(false)}
+        onSubmit={handleSaveEdit}
+        open={editOpen}
+        submitting={mutations.updateBookmark.isPending}
+      />
 
-      <Modal onClose={() => setAiOpen(false)} open={aiOpen} title="AI 整理建议" width="lg">
-        <div className="space-y-4">
-          <p className="text-[13px] leading-6 text-[var(--text-tertiary)]">
-            {actionableFolderId
-              ? '这次会只针对当前文件夹给出建议，便于你在上下文里快速整理。'
-              : '当前没有选中具体文件夹，AI 会基于全局书签给出整理建议。'}
-          </p>
+      <AIModal
+        actionableFolderId={actionableFolderId}
+        aiApplying={mutations.applyAISuggestions.isPending}
+        aiLoading={aiLoading}
+        onApply={() => void handleAIApply()}
+        onClose={() => setAiOpen(false)}
+        open={aiOpen}
+        suggestions={aiSuggestions}
+      />
 
-          <div className="scroll-fade max-h-[420px] space-y-3 overflow-y-auto pr-1">
-            {aiLoading ? (
-              Array.from({ length: 4 }).map((_, index) => (
-                <Surface className="animate-pulse p-4" key={index} tone="subtle">
-                  <div className="h-4 w-2/5 rounded-full bg-white/12" />
-                  <div className="mt-3 h-4 w-4/5 rounded-full bg-white/10" />
-                  <div className="mt-2 h-4 w-full rounded-full bg-white/8" />
-                </Surface>
-              ))
-            ) : aiSuggestions.length > 0 ? (
-              aiSuggestions.map((suggestion) => (
-                <Surface className="space-y-3 p-4" key={suggestion.bookmark_id} tone="subtle">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-[15px] font-semibold text-[var(--text-primary)]">{suggestion.title}</div>
-                      <div className="mt-1 text-[12px] text-[var(--accent)]">建议归档到 {suggestion.suggested_folder}</div>
-                    </div>
-                    <span className="rounded-full bg-[rgba(0,113,227,0.16)] px-3 py-1 text-[11px] font-semibold text-[var(--accent)]">
-                      {Math.round(suggestion.confidence * 100)}%
-                    </span>
-                  </div>
-                  <p className="text-[13px] leading-6 text-[var(--text-tertiary)]">{suggestion.reason}</p>
-                </Surface>
-              ))
-            ) : (
-              <StatePanel
-                description="AI 没有发现需要移动的项目，或者当前数据量还不足以形成建议。"
-                title="这批书签已经很整齐了"
-              />
-            )}
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button onClick={() => setAiOpen(false)} variant="secondary">
-              关闭
-            </Button>
-            <Button disabled={aiLoading || aiApplying || aiSuggestions.length === 0} onClick={() => void handleAIApply()} variant="primary">
-              {aiApplying ? '应用中…' : '全部应用'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
+      <ImportModal
+        connectionError={importConnectionError}
+        importTask={importTask}
         onClose={() => {
+          closeImportEventSource()
           setImportOpen(false)
-          setImportResult(null)
         }}
+        onImport={(event) => void handleImport(event)}
         open={importOpen}
-        title="导入浏览器书签"
-        width="md"
-      >
-        <div className="space-y-4">
-          <p className="text-[13px] leading-6 text-[var(--text-tertiary)]">
-            支持 Chrome、Edge、Firefox 导出的 HTML 书签文件。重复 URL 会自动跳过，不会覆盖你现有的数据。
-          </p>
+        starting={mutations.importBookmarks.isPending}
+      />
 
-          {importResult ? (
-            <Surface className="space-y-3 p-5" tone="subtle">
-              <div className="text-[20px] font-semibold tracking-[-0.04em] text-[var(--text-primary)]">导入完成</div>
-              <div className="grid grid-cols-2 gap-3">
-                <MetricCard label="新增书签" value={String(importResult.created)} />
-                <MetricCard label="跳过重复" value={String(importResult.skipped)} />
-              </div>
-              <div className="text-[13px] leading-6 text-[var(--text-tertiary)]">
-                {importResult.folders_created.length > 0
-                  ? `创建的新文件夹：${importResult.folders_created.join('、')}`
-                  : '没有额外创建新文件夹。'}
-              </div>
-            </Surface>
-          ) : (
-            <label className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[24px] border border-dashed border-white/12 bg-white/6 px-6 py-12 text-center transition hover:scale-[1.01] hover:bg-white/9">
-              <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-[var(--accent-soft)] text-[28px] text-[var(--accent)]">
-                ↓
-              </div>
-              <div className="text-[16px] font-medium text-[var(--text-primary)]">{importing ? '正在导入…' : '选择 HTML 书签文件'}</div>
-              <div className="max-w-sm text-[13px] leading-6 text-[var(--text-tertiary)]">点击后选择浏览器导出的书签文件，导入结果会在这里即时反馈。</div>
-              <input accept=".html,.htm" className="hidden" onChange={(event) => void handleImport(event)} type="file" />
-            </label>
-          )}
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button
-              onClick={() => {
-                setImportOpen(false)
-                setImportResult(null)
-              }}
-              variant="secondary"
-            >
-              关闭
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        confirmLabel={pendingDeleteIds.length > 1 ? `删除 ${pendingDeleteIds.length} 条` : '删除'}
+        description={
+          pendingDeleteIds.length > 1 ? '这会永久删除所选书签，无法恢复。' : '这会永久删除这条书签，无法恢复。'
+        }
+        onClose={() => setPendingDeleteIds([])}
+        onConfirm={() => void handleDeleteConfirmed()}
+        open={pendingDeleteIds.length > 0}
+        title="确认删除"
+      />
     </div>
   )
 }
 
-function BookmarkCard({
-  bookmark,
-  folderName,
-  onDelete,
-  onEdit,
-  onFavorite,
-  priorityIndex,
-  viewMode,
-}: {
-  bookmark: Bookmark
-  folderName: string | null
-  onDelete: () => void
-  onEdit: () => void
-  onFavorite: () => void
-  priorityIndex: number
-  viewMode: 'grid' | 'list'
-}) {
-  const hostname = formatHostname(bookmark.url)
-
-  return (
-    <motion.div
-      animate={{ opacity: 1, y: 0 }}
-      initial={{ opacity: 0, y: 18 }}
-      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1], delay: Math.min(priorityIndex * 0.03, 0.24) }}
-    >
-      <Surface
-        className="group relative h-full overflow-hidden p-5 transition duration-300 hover:-translate-y-1 hover:[box-shadow:var(--shadow-float)]"
-        tone="panel"
-      >
-        <div className={`flex gap-4 pr-[7.5rem] ${viewMode === 'list' ? 'items-start' : 'flex-col'}`}>
-          <a
-            className={`min-w-0 flex-1 ${viewMode === 'list' ? 'flex items-start gap-4' : 'block'}`}
-            href={bookmark.url}
-            rel="noreferrer"
-            target="_blank"
+function LoadingState({ viewMode }: { viewMode: 'grid' | 'list' }) {
+  if (viewMode === 'list') {
+    return (
+      <div className="page-section overflow-hidden">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            className={`flex items-center gap-3 px-4 py-3 animate-pulse ${
+              index < 5 ? 'border-b border-[var(--color-border)]' : ''
+            }`}
+            key={index}
           >
-            <div
-              className={`flex shrink-0 items-center justify-center rounded-[22px] ${
-                viewMode === 'list' ? 'h-14 w-14' : 'mb-4 h-16 w-16'
-              } bg-[linear-gradient(145deg,rgba(0,113,227,0.18),rgba(255,255,255,0.28))] text-[22px] text-[var(--accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]`}
-            >
-              {bookmark.favicon_url ? (
-                <img alt="" className="h-8 w-8 rounded-[10px] object-cover" src={bookmark.favicon_url} />
-              ) : (
-                '↗'
-              )}
+            <div className="h-4 w-4 rounded bg-[var(--color-bg-muted)]" />
+            <div className="h-8 w-8 rounded-[8px] bg-[var(--color-bg-muted)]" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-4 w-2/5 rounded bg-[var(--color-bg-muted)]" />
+              <div className="h-3 w-3/5 rounded bg-[var(--color-bg-muted)]" />
             </div>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                {bookmark.is_favorite ? <span className="status-pill">收藏</span> : null}
-                {folderName ? <span className="status-pill">{folderName}</span> : null}
-              </div>
-              <div className="mt-3 text-[17px] font-semibold tracking-[-0.03em] text-[var(--text-primary)]">{bookmark.title}</div>
-              <div className="mt-1 text-[12px] text-[var(--text-quaternary)]">{hostname}</div>
-              {bookmark.description ? (
-                <p className="line-clamp-2 mt-3 text-[13px] leading-6 text-[var(--text-tertiary)]">{bookmark.description}</p>
-              ) : (
-                <p className="mt-3 text-[13px] leading-6 text-[var(--text-quaternary)]">暂无备注，点击卡片可以直接打开原始链接。</p>
-              )}
-            </div>
-          </a>
-        </div>
-
-        <div className="absolute right-4 top-4 flex shrink-0 gap-2">
-          <ActionButton label={bookmark.is_favorite ? '取消收藏' : '加入收藏'} onClick={onFavorite}>
-            {bookmark.is_favorite ? '♥' : '♡'}
-          </ActionButton>
-          <ActionButton label="编辑书签" onClick={onEdit}>
-            ✎
-          </ActionButton>
-          <ActionButton label="删除书签" onClick={onDelete}>
-            ×
-          </ActionButton>
-        </div>
-      </Surface>
-    </motion.div>
-  )
-}
-
-function ActionButton({ children, label, onClick }: { children: string; label: string; onClick: () => void }) {
-  return (
-    <button
-      aria-label={label}
-      className="icon-button opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100"
-      onClick={onClick}
-      type="button"
-    >
-      {children}
-    </button>
-  )
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Surface className="p-4" tone="panel">
-      <div className="text-[12px] text-[var(--text-tertiary)]">{label}</div>
-      <div className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-[var(--text-primary)]">{value}</div>
-    </Surface>
-  )
-}
-
-function StatePanel({ action, description, title }: { action?: ReactNode; description: string; title: string }) {
-  return (
-    <Surface className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-4 px-8 py-16 text-center" tone="subtle">
-      <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[28px] bg-[var(--accent-soft)] text-[30px] text-[var(--accent)]">
-        ◎
+          </div>
+        ))}
       </div>
-      <div className="text-[24px] font-semibold tracking-[-0.04em] text-[var(--text-primary)]">{title}</div>
-      <p className="max-w-xl text-[14px] leading-7 text-[var(--text-tertiary)]">{description}</p>
-      {action}
-    </Surface>
-  )
-}
-
-function formatHostname(url: string) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '')
-  } catch {
-    return url
+    )
   }
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div className="page-section space-y-4 p-4 animate-pulse" key={index}>
+          <div className="h-10 w-10 rounded-[8px] bg-[var(--color-bg-muted)]" />
+          <div className="space-y-2">
+            <div className="h-4 w-2/3 rounded bg-[var(--color-bg-muted)]" />
+            <div className="h-3 w-1/2 rounded bg-[var(--color-bg-muted)]" />
+            <div className="h-3 w-full rounded bg-[var(--color-bg-muted)]" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }

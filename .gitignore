@@ -7,7 +7,8 @@ cubby.db
 .npm-cache/
 .gocache/
 .claude/
-backend/cmd/server/static/
+backend/cmd/server/static/*
+!backend/cmd/server/static/.gitkeep
 .idea/
 backend/cubby.db-shm
 backend/cubby.db-wal

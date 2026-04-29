@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"database/sql"
 	"cubby/internal/model"
+	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -12,6 +12,10 @@ type BookmarkRepo struct {
 }
 
 func NewBookmarkRepo(db *sql.DB) *BookmarkRepo { return &BookmarkRepo{db: db} }
+
+type BookmarkFavoriteToggleResult struct {
+	IsFavorite bool `json:"is_favorite"`
+}
 
 type BookmarkQuery struct {
 	FolderID string
@@ -28,6 +32,11 @@ type BookmarkListResult struct {
 	Total    int              `json:"total"`
 	Page     int              `json:"page"`
 	PageSize int              `json:"page_size"`
+}
+
+type MetadataUpdateOptions struct {
+	ForceDescription bool
+	ForceTitle       bool
 }
 
 func (r *BookmarkRepo) List(q BookmarkQuery) (*BookmarkListResult, error) {
@@ -134,17 +143,37 @@ func (r *BookmarkRepo) Create(b *model.Bookmark) error {
 func (r *BookmarkRepo) Update(b *model.Bookmark) error {
 	_, err := r.db.Exec(
 		`UPDATE bookmarks SET title=?, url=?, description=?, favicon_url=?, thumbnail_url=?,
-		                        folder_id=?, is_favorite=?, sort_order=?,
+		                        folder_id=?, is_favorite=?, sort_order=?, metadata_fetched=?,
 		                        updated_at=CURRENT_TIMESTAMP
 		 WHERE id=?`,
 		b.Title, b.URL, b.Description, b.FaviconURL, b.ThumbnailURL,
-		b.FolderID, b.IsFavorite, b.SortOrder, b.ID)
+		b.FolderID, b.IsFavorite, b.SortOrder, b.MetadataFetched, b.ID)
 	return err
 }
 
 func (r *BookmarkRepo) Delete(id string) error {
 	_, err := r.db.Exec(`DELETE FROM bookmarks WHERE id=?`, id)
 	return err
+}
+
+func (r *BookmarkRepo) BatchDelete(ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, id := range ids {
+		if _, err := tx.Exec(`DELETE FROM bookmarks WHERE id=?`, id); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (r *BookmarkRepo) ToggleFavorite(id string) (bool, error) {
@@ -155,23 +184,65 @@ func (r *BookmarkRepo) ToggleFavorite(id string) (bool, error) {
 	return fav == 1, err
 }
 
-func (r *BookmarkRepo) UpdateMetadata(id, title, description, faviconURL, thumbnailURL string) error {
+func (r *BookmarkRepo) UpdateMetadata(id, title, description, faviconURL, thumbnailURL string, options MetadataUpdateOptions) error {
 	_, err := r.db.Exec(
-		`UPDATE bookmarks SET title=COALESCE(NULLIF(?, ''), title),
-		                        description=COALESCE(NULLIF(?, ''), description),
+		`UPDATE bookmarks SET title=CASE
+		                            WHEN ? <> '' AND (? = 1 OR title = '' OR title = url) THEN ?
+		                            ELSE title
+		                        END,
+		                        description=CASE
+		                            WHEN ? <> '' AND (? = 1 OR description = '') THEN ?
+		                            ELSE description
+		                        END,
 		                        favicon_url=COALESCE(NULLIF(?, ''), favicon_url),
 		                        thumbnail_url=COALESCE(NULLIF(?, ''), thumbnail_url),
 		                        metadata_fetched=1,
 		                        updated_at=CURRENT_TIMESTAMP
-		 WHERE id=?`, title, description, faviconURL, thumbnailURL, id)
+		 WHERE id=?`,
+		title, boolToInt(options.ForceTitle), title,
+		description, boolToInt(options.ForceDescription), description,
+		faviconURL, thumbnailURL, id)
 	return err
 }
 
 func (r *BookmarkRepo) MoveToFolder(bookmarkID string, folderID *string) error {
-	_, err := r.db.Exec(
-		`UPDATE bookmarks SET folder_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
-		folderID, bookmarkID)
+	sortOrder, err := r.nextSortOrder(folderID)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.Exec(
+		`UPDATE bookmarks SET folder_id=?, sort_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+		folderID, sortOrder, bookmarkID)
 	return err
+}
+
+func (r *BookmarkRepo) BatchMove(ids []string, folderID *string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	sortOrder, err := r.nextSortOrderTx(tx, folderID)
+	if err != nil {
+		return err
+	}
+
+	for index, id := range ids {
+		if _, err := tx.Exec(
+			`UPDATE bookmarks SET folder_id=?, sort_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+			folderID, sortOrder+index, id,
+		); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (r *BookmarkRepo) Reorder(ids []string) error {
@@ -186,6 +257,51 @@ func (r *BookmarkRepo) Reorder(ids []string) error {
 		}
 	}
 	return tx.Commit()
+}
+
+func (r *BookmarkRepo) BatchSetFavorite(ids []string, isFavorite bool) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	favoriteValue := 0
+	if isFavorite {
+		favoriteValue = 1
+	}
+
+	for _, id := range ids {
+		if _, err := tx.Exec(
+			`UPDATE bookmarks SET is_favorite=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+			favoriteValue, id,
+		); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (r *BookmarkRepo) ClearFolderAssignments(folderIDs []string) error {
+	if len(folderIDs) == 0 {
+		return nil
+	}
+
+	placeholders := make([]string, len(folderIDs))
+	args := make([]any, len(folderIDs))
+	for i, id := range folderIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := `UPDATE bookmarks SET folder_id=NULL, updated_at=CURRENT_TIMESTAMP WHERE folder_id IN (` + strings.Join(placeholders, ",") + `)`
+	_, err := r.db.Exec(query, args...)
+	return err
 }
 
 func (r *BookmarkRepo) ListByFolderIDs(folderIDs []string) ([]model.Bookmark, error) {
@@ -227,20 +343,60 @@ func (r *BookmarkRepo) ExistsByURL(url string) (bool, error) {
 	return count > 0, err
 }
 
+func (r *BookmarkRepo) CreateIfNotExists(bookmark *model.Bookmark) (bool, error) {
+	exists, err := r.ExistsByURL(bookmark.URL)
+	if err != nil {
+		return false, err
+	}
+	if exists {
+		return false, nil
+	}
+	if err := r.Create(bookmark); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (r *BookmarkRepo) BulkCreate(bookmarks []model.Bookmark) (created int, skipped int, err error) {
 	for _, b := range bookmarks {
-		exists, err := r.ExistsByURL(b.URL)
+		inserted, err := r.CreateIfNotExists(&b)
 		if err != nil {
 			return created, skipped, err
 		}
-		if exists {
+		if !inserted {
 			skipped++
 			continue
-		}
-		if err := r.Create(&b); err != nil {
-			return created, skipped, err
 		}
 		created++
 	}
 	return created, skipped, nil
+}
+
+func (r *BookmarkRepo) nextSortOrder(folderID *string) (int, error) {
+	return r.nextSortOrderTx(r.db, folderID)
+}
+
+type queryRower interface {
+	QueryRow(query string, args ...any) *sql.Row
+}
+
+func (r *BookmarkRepo) nextSortOrderTx(rower queryRower, folderID *string) (int, error) {
+	var next sql.NullInt64
+	var err error
+	if folderID == nil {
+		err = rower.QueryRow(`SELECT COALESCE(MAX(sort_order), -1) + 1 FROM bookmarks WHERE folder_id IS NULL`).Scan(&next)
+	} else {
+		err = rower.QueryRow(`SELECT COALESCE(MAX(sort_order), -1) + 1 FROM bookmarks WHERE folder_id = ?`, *folderID).Scan(&next)
+	}
+	if err != nil {
+		return 0, err
+	}
+	return int(next.Int64), nil
+}
+
+func boolToInt(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
 }

@@ -7,6 +7,7 @@ import (
 	"embed"
 	"io/fs"
 	"log"
+	"path/filepath"
 
 	_ "modernc.org/sqlite"
 )
@@ -23,15 +24,16 @@ func main() {
 	folderRepo := repository.NewFolderRepo(db)
 	bookmarkRepo := repository.NewBookmarkRepo(db)
 	settingRepo := repository.NewSettingRepo(db)
+	faviconDir := filepath.Join("data", "favicons")
 
 	folderHandler := handler.NewFolderHandler(folderRepo)
-	bookmarkHandler := handler.NewBookmarkHandler(bookmarkRepo, folderRepo)
+	bookmarkHandler := handler.NewBookmarkHandler(bookmarkRepo, folderRepo, faviconDir)
 	aiClient := ai.NewClient(settingRepo)
 	settingHandler := handler.NewSettingHandler(settingRepo, aiClient)
 	aiHandler := handler.NewAIHandler(aiClient, bookmarkRepo, folderRepo)
 
 	staticFS, _ := fs.Sub(staticFiles, "static")
-	r := handler.SetupRouter(folderRepo, bookmarkRepo, settingRepo, folderHandler, bookmarkHandler, settingHandler, aiHandler, staticFS)
+	r := handler.SetupRouter(folderRepo, bookmarkRepo, settingRepo, folderHandler, bookmarkHandler, settingHandler, aiHandler, faviconDir, staticFS)
 
 	log.Println("Cubby server starting on :8080")
 	if err := r.Run(":8080"); err != nil {

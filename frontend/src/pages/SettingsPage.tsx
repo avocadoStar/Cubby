@@ -1,22 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useThemeMode } from '../hooks/useThemeMode'
-import { useSettingsStore } from '../stores/settingsStore'
-import { getErrorMessage } from '../utils/errors'
 import { Button } from '../components/ui/Button'
+import { Icon } from '../components/ui/Icon'
 import { Input } from '../components/ui/Input'
+import { NoticeBanner } from '../components/ui/NoticeBanner'
+import type { Notice } from '../components/ui/NoticeBanner'
 import { Surface } from '../components/ui/Surface'
+import { useSettingsMutations, useSettingsQuery } from '../hooks/useSettingsQueries'
+import { useThemeMode } from '../hooks/useThemeMode'
+import { getErrorMessage } from '../utils/errors'
 
 type FormState = {
   apiKey: string
   baseUrl: string
   model: string
 }
-
-type Feedback = {
-  tone: 'error' | 'success'
-  message: string
-} | null
 
 const defaultForm: FormState = {
   baseUrl: '',
@@ -26,27 +24,39 @@ const defaultForm: FormState = {
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { fetchSettings, updateSettings, testAI, loading, error } = useSettingsStore()
+  const { data, error, isLoading } = useSettingsQuery()
+  const { updateSettings, testAI } = useSettingsMutations()
   const { themeMode, setThemeMode } = useThemeMode()
-  const [form, setForm] = useState<FormState>(defaultForm)
+  const [draft, setDraft] = useState<FormState | null>(null)
   const [showKey, setShowKey] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [testing, setTesting] = useState(false)
-  const [feedback, setFeedback] = useState<Feedback>(null)
+  const [feedback, setFeedback] = useState<Notice | null>(null)
+  const initialForm = useMemo(() => {
+    const settings = data?.settings
+    if (!settings) {
+      return defaultForm
+    }
+
+    return {
+      baseUrl: settings.ai_base_url ?? '',
+      apiKey: settings.ai_api_key && !settings.ai_api_key.includes('****') ? settings.ai_api_key : '',
+      model: settings.ai_model ?? '',
+    }
+  }, [data])
+  const form = draft ?? initialForm
 
   useEffect(() => {
-    void fetchSettings()
-      .then((settings) => {
-        setForm({
-          baseUrl: settings.ai_base_url ?? '',
-          apiKey: settings.ai_api_key && !settings.ai_api_key.includes('****') ? settings.ai_api_key : '',
-          model: settings.ai_model ?? 'gpt-4o-mini',
-        })
-      })
-      .catch((fetchError: unknown) => {
-        setFeedback({ tone: 'error', message: getErrorMessage(fetchError, '加载设置失败') })
-      })
-  }, [fetchSettings])
+    if (!feedback || feedback.tone !== 'success') {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setFeedback(null)
+    }, 4000)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [feedback])
 
   const persistSettings = async () => {
     const payload: Record<string, string> = {
@@ -59,11 +69,10 @@ export function SettingsPage() {
       payload.ai_api_key = form.apiKey.trim()
     }
 
-    await updateSettings(payload)
+    await updateSettings.mutateAsync(payload)
   }
 
   const handleSave = async () => {
-    setSaving(true)
     setFeedback(null)
 
     try {
@@ -73,8 +82,6 @@ export function SettingsPage() {
     } catch (saveError: unknown) {
       setFeedback({ tone: 'error', message: getErrorMessage(saveError, '保存设置失败') })
       return false
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -83,143 +90,165 @@ export function SettingsPage() {
     if (!saved) {
       return
     }
-    setTesting(true)
 
-    try {
-      const result = await testAI()
-      setFeedback({ tone: result.ok ? 'success' : 'error', message: result.message })
-    } finally {
-      setTesting(false)
-    }
+    const result = await testAI.mutateAsync()
+    setFeedback({ tone: result.ok ? 'success' : 'error', message: result.message })
   }
 
+  const loadError = error instanceof Error ? error.message : null
+
   return (
-    <div className="scroll-fade h-full overflow-y-auto px-5 py-5 lg:px-7 lg:py-6">
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-[12px] uppercase tracking-[0.24em] text-[var(--text-quaternary)]">Preference Center</div>
-            <h1 className="mt-2 text-[30px] font-semibold tracking-[-0.05em] text-[var(--text-primary)]">AI 与界面偏好</h1>
-            <p className="mt-2 max-w-2xl text-[14px] leading-7 text-[var(--text-tertiary)]">
-              在这里配置 AI 服务连接、默认模型，以及当前设备上的界面显示模式。保存只会更新现有业务配置，不会改变数据结构。
+    <div className="w-full space-y-6">
+      <section className="surface-divider pb-4">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0 space-y-2">
+            <div className="section-label">Settings</div>
+            <h1 className="text-[18px] font-semibold leading-6 text-[var(--color-text)]">设置</h1>
+            <p className="max-w-[760px] text-[13px] leading-5 text-[var(--color-text-secondary)]">
+              在这里管理 AI 连接、界面主题和当前工作区的使用方式。页面会铺满右侧区域，但每个设置块内部仍保持舒适的阅读宽度。
             </p>
           </div>
 
-          <Button leading="←" onClick={() => navigate('/')} variant="secondary">
-            返回首页
+          <Button leading={<Icon className="text-[14px]" name="arrow-left" />} onClick={() => navigate('/')} size="sm" variant="secondary">
+            返回书签
           </Button>
         </div>
+      </section>
 
-        {feedback ? (
-          <Surface className="px-4 py-3" tone="subtle">
-            <p className={`text-[13px] ${feedback.tone === 'error' ? 'text-[var(--danger)]' : 'text-[var(--success)]'}`}>
-              {feedback.message}
+      {feedback ? <NoticeBanner notice={feedback} onClose={() => setFeedback(null)} /> : null}
+
+      {loadError && !feedback ? (
+        <Surface className="px-4 py-3" tone="subtle">
+          <p className="text-[13px] leading-5 text-[var(--color-danger)]">{loadError}</p>
+        </Surface>
+      ) : null}
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.95fr)]">
+        <Surface className="space-y-5 p-4 sm:p-5" tone="panel">
+          <div className="space-y-2">
+            <div className="section-label">AI Connection</div>
+            <h2 className="text-[16px] font-semibold leading-6 text-[var(--color-text)]">模型连接</h2>
+            <p className="max-w-[720px] text-[13px] leading-5 text-[var(--color-text-secondary)]">
+              填写 API 地址、API Key 和模型名称。这里不再自动帮你写默认模型，保持为空时就按你的输入来保存。
             </p>
-          </Surface>
-        ) : null}
+          </div>
 
-        {error && !feedback ? (
-          <Surface className="px-4 py-3" tone="subtle">
-            <p className="text-[13px] text-[var(--danger)]">{error}</p>
-          </Surface>
-        ) : null}
+          <div className="grid max-w-[720px] gap-4">
+            <Input
+              helper="支持官方 OpenAI 接口，也支持兼容 OpenAI 的自定义网关。"
+              label="API 地址"
+              onChange={(event) => setDraft((current) => ({ ...(current ?? initialForm), baseUrl: event.target.value }))}
+              value={form.baseUrl}
+            />
 
-        <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-          <Surface className="space-y-6 p-6 lg:p-7" tone="elevated">
-            <div>
-              <div className="text-[12px] uppercase tracking-[0.22em] text-[var(--text-quaternary)]">AI Connection</div>
-              <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.04em] text-[var(--text-primary)]">服务连接</h2>
-              <p className="mt-2 text-[14px] leading-7 text-[var(--text-tertiary)]">
-                Cubby 会直接使用你在这里填写的 API 参数进行测试和整理操作。未修改的密钥不会重复覆盖。
+            <Input
+              helper="如果后端返回的是脱敏密钥，这里可以留空，不会覆盖原来的值。"
+              label="API Key"
+              onChange={(event) => setDraft((current) => ({ ...(current ?? initialForm), apiKey: event.target.value }))}
+              trailing={
+                <button
+                  aria-label={showKey ? '隐藏密钥' : '显示密钥'}
+                  className="icon-button h-8 w-8"
+                  onClick={() => setShowKey((current) => !current)}
+                  type="button"
+                >
+                  <Icon className="text-[14px]" name={showKey ? 'eye-off' : 'eye'} />
+                </button>
+              }
+              trailingInteractive
+              type={showKey ? 'text' : 'password'}
+              value={form.apiKey}
+            />
+
+            <Input
+              helper="保持为空时不会自动填默认模型，由你自行决定后再保存。"
+              label="模型名称"
+              onChange={(event) => setDraft((current) => ({ ...(current ?? initialForm), model: event.target.value }))}
+              value={form.model}
+            />
+          </div>
+
+          <div className="flex flex-wrap justify-end gap-2 border-t border-[var(--color-border)] pt-4">
+            <Button
+              disabled={isLoading || updateSettings.isPending || testAI.isPending}
+              leading={<Icon className="text-[14px]" name="sparkles" />}
+              onClick={() => void handleTest()}
+              size="sm"
+              variant="secondary"
+            >
+              {testAI.isPending ? '测试中…' : '测试连接'}
+            </Button>
+            <Button
+              disabled={isLoading || updateSettings.isPending}
+              leading={<Icon className="text-[14px]" name="check-circle" />}
+              onClick={() => void handleSave()}
+              size="sm"
+              variant="primary"
+            >
+              {updateSettings.isPending ? '保存中…' : '保存设置'}
+            </Button>
+          </div>
+        </Surface>
+
+        <div className="grid gap-4 xl:grid-rows-[auto_auto]">
+          <Surface className="space-y-4 p-4 sm:p-5" tone="panel">
+            <div className="space-y-2">
+              <div className="section-label">Appearance</div>
+              <h2 className="text-[16px] font-semibold leading-6 text-[var(--color-text)]">主题模式</h2>
+              <p className="max-w-[360px] text-[13px] leading-5 text-[var(--color-text-secondary)]">
+                切换后会立即生效，并保持整站统一。
               </p>
             </div>
 
-            <div className="grid gap-4">
-              <Input
-                helper="支持官方 OpenAI 接口或兼容 OpenAI 的自定义网关。"
-                label="API 地址"
-                onChange={(event) => setForm((current) => ({ ...current, baseUrl: event.target.value }))}
-                placeholder="https://api.openai.com/v1"
-                value={form.baseUrl}
-              />
-
-              <Input
-                helper="如果后端返回的是脱敏密钥，这里留空即可，不会影响保存。"
-                label="API Key"
-                onChange={(event) => setForm((current) => ({ ...current, apiKey: event.target.value }))}
-                placeholder="sk-..."
-                type={showKey ? 'text' : 'password'}
-                value={form.apiKey}
-              />
-
-              <div className="flex justify-end">
-                <Button onClick={() => setShowKey((current) => !current)} size="sm" variant="ghost">
-                  {showKey ? '隐藏密钥' : '显示密钥'}
-                </Button>
-              </div>
-
-              <Input
-                helper="建议填写你计划用于整理与分类的模型名称。"
-                label="模型名称"
-                onChange={(event) => setForm((current) => ({ ...current, model: event.target.value }))}
-                placeholder="gpt-4o-mini"
-                value={form.model}
-              />
-            </div>
-
-            <div className="flex flex-wrap justify-end gap-3">
-              <Button disabled={loading || saving || testing} onClick={() => void handleTest()} variant="secondary">
-                {testing ? '测试中…' : '测试连接'}
-              </Button>
-              <Button disabled={loading || saving} onClick={() => void handleSave()} variant="primary">
-                {saving ? '保存中…' : '保存设置'}
-              </Button>
+            <div className="grid gap-2 max-w-[420px]">
+              <ThemeButton active={themeMode === 'system'} icon="monitor" label="跟随系统" onClick={() => setThemeMode('system')} />
+              <ThemeButton active={themeMode === 'light'} icon="star" label="浅色模式" onClick={() => setThemeMode('light')} />
+              <ThemeButton active={themeMode === 'dark'} icon="moon" label="深色模式" onClick={() => setThemeMode('dark')} />
             </div>
           </Surface>
 
-          <div className="space-y-6">
-            <Surface className="space-y-5 p-6 lg:p-7" tone="panel">
-              <div>
-                <div className="text-[12px] uppercase tracking-[0.22em] text-[var(--text-quaternary)]">Appearance</div>
-                <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.04em] text-[var(--text-primary)]">显示模式</h2>
-                <p className="mt-2 text-[14px] leading-7 text-[var(--text-tertiary)]">
-                  界面主题是本地偏好，不影响业务数据。切换后会立即生效，并保持当前 Liquid Glass 视觉语言。
-                </p>
-              </div>
-
-              <div className="grid gap-3">
-                <ThemeButton active={themeMode === 'system'} label="跟随系统" onClick={() => setThemeMode('system')} />
-                <ThemeButton active={themeMode === 'light'} label="浅色模式" onClick={() => setThemeMode('light')} />
-                <ThemeButton active={themeMode === 'dark'} label="深色模式" onClick={() => setThemeMode('dark')} />
-              </div>
-            </Surface>
-
-            <Surface className="space-y-4 p-6 lg:p-7" tone="subtle">
-              <div className="text-[12px] uppercase tracking-[0.22em] text-[var(--text-quaternary)]">Notes</div>
-              <ul className="space-y-3 text-[13px] leading-6 text-[var(--text-tertiary)]">
-                <li>连接测试会先保存当前表单，再调用后端的 AI 测试接口。</li>
-                <li>如果没有提供密钥，后端会返回明确的业务错误提示，而不是模糊失败。</li>
-                <li>保存不会扩展业务模型，只会更新现有 `settings` 配置。</li>
-              </ul>
-            </Surface>
-          </div>
+          <Surface className="space-y-3 p-4 sm:p-5" tone="subtle">
+            <div className="section-label">Notes</div>
+            <ul className="max-w-[420px] space-y-2 text-[13px] leading-5 text-[var(--color-text-secondary)]">
+              <li>测试连接会先保存当前表单，再调用后端的测试接口。</li>
+              <li>没有填写密钥时，后端会明确告诉你缺了什么。</li>
+              <li>这里不会动你的书签数据，只会更新当前设置。</li>
+            </ul>
+          </Surface>
         </div>
       </div>
     </div>
   )
 }
 
-function ThemeButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+function ThemeButton({
+  active,
+  icon,
+  label,
+  onClick,
+}: {
+  active: boolean
+  icon: 'monitor' | 'moon' | 'star'
+  label: string
+  onClick: () => void
+}) {
   return (
     <button
-      className={`flex items-center justify-between rounded-[22px] px-4 py-4 text-left transition ${
-        active ? 'bg-[rgba(0,113,227,0.18)] text-[var(--text-primary)] shadow-soft' : 'bg-white/7 text-[var(--text-secondary)] hover:bg-white/10'
+      className={`flex items-center justify-between gap-3 rounded-[8px] border px-3 py-3 text-left transition-colors duration-200 ${
+        active
+          ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-text)]'
+          : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-muted)] hover:text-[var(--color-text)]'
       }`}
       onClick={onClick}
       type="button"
     >
-      <span className="text-[14px] font-medium">{label}</span>
-      <span className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-[var(--accent)]' : 'bg-white/20'}`} />
+      <span className="flex items-center gap-3">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-bg-muted)]">
+          <Icon className="text-[14px]" name={icon} />
+        </span>
+        <span className="text-[14px] font-medium">{label}</span>
+      </span>
+      <span className={`h-2.5 w-2.5 rounded-full ${active ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-border-strong)]'}`} />
     </button>
   )
 }

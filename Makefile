@@ -18,4 +18,4 @@ build-backend:
 build: build-frontend build-backend
 
 clean:
-	rm -rf cubby backend/cubby frontend/dist
+	rm -rf cubby backend/cubby frontend/dist backend/cmd/server/static/assets backend/cmd/server/static/index.html

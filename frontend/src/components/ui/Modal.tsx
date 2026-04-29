@@ -1,5 +1,7 @@
-import type { ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useRef } from 'react'
+import type { ReactNode } from 'react'
+import { Icon } from './Icon'
 
 type ModalProps = {
   children: ReactNode
@@ -10,39 +12,67 @@ type ModalProps = {
 }
 
 const widthClasses = {
-  md: 'max-w-xl',
-  lg: 'max-w-2xl',
+  md: 'max-w-[40rem]',
+  lg: 'max-w-[52rem]',
 }
 
 export function Modal({ children, onClose, open, title, width = 'md' }: ModalProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+      }
+    }
+
+    const currentContainer = containerRef.current
+    const firstFocusable = currentContainer?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    )
+    firstFocusable?.focus()
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClose, open])
+
   return (
     <AnimatePresence>
       {open ? (
         <motion.div
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-6 backdrop-blur-xl"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] px-4 py-5 sm:px-6"
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
           onClick={onClose}
-          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
         >
           <motion.div
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            className={`glass-panel glass-panel-elevated w-full ${widthClasses[width]} overflow-hidden rounded-[28px] p-6 shadow-modal`.trim()}
-            exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            initial={{ opacity: 0, y: 24, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`surface-elevated w-full ${widthClasses[width]} overflow-hidden p-4 sm:p-5`.trim()}
+            exit={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 8 }}
             onClick={(event) => event.stopPropagation()}
-            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            ref={containerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
           >
-            <div className="mb-6 flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-[var(--text-primary)]">{title}</h2>
+            <div className="mb-4 flex items-center justify-between gap-4 border-b border-[var(--color-border)] pb-3">
+              <div className="min-w-0">
+                <h2 className="truncate text-[16px] font-semibold text-[var(--color-text)]">{title}</h2>
               </div>
-              <button className="icon-button" onClick={onClose} type="button">
-                <svg fill="none" height="16" viewBox="0 0 24 24" width="16">
-                  <path d="M18 6 6 18" stroke="currentColor" strokeWidth="2" />
-                  <path d="m6 6 12 12" stroke="currentColor" strokeWidth="2" />
-                </svg>
+              <button aria-label="关闭弹窗" className="icon-button shrink-0" onClick={onClose} type="button">
+                <Icon className="text-[15px]" name="close" />
               </button>
             </div>
             {children}
