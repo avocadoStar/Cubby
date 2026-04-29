@@ -3,6 +3,7 @@ package repository
 import (
 	"cubby/internal/model"
 	"database/sql"
+	"sort"
 )
 
 type FolderRepo struct {
@@ -23,7 +24,7 @@ type FolderPosition struct {
 }
 
 func (r *FolderRepo) GetTree() ([]FolderTree, error) {
-	flat, err := r.listAll()
+	flat, err := r.ListAll()
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +138,7 @@ func (r *FolderRepo) Move(id string, parentID *string, sortOrder int) error {
 }
 
 func (r *FolderRepo) GetDescendantIDs(folderID string) ([]string, error) {
-	flat, err := r.listAll()
+	flat, err := r.ListAll()
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +170,7 @@ func (r *FolderRepo) GetDescendantIDs(folderID string) ([]string, error) {
 	return ids, nil
 }
 
-func (r *FolderRepo) listAll() ([]model.Folder, error) {
+func (r *FolderRepo) ListAll() ([]model.Folder, error) {
 	rows, err := r.db.Query(
 		`SELECT id, name, parent_id, sort_order, created_at, updated_at
 		 FROM folders ORDER BY sort_order, name`)
@@ -187,6 +188,71 @@ func (r *FolderRepo) listAll() ([]model.Folder, error) {
 		flat = append(flat, folder)
 	}
 	return flat, nil
+}
+
+func (r *FolderRepo) CreateMany(folders []model.Folder) error {
+	if len(folders) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	sorted := append([]model.Folder(nil), folders...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return folderDepth(sorted[i], sorted) < folderDepth(sorted[j], sorted)
+	})
+
+	for _, folder := range sorted {
+		if _, err := tx.Exec(
+			`INSERT INTO folders (id, name, parent_id, sort_order, created_at, updated_at)
+			 VALUES (?, ?, ?, ?, ?, ?)`,
+			folder.ID, folder.Name, folder.ParentID, folder.SortOrder, folder.CreatedAt, folder.UpdatedAt,
+		); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (r *FolderRepo) DeleteMany(ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	_, err := r.db.Exec(`DELETE FROM folders WHERE id IN (`+joinComma(placeholders)+`)`, args...)
+	return err
+}
+
+func folderDepth(folder model.Folder, all []model.Folder) int {
+	depth := 0
+	current := folder
+	for current.ParentID != nil {
+		found := false
+		for _, candidate := range all {
+			if candidate.ID == *current.ParentID {
+				depth++
+				current = candidate
+				found = true
+				break
+			}
+		}
+		if !found {
+			break
+		}
+	}
+	return depth
 }
 
 func joinComma(items []string) string {

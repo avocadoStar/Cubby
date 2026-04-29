@@ -39,6 +39,12 @@ type MetadataUpdateOptions struct {
 	ForceTitle       bool
 }
 
+type BookmarkAssignment struct {
+	ID        string
+	FolderID  *string
+	SortOrder int
+}
+
 func (r *BookmarkRepo) List(q BookmarkQuery) (*BookmarkListResult, error) {
 	var conditions []string
 	var args []any
@@ -335,6 +341,99 @@ func (r *BookmarkRepo) ListByFolderIDs(folderIDs []string) ([]model.Bookmark, er
 		items = append(items, b)
 	}
 	return items, nil
+}
+
+func (r *BookmarkRepo) ListAll() ([]model.Bookmark, error) {
+	rows, err := r.db.Query(
+		`SELECT id, title, url, description, favicon_url, thumbnail_url,
+		        folder_id, is_favorite, sort_order, metadata_fetched,
+		        created_at, updated_at
+		 FROM bookmarks ORDER BY sort_order, created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []model.Bookmark
+	for rows.Next() {
+		var b model.Bookmark
+		if err := rows.Scan(&b.ID, &b.Title, &b.URL, &b.Description, &b.FaviconURL,
+			&b.ThumbnailURL, &b.FolderID, &b.IsFavorite, &b.SortOrder,
+			&b.MetadataFetched, &b.CreatedAt, &b.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, b)
+	}
+	return items, nil
+}
+
+func (r *BookmarkRepo) ListByExactFolder(folderID *string) ([]model.Bookmark, error) {
+	query := `SELECT id, title, url, description, favicon_url, thumbnail_url,
+		        folder_id, is_favorite, sort_order, metadata_fetched,
+		        created_at, updated_at
+		 FROM bookmarks WHERE `
+	var rows *sql.Rows
+	var err error
+	if folderID == nil {
+		rows, err = r.db.Query(query+`folder_id IS NULL ORDER BY sort_order, created_at DESC`)
+	} else {
+		rows, err = r.db.Query(query+`folder_id = ? ORDER BY sort_order, created_at DESC`, *folderID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []model.Bookmark
+	for rows.Next() {
+		var b model.Bookmark
+		if err := rows.Scan(&b.ID, &b.Title, &b.URL, &b.Description, &b.FaviconURL,
+			&b.ThumbnailURL, &b.FolderID, &b.IsFavorite, &b.SortOrder,
+			&b.MetadataFetched, &b.CreatedAt, &b.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, b)
+	}
+	return items, nil
+}
+
+func (r *BookmarkRepo) UpdateTitle(id, title string) error {
+	_, err := r.db.Exec(
+		`UPDATE bookmarks SET title=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+		title, id,
+	)
+	return err
+}
+
+func (r *BookmarkRepo) RestoreAssignments(assignments []BookmarkAssignment) error {
+	if len(assignments) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, assignment := range assignments {
+		if _, err := tx.Exec(
+			`UPDATE bookmarks SET folder_id=?, sort_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+			assignment.FolderID, assignment.SortOrder, assignment.ID,
+		); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (r *BookmarkRepo) AssignBookmark(id string, folderID *string, sortOrder int) error {
+	_, err := r.db.Exec(
+		`UPDATE bookmarks SET folder_id=?, sort_order=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+		folderID, sortOrder, id,
+	)
+	return err
 }
 
 func (r *BookmarkRepo) ExistsByURL(url string) (bool, error) {

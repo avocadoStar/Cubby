@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Icon } from '../components/ui/Icon'
 import { Input } from '../components/ui/Input'
@@ -23,13 +22,13 @@ const defaultForm: FormState = {
 }
 
 export function SettingsPage() {
-  const navigate = useNavigate()
   const { data, error, isLoading } = useSettingsQuery()
   const { updateSettings, testAI } = useSettingsMutations()
   const { themeMode, setThemeMode } = useThemeMode()
   const [draft, setDraft] = useState<FormState | null>(null)
   const [showKey, setShowKey] = useState(false)
   const [feedback, setFeedback] = useState<Notice | null>(null)
+
   const initialForm = useMemo(() => {
     const settings = data?.settings
     if (!settings) {
@@ -42,6 +41,7 @@ export function SettingsPage() {
       model: settings.ai_model ?? '',
     }
   }, [data])
+
   const form = draft ?? initialForm
 
   useEffect(() => {
@@ -78,16 +78,18 @@ export function SettingsPage() {
     try {
       await persistSettings()
       setFeedback({ tone: 'success', message: '设置已保存。' })
-      return true
     } catch (saveError: unknown) {
       setFeedback({ tone: 'error', message: getErrorMessage(saveError, '保存设置失败') })
-      return false
     }
   }
 
   const handleTest = async () => {
-    const saved = await handleSave()
-    if (!saved) {
+    setFeedback(null)
+
+    try {
+      await persistSettings()
+    } catch (saveError: unknown) {
+      setFeedback({ tone: 'error', message: getErrorMessage(saveError, '测试前保存当前设置失败') })
       return
     }
 
@@ -98,23 +100,7 @@ export function SettingsPage() {
   const loadError = error instanceof Error ? error.message : null
 
   return (
-    <div className="w-full space-y-6">
-      <section className="surface-divider pb-4">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0 space-y-2">
-            <div className="section-label">Settings</div>
-            <h1 className="text-[18px] font-semibold leading-6 text-[var(--color-text)]">设置</h1>
-            <p className="max-w-[760px] text-[13px] leading-5 text-[var(--color-text-secondary)]">
-              在这里管理 AI 连接、界面主题和当前工作区的使用方式。页面会铺满右侧区域，但每个设置块内部仍保持舒适的阅读宽度。
-            </p>
-          </div>
-
-          <Button leading={<Icon className="text-[14px]" name="arrow-left" />} onClick={() => navigate('/')} size="sm" variant="secondary">
-            返回书签
-          </Button>
-        </div>
-      </section>
-
+    <div className="flex min-h-full flex-col gap-4">
       {feedback ? <NoticeBanner notice={feedback} onClose={() => setFeedback(null)} /> : null}
 
       {loadError && !feedback ? (
@@ -123,13 +109,13 @@ export function SettingsPage() {
         </Surface>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.95fr)]">
+      <div className="grid gap-4 xl:flex-1 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.95fr)]">
         <Surface className="space-y-5 p-4 sm:p-5" tone="panel">
           <div className="space-y-2">
             <div className="section-label">AI Connection</div>
             <h2 className="text-[16px] font-semibold leading-6 text-[var(--color-text)]">模型连接</h2>
             <p className="max-w-[720px] text-[13px] leading-5 text-[var(--color-text-secondary)]">
-              填写 API 地址、API Key 和模型名称。这里不再自动帮你写默认模型，保持为空时就按你的输入来保存。
+              填写 API 地址、API Key 和模型名称。这里不会自动帮你填默认模型，保持为空时就按你的输入来保存。
             </p>
           </div>
 
@@ -161,7 +147,7 @@ export function SettingsPage() {
             />
 
             <Input
-              helper="保持为空时不会自动填默认模型，由你自行决定后再保存。"
+              helper="保持为空时不会自动填默认模型，由你自己决定后再保存。"
               label="模型名称"
               onChange={(event) => setDraft((current) => ({ ...(current ?? initialForm), model: event.target.value }))}
               value={form.model}
@@ -200,7 +186,7 @@ export function SettingsPage() {
               </p>
             </div>
 
-            <div className="grid gap-2 max-w-[420px]">
+            <div className="grid max-w-[420px] gap-2">
               <ThemeButton active={themeMode === 'system'} icon="monitor" label="跟随系统" onClick={() => setThemeMode('system')} />
               <ThemeButton active={themeMode === 'light'} icon="star" label="浅色模式" onClick={() => setThemeMode('light')} />
               <ThemeButton active={themeMode === 'dark'} icon="moon" label="深色模式" onClick={() => setThemeMode('dark')} />
@@ -210,7 +196,7 @@ export function SettingsPage() {
           <Surface className="space-y-3 p-4 sm:p-5" tone="subtle">
             <div className="section-label">Notes</div>
             <ul className="max-w-[420px] space-y-2 text-[13px] leading-5 text-[var(--color-text-secondary)]">
-              <li>测试连接会先保存当前表单，再调用后端的测试接口。</li>
+              <li>测试连接会使用当前表单内容，但不会额外提示“设置已保存”。</li>
               <li>没有填写密钥时，后端会明确告诉你缺了什么。</li>
               <li>这里不会动你的书签数据，只会更新当前设置。</li>
             </ul>

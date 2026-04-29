@@ -2,7 +2,9 @@ import { Icon } from './Icon'
 import { Surface } from './Surface'
 
 export type Notice = {
+  actionLabel?: string
   message: string
+  onAction?: () => void
   tone: 'error' | 'success'
 }
 
@@ -32,13 +34,26 @@ export function NoticeBanner({ notice, onClose }: NoticeBannerProps) {
           {notice.message}
         </p>
       </div>
-      <button
-        className="text-left text-[12px] font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text)]"
-        onClick={onClose}
-        type="button"
-      >
-        关闭
-      </button>
+
+      <div className="flex items-center gap-3">
+        {notice.actionLabel && notice.onAction ? (
+          <button
+            className="text-left text-[12px] font-medium text-[var(--color-accent)] transition-opacity hover:opacity-80"
+            onClick={notice.onAction}
+            type="button"
+          >
+            {notice.actionLabel}
+          </button>
+        ) : null}
+
+        <button
+          className="text-left text-[12px] font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text)]"
+          onClick={onClose}
+          type="button"
+        >
+          关闭
+        </button>
+      </div>
     </Surface>
   )
 }

@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type {
-  AISuggestion,
+  AIPlan,
+  AIPlanResponse,
   Bookmark,
   BookmarkListResult,
   BookmarkMutation,
@@ -72,9 +73,40 @@ export const subscribeImportProgress = (
   return source
 }
 
-export const aiOrganize = (folderId?: string, action: 'suggest' | 'apply' = 'suggest') =>
+export const aiPlanOrganize = (folderId?: string, sessionId?: string) =>
   api
-    .post<{ suggestions: AISuggestion[] }>('/ai/organize', { folder_id: folderId || '', action })
+    .post<AIPlanResponse>('/ai/organize', {
+      action: 'plan',
+      folder_id: folderId || '',
+      session_id: sessionId || '',
+    })
+    .then((response) => response.data)
+
+export const aiApplyPlan = (plan: AIPlan, folderId?: string, sessionId?: string) =>
+  api
+    .post<AIPlanResponse>('/ai/organize', {
+      action: 'apply',
+      folder_id: folderId || '',
+      plan,
+      session_id: sessionId || '',
+    })
+    .then((response) => response.data)
+
+export const aiUndoPlan = (undoToken: string, sessionId?: string) =>
+  api
+    .post<{ ok: boolean }>('/ai/organize', {
+      action: 'undo',
+      session_id: sessionId || '',
+      undo_token: undoToken,
+    })
+    .then((response) => response.data)
+
+export const aiCloseSession = (sessionId: string) =>
+  api
+    .post<{ ok: boolean }>('/ai/organize', {
+      action: 'close',
+      session_id: sessionId,
+    })
     .then((response) => response.data)
 
 export const fetchTitle = (url: string) =>

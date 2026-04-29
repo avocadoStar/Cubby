@@ -158,9 +158,8 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
     }
   }
 
-  const settingsActive = location.pathname === '/settings'
   const folderOptions = flatFolders.map((item) => ({
-    label: `${'· '.repeat(item.depth)}${item.folder.name}`,
+    label: `${'路 '.repeat(item.depth)}${item.folder.name}`,
     value: item.folder.id,
   }))
 
@@ -305,22 +304,6 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
             </div>
           </div>
         </div>
-
-        <div className="sidebar-panel p-2">
-          <button
-            className={`sidebar-item ${settingsActive ? 'sidebar-item-active' : ''}`}
-            onClick={() => {
-              navigate('/settings')
-              onNavigate?.()
-            }}
-            type="button"
-          >
-            <span className="sidebar-item-icon">
-              <Icon className="text-[14px]" name="settings" />
-            </span>
-            <span className="min-w-0 flex-1 truncate text-[13px] font-medium">设置</span>
-          </button>
-        </div>
       </div>
 
       {contextMenu ? (
@@ -381,7 +364,7 @@ type FolderNodeProps = {
   onDropBookmark: (bookmarkId: string, folderId: string) => void
   onDropFolderBefore: (draggedFolderId: string, targetFolder: Folder, siblingIds: string[], parentId: string | null) => void
   onDropFolderInto: (draggedFolderId: string, targetFolder: Folder) => void
-  onSelect: (id: string) => void
+  onSelect: (id: string | null) => void
   onToggleExpand: (id: string) => void
   selectedFolderId: string | null
   siblingIds: string[]

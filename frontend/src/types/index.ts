@@ -38,13 +38,36 @@ export interface BookmarkListResult {
   page_size: number
 }
 
-export interface AISuggestion {
+export interface AITitleCleanupChange {
+  bookmark_id: string
+  old_title: string
+  new_title: string
+}
+
+export interface AIPlanItem {
   bookmark_id: string
   title: string
-  suggested_folder: string
-  new_folder_name?: string
   confidence: number
-  reason: string
+}
+
+export interface AIPlanFolder {
+  name: string
+  items: AIPlanItem[]
+}
+
+export interface AIPlan {
+  id: string
+  name: string
+  description: string
+  confidence_summary: string
+  folders: AIPlanFolder[]
+}
+
+export interface AIPlanResponse {
+  cleaned_titles?: AITitleCleanupChange[]
+  plans?: AIPlan[]
+  session_id?: string
+  undo_token?: string
 }
 
 export interface ImportResult {

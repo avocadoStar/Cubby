@@ -5,8 +5,10 @@ import { Icon } from './Icon'
 
 type ModalProps = {
   children: ReactNode
+  contentClassName?: string
   onClose: () => void
   open: boolean
+  panelClassName?: string
   title: string
   width?: 'md' | 'lg'
 }
@@ -16,7 +18,15 @@ const widthClasses = {
   lg: 'max-w-[52rem]',
 }
 
-export function Modal({ children, onClose, open, title, width = 'md' }: ModalProps) {
+export function Modal({
+  children,
+  contentClassName = '',
+  onClose,
+  open,
+  panelClassName = '',
+  title,
+  width = 'md',
+}: ModalProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -57,14 +67,14 @@ export function Modal({ children, onClose, open, title, width = 'md' }: ModalPro
         >
           <motion.div
             animate={{ opacity: 1, y: 0 }}
-            className={`surface-elevated w-full ${widthClasses[width]} overflow-hidden p-4 sm:p-5`.trim()}
+            aria-label={title}
+            aria-modal="true"
+            className={`surface-elevated flex max-h-[calc(100vh-2.5rem)] w-full min-h-0 flex-col ${widthClasses[width]} overflow-hidden p-4 sm:p-5 ${panelClassName}`.trim()}
             exit={{ opacity: 0, y: 8 }}
             initial={{ opacity: 0, y: 8 }}
             onClick={(event) => event.stopPropagation()}
             ref={containerRef}
             role="dialog"
-            aria-modal="true"
-            aria-label={title}
             transition={{ duration: 0.18, ease: 'easeOut' }}
           >
             <div className="mb-4 flex items-center justify-between gap-4 border-b border-[var(--color-border)] pb-3">
@@ -75,7 +85,7 @@ export function Modal({ children, onClose, open, title, width = 'md' }: ModalPro
                 <Icon className="text-[15px]" name="close" />
               </button>
             </div>
-            {children}
+            <div className={`min-h-0 flex-1 ${contentClassName}`.trim()}>{children}</div>
           </motion.div>
         </motion.div>
       ) : null}

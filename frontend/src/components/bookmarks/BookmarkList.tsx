@@ -25,6 +25,8 @@ type BookmarkListProps = {
 }
 
 const endDropZoneHeight = 12
+const listBottomPadding = 16
+const loadingIndicatorHeight = 36
 
 export function BookmarkList({
   bookmarks,
@@ -72,11 +74,15 @@ export function BookmarkList({
     ? '当前已加载内容可拖拽排序，也可拖到左侧文件夹中移动'
     : '当前视图不支持排序'
   const rows = useMemo(() => bookmarks, [bookmarks])
-  const totalHeight = rowVirtualizer.getTotalSize() + (dragEnabled ? endDropZoneHeight : 0)
+  const totalHeight =
+    rowVirtualizer.getTotalSize() +
+    (dragEnabled ? endDropZoneHeight : 0) +
+    (isFetchingNextPage ? loadingIndicatorHeight : 0) +
+    listBottomPadding
 
   return (
-    <div className="page-section overflow-hidden">
-      <div className="max-h-[calc(100vh-18rem)] overflow-x-hidden overflow-y-auto" ref={parentRef}>
+    <div className="page-section flex h-full min-h-[20rem] flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto" ref={parentRef}>
         <div className="relative w-full" style={{ height: `${totalHeight}px` }}>
           {virtualItems.map((virtualRow) => {
             const bookmark = rows[virtualRow.index]
@@ -202,11 +208,18 @@ export function BookmarkList({
               />
             </div>
           ) : null}
-        </div>
 
-        {isFetchingNextPage ? (
-          <div className="px-4 py-3 text-[12px] leading-4 text-[var(--color-text-secondary)]">正在加载更多书签…</div>
-        ) : null}
+          {isFetchingNextPage ? (
+            <div
+              className="absolute left-0 w-full px-4 py-2 text-[12px] leading-4 text-[var(--color-text-secondary)]"
+              style={{
+                transform: `translateY(${rowVirtualizer.getTotalSize() + (dragEnabled ? endDropZoneHeight : 0)}px)`,
+              }}
+            >
+              正在加载更多书签...
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )

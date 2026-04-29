@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useThemeMode } from '../hooks/useThemeMode'
 import { AnimatedBackground } from './AnimatedBackground'
@@ -25,25 +25,12 @@ export function Layout() {
   const routeCopy = pageCopy[location.pathname] ?? pageCopy['/']
   const hideRouteCopy = location.pathname === '/'
 
-  useEffect(() => {
-    const syncScroll = () => {
-      setContentScrolled(window.scrollY > 8)
-    }
-
-    syncScroll()
-    window.addEventListener('scroll', syncScroll, { passive: true })
-
-    return () => {
-      window.removeEventListener('scroll', syncScroll)
-    }
-  }, [])
-
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+    <div className="h-screen overflow-hidden bg-[var(--color-bg)] text-[var(--color-text)]">
       <AnimatedBackground theme={resolvedTheme} />
 
-      <div className="relative z-10 min-h-screen lg:grid lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
-        <div className="hidden border-r border-[var(--color-border)] lg:block">
+      <div className="relative z-10 h-full lg:grid lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
+        <div className="hidden h-full border-r border-[var(--color-border)] lg:block">
           <Sidebar />
         </div>
 
@@ -71,7 +58,7 @@ export function Layout() {
           ) : null}
         </AnimatePresence>
 
-        <div className="min-w-0">
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           <TopBar
             hideRouteCopy={hideRouteCopy}
             onOpenSidebar={() => setSidebarOpen(true)}
@@ -82,8 +69,11 @@ export function Layout() {
             themeMode={themeMode}
           />
 
-          <main className="px-4 pb-8 pt-6 sm:px-6 sm:pt-8 lg:px-8">
-            <div className="w-full">
+          <main
+            className="min-h-0 flex flex-1 flex-col overflow-y-auto px-4 pb-4 pt-6 sm:px-6 sm:pt-8 lg:px-8"
+            onScroll={(event) => setContentScrolled(event.currentTarget.scrollTop > 8)}
+          >
+            <div className="flex min-h-0 flex-1 flex-col">
               <Outlet />
             </div>
           </main>

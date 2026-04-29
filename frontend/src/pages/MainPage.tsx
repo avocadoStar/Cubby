@@ -15,14 +15,15 @@ import { Icon } from '../components/ui/Icon'
 import { NoticeBanner } from '../components/ui/NoticeBanner'
 import type { Notice } from '../components/ui/NoticeBanner'
 import { StatePanel } from '../components/ui/StatePanel'
-import * as api from '../services/api'
+import { Tooltip } from '../components/ui/Tooltip'
 import { useBookmarkMutations, useInfiniteBookmarks } from '../hooks/useBookmarkQueries'
 import { folderQueryKey, useFoldersQuery } from '../hooks/useFolderQueries'
+import * as api from '../services/api'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
-import type { AISuggestion, Bookmark, BookmarkMutation, ImportTaskSnapshot } from '../types'
+import type { AIPlan, AITitleCleanupChange, Bookmark, BookmarkMutation, ImportTaskSnapshot } from '../types'
+import { findFolderName, flattenFolders, getActionableFolderId, isPseudoFolderId } from '../utils/bookmarkFilters'
 import { getErrorMessage } from '../utils/errors'
-import { findFolderName, flattenFolders, getActionableFolderId } from '../utils/bookmarkFilters'
 
 const emptyDraft: BookmarkDraft = {
   title: '',
@@ -33,16 +34,22 @@ const emptyDraft: BookmarkDraft = {
 }
 
 const pseudoLabels: Record<string, { description: string; title: string }> = {
-  recent: { title: '最近添加', description: '按最近加入时间查看，适合快速回看新内容。' },
-  favorites: { title: '我的收藏', description: '集中查看你最常打开、最值得保留的链接。' },
-  unsorted: { title: '未分类', description: '这里是还没有归档的内容，适合继续整理。' },
+  recent: { title: '最近添加', description: '按加入时间查看最近收进来的书签。' },
+  favorites: { title: '收藏', description: '集中查看你标记过收藏的内容。' },
+  unsorted: { title: '未分类', description: '这里是还没有归档的书签。' },
 }
+
+type TitleFetchState = 'failed' | 'fetching' | 'idle' | 'success'
+
+const defaultTitleFetchStatus: { message?: string; state: TitleFetchState } = { state: 'idle' }
+const createTitleStatusMinMs = 700
 
 export function MainPage() {
   const queryClient = useQueryClient()
   const { selectedFolderId } = useFolderStore()
   const { viewMode, setViewMode } = useBookmarkStore()
   const { data: folders = [] } = useFoldersQuery()
+
   const [searchInputValue, setSearchInputValue] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [notice, setNotice] = useState<Notice | null>(null)
@@ -52,9 +59,16 @@ export function MainPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [createDraft, setCreateDraft] = useState<BookmarkDraft>(emptyDraft)
   const [editDraft, setEditDraft] = useState<BookmarkDraft>(emptyDraft)
-  const [titleFetching, setTitleFetching] = useState(false)
-  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([])
+  const [titleFetchStatus, setTitleFetchStatus] = useState<{ message?: string; state: TitleFetchState }>(
+    defaultTitleFetchStatus,
+  )
+  const [aiPlans, setAiPlans] = useState<AIPlan[]>([])
+  const [aiCleanedTitles, setAiCleanedTitles] = useState<AITitleCleanupChange[]>([])
   const [aiLoading, setAiLoading] = useState(false)
+  const [aiLoadingMessage, setAiLoadingMessage] = useState('正在清理标题...')
+  const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null)
+  const [aiSessionId, setAiSessionId] = useState<string | null>(null)
+  const [aiUndoToken, setAiUndoToken] = useState<string | null>(null)
   const [selectionState, setSelectionState] = useState<{ ids: string[]; scopeKey: string }>({
     ids: [],
     scopeKey: 'all::',
@@ -64,6 +78,11 @@ export function MainPage() {
   const [importConnectionError, setImportConnectionError] = useState<string | null>(null)
   const [importTask, setImportTask] = useState<ImportTaskSnapshot | null>(null)
 
+  const actionableFolderId = getActionableFolderId(selectedFolderId)
+  const aiFolderId = selectedFolderId === null ? undefined : actionableFolderId ?? undefined
+  const aiEnabled = selectedFolderId === null || actionableFolderId !== null
+  const aiDisabledReason = '请先进入具体文件夹或全部书签，再使用 AI 整理。'
+
   const selectionScopeKey = useMemo(
     () => `${selectedFolderId ?? 'all'}::${searchQuery.trim()}`,
     [searchQuery, selectedFolderId],
@@ -72,46 +91,63 @@ export function MainPage() {
     () => ({ query: searchQuery.trim(), selection: selectedFolderId }),
     [searchQuery, selectedFolderId],
   )
-  const actionableFolderId = getActionableFolderId(selectedFolderId)
+  const mutations = useBookmarkMutations(queryInput)
   const folderOptions = useMemo(
     () =>
       flattenFolders(folders).map((folder) => ({
-        label: `${'· '.repeat(folder.depth)}${folder.name}`,
+        label: `${'  '.repeat(folder.depth)}${folder.name}`,
         value: folder.id,
       })),
     [folders],
   )
 
   const { data, error, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteBookmarks(queryInput)
-  const mutations = useBookmarkMutations(queryInput)
   const bookmarks = useMemo(() => data?.pages.flatMap((page) => page.items ?? []) ?? [], [data])
   const bookmarkIdSet = useMemo(() => new Set(bookmarks.map((bookmark) => bookmark.id)), [bookmarks])
   const selectedIds = useMemo(() => {
     if (selectionState.scopeKey !== selectionScopeKey) {
       return []
     }
-
     return selectionState.ids.filter((id) => bookmarkIdSet.has(id))
   }, [bookmarkIdSet, selectionScopeKey, selectionState.ids, selectionState.scopeKey])
 
   const total = data?.pages[0]?.total ?? 0
   const hasSelection = selectedIds.length > 0
-  const selectionLabel = selectedFolderId
+  const currentLabel = selectedFolderId
     ? pseudoLabels[selectedFolderId]?.title ?? findFolderName(folders, selectedFolderId) ?? '当前视图'
     : '全部书签'
-  const selectionDescription = selectedFolderId
+  const currentDescription = selectedFolderId
     ? pseudoLabels[selectedFolderId]?.description ?? '当前文件夹中的书签列表。'
     : '整理、搜索和管理你的常用链接。'
-  const headerTitle = selectedFolderId ? selectionLabel : '书签'
-  const headerMeta = selectedFolderId ? `${total} 条结果` : `${total} 条结果 · 全部内容`
-  const canReorder = selectedFolderId !== 'recent' && searchQuery.trim() === ''
+  const canReorder = !searchQuery.trim() && (selectedFolderId === null || !isPseudoFolderId(selectedFolderId))
+  const reorderHint = canReorder
+    ? '当前已加载内容可拖拽排序，也可拖到左侧文件夹中移动。'
+    : '当前视图不支持排序。'
+
   const gridSentinelRef = useRef<HTMLDivElement | null>(null)
+  const createDraftRef = useRef(createDraft)
+  const createModalOpenRef = useRef(createOpen)
   const createTitleRequestRef = useRef<{ promise: Promise<string>; url: string } | null>(null)
   const importEventSourceRef = useRef<EventSource | null>(null)
   const completedImportTaskRef = useRef<string | null>(null)
+  const aiStageTimerRef = useRef<number | null>(null)
+  const aiRequestTokenRef = useRef(0)
+  const aiSessionIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!notice || notice.tone !== 'success') {
+    createDraftRef.current = createDraft
+  }, [createDraft])
+
+  useEffect(() => {
+    createModalOpenRef.current = createOpen
+  }, [createOpen])
+
+  useEffect(() => {
+    aiSessionIdRef.current = aiSessionId
+  }, [aiSessionId])
+
+  useEffect(() => {
+    if (!notice || notice.tone !== 'success' || notice.actionLabel || notice.onAction) {
       return
     }
 
@@ -169,7 +205,7 @@ export function MainPage() {
         setImportConnectionError(null)
 
         if (snapshot.status === 'failed') {
-          setNotice({ tone: 'error', message: snapshot.error || '导入书签失败' })
+          setNotice({ tone: 'error', message: snapshot.error || '导入书签失败。' })
         }
 
         if (snapshot.status === 'completed' || snapshot.status === 'failed') {
@@ -178,7 +214,7 @@ export function MainPage() {
         }
       },
       onError: () => {
-        setImportConnectionError('导入进度连接已中断，重新打开弹窗后会继续同步最新状态。')
+        setImportConnectionError('导入进度连接已中断，重新打开窗口后会继续同步最新状态。')
       },
     })
 
@@ -206,7 +242,15 @@ export function MainPage() {
     setNotice({ tone: 'success', message: '浏览器书签已导入。' })
   }, [importTask, queryClient])
 
-  useEffect(() => () => closeImportEventSource(), [])
+  useEffect(
+    () => () => {
+      closeImportEventSource()
+      if (aiStageTimerRef.current) {
+        window.clearTimeout(aiStageTimerRef.current)
+      }
+    },
+    [],
+  )
 
   const updateSelectionIds = (updater: (current: string[]) => string[]) => {
     setSelectionState((current) => {
@@ -232,10 +276,24 @@ export function MainPage() {
     submitSearch()
   }
 
+  const handleCreateDraftChange = (patch: Partial<BookmarkDraft>) => {
+    if (Object.prototype.hasOwnProperty.call(patch, 'url') && patch.url !== createDraftRef.current.url) {
+      setTitleFetchStatus(defaultTitleFetchStatus)
+    }
+
+    setCreateDraft((current) => ({ ...current, ...patch }))
+  }
+
   const openCreateModal = () => {
     setNotice(null)
+    setTitleFetchStatus(defaultTitleFetchStatus)
     setCreateDraft({ ...emptyDraft, folderId: actionableFolderId || '' })
     setCreateOpen(true)
+  }
+
+  const closeCreateModal = () => {
+    setCreateOpen(false)
+    setTitleFetchStatus(defaultTitleFetchStatus)
   }
 
   const openEditModal = (bookmark: Bookmark) => {
@@ -254,6 +312,7 @@ export function MainPage() {
   const requestCreateTitle = (rawUrl: string) => {
     const normalizedUrl = rawUrl.trim()
     if (!normalizedUrl) {
+      setTitleFetchStatus(defaultTitleFetchStatus)
       return Promise.resolve('')
     }
 
@@ -261,16 +320,50 @@ export function MainPage() {
       return createTitleRequestRef.current.promise
     }
 
-    setTitleFetching(true)
+    const startedAt = Date.now()
+    setTitleFetchStatus({ state: 'fetching', message: '正在抓取标题...' })
+
     const promise = api
       .fetchTitle(normalizedUrl)
-      .then((response) => response.title?.trim() ?? '')
-      .catch(() => '')
+      .then(async (response) => {
+        const fetchedTitle = response.title?.trim() ?? ''
+        const remain = createTitleStatusMinMs - (Date.now() - startedAt)
+        if (remain > 0) {
+          await new Promise((resolve) => window.setTimeout(resolve, remain))
+        }
+
+        const shouldUpdateStatus =
+          createModalOpenRef.current && createDraftRef.current.url.trim() === normalizedUrl
+
+        if (shouldUpdateStatus) {
+          setTitleFetchStatus(
+            fetchedTitle
+              ? { state: 'success', message: '已抓到标题，已自动回填。' }
+              : { state: 'failed', message: '没有抓到标题，你可以继续保存，之后再补。' },
+          )
+        }
+
+        return fetchedTitle
+      })
+      .catch(async (error: unknown) => {
+        const remain = createTitleStatusMinMs - (Date.now() - startedAt)
+        if (remain > 0) {
+          await new Promise((resolve) => window.setTimeout(resolve, remain))
+        }
+
+        if (createModalOpenRef.current && createDraftRef.current.url.trim() === normalizedUrl) {
+          setTitleFetchStatus({
+            state: 'failed',
+            message: getErrorMessage(error, '标题抓取失败，你可以继续保存。'),
+          })
+        }
+
+        return ''
+      })
       .finally(() => {
         if (createTitleRequestRef.current?.url === normalizedUrl) {
           createTitleRequestRef.current = null
         }
-        setTitleFetching(false)
       })
 
     createTitleRequestRef.current = { url: normalizedUrl, promise }
@@ -278,8 +371,8 @@ export function MainPage() {
   }
 
   const handleCreateUrlBlur = async () => {
-    const normalizedUrl = createDraft.url.trim()
-    if (!normalizedUrl || createDraft.title.trim()) {
+    const normalizedUrl = createDraftRef.current.url.trim()
+    if (!normalizedUrl || createDraftRef.current.title.trim()) {
       return
     }
 
@@ -298,13 +391,13 @@ export function MainPage() {
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const normalizedUrl = createDraft.url.trim()
+    const normalizedUrl = createDraftRef.current.url.trim()
     if (!normalizedUrl) {
       setNotice({ tone: 'error', message: '请先填写有效的网址。' })
       return
     }
 
-    let resolvedTitle = createDraft.title.trim()
+    let resolvedTitle = createDraftRef.current.title.trim()
     if (!resolvedTitle) {
       resolvedTitle = await requestCreateTitle(normalizedUrl)
       if (resolvedTitle) {
@@ -320,18 +413,18 @@ export function MainPage() {
     const payload: BookmarkMutation = {
       title: resolvedTitle,
       url: normalizedUrl,
-      description: createDraft.description.trim(),
-      folder_id: createDraft.folderId || null,
-      is_favorite: createDraft.isFavorite,
+      description: createDraftRef.current.description.trim(),
+      folder_id: createDraftRef.current.folderId || null,
+      is_favorite: createDraftRef.current.isFavorite,
     }
 
     try {
       await mutations.createBookmark.mutateAsync(payload)
-      setCreateOpen(false)
+      closeCreateModal()
       setCreateDraft(emptyDraft)
       setNotice({ tone: 'success', message: '书签已添加。' })
     } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '添加书签失败') })
+      setNotice({ tone: 'error', message: getErrorMessage(error, '添加书签失败。') })
     }
   }
 
@@ -355,7 +448,7 @@ export function MainPage() {
       setEditOpen(false)
       setNotice({ tone: 'success', message: '书签已更新。' })
     } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '更新书签失败') })
+      setNotice({ tone: 'error', message: getErrorMessage(error, '更新书签失败。') })
     }
   }
 
@@ -372,35 +465,142 @@ export function MainPage() {
       const task = await mutations.importBookmarks.mutateAsync(file)
       setImportTask(task)
     } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '导入书签失败') })
+      setNotice({ tone: 'error', message: getErrorMessage(error, '导入书签失败。') })
     } finally {
       event.target.value = ''
     }
   }
 
-  const handleAIReview = async () => {
-    setAiOpen(true)
-    setAiLoading(true)
-    setNotice(null)
-
-    try {
-      const response = await api.aiOrganize(actionableFolderId ?? undefined)
-      setAiSuggestions(response.suggestions ?? [])
-    } catch (error: unknown) {
-      setAiSuggestions([])
-      setNotice({ tone: 'error', message: getErrorMessage(error, '获取 AI 整理建议失败') })
-    } finally {
-      setAiLoading(false)
+  const clearAIStageTimer = () => {
+    if (aiStageTimerRef.current) {
+      window.clearTimeout(aiStageTimerRef.current)
+      aiStageTimerRef.current = null
     }
   }
 
-  const handleAIApply = async () => {
+  const closeAISession = async () => {
+    const sessionId = aiSessionIdRef.current
+    aiSessionIdRef.current = null
+    setAiSessionId(null)
+    if (!sessionId) {
+      return
+    }
+
     try {
-      await mutations.applyAISuggestions.mutateAsync(actionableFolderId ?? undefined)
-      setAiOpen(false)
-      setNotice({ tone: 'success', message: 'AI 建议已应用。' })
+      await api.aiCloseSession(sessionId)
+    } catch {
+      // Closing the modal should not be blocked by a session cleanup failure.
+    }
+  }
+
+  const handleAIModalClose = () => {
+    aiRequestTokenRef.current += 1
+    clearAIStageTimer()
+    setAiOpen(false)
+    setAiLoading(false)
+    setAiLoadingMessage('正在清理标题...')
+    setAiErrorMessage(null)
+    setAiPlans([])
+    setAiCleanedTitles([])
+    void closeAISession()
+  }
+
+  const requestAIPlans = async () => {
+    if (!aiEnabled) {
+      return
+    }
+
+    const sessionId = aiSessionIdRef.current ?? window.crypto.randomUUID()
+    if (!aiSessionIdRef.current) {
+      aiSessionIdRef.current = sessionId
+      setAiSessionId(sessionId)
+    }
+
+    const requestToken = ++aiRequestTokenRef.current
+    clearAIStageTimer()
+    setAiOpen(true)
+    setAiLoading(true)
+    setAiErrorMessage(null)
+    setAiPlans([])
+    setAiCleanedTitles([])
+    setAiLoadingMessage('正在清理标题...')
+    setNotice(null)
+
+    aiStageTimerRef.current = window.setTimeout(() => {
+      setAiLoadingMessage('正在生成整理方案...')
+    }, 900)
+
+    try {
+      const response = await api.aiPlanOrganize(aiFolderId, sessionId)
+      if (requestToken !== aiRequestTokenRef.current) {
+        return
+      }
+
+      clearAIStageTimer()
+      setAiSessionId(response.session_id ?? sessionId)
+      setAiCleanedTitles(response.cleaned_titles ?? [])
+      setAiPlans(response.plans ?? [])
+      setAiErrorMessage(null)
     } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '应用 AI 建议失败') })
+      if (requestToken !== aiRequestTokenRef.current) {
+        return
+      }
+
+      clearAIStageTimer()
+      setAiPlans([])
+      setAiCleanedTitles([])
+      setAiErrorMessage(getErrorMessage(error, 'AI 整理暂时失败，请稍后再试。'))
+    } finally {
+      if (requestToken === aiRequestTokenRef.current) {
+        setAiLoading(false)
+        setAiLoadingMessage('正在清理标题...')
+      }
+    }
+  }
+
+  const handleAIReview = async () => {
+    await requestAIPlans()
+  }
+
+  const handleAIApply = async (plan: AIPlan) => {
+    setAiLoading(true)
+    setAiLoadingMessage('正在应用整理方案...')
+    setAiErrorMessage(null)
+
+    try {
+      const response = await api.aiApplyPlan(plan, aiFolderId, aiSessionIdRef.current ?? undefined)
+      setAiUndoToken(response.undo_token ?? null)
+      await closeAISession()
+      setAiOpen(false)
+      await queryClient.invalidateQueries({ queryKey: ['bookmarks'] })
+      await queryClient.invalidateQueries({ queryKey: folderQueryKey })
+      setNotice({
+        tone: 'success',
+        message: 'AI 整理方案已应用。',
+        actionLabel: response.undo_token ? '撤销' : undefined,
+        onAction: response.undo_token ? () => void handleAIUndo(response.undo_token) : undefined,
+      })
+    } catch (error: unknown) {
+      setAiErrorMessage(getErrorMessage(error, '应用 AI 整理方案失败。'))
+    } finally {
+      setAiLoading(false)
+      setAiLoadingMessage('正在清理标题...')
+    }
+  }
+
+  const handleAIUndo = async (token = aiUndoToken ?? '') => {
+    if (!token) {
+      return
+    }
+
+    try {
+      await api.aiUndoPlan(token, aiSessionIdRef.current ?? undefined)
+      setAiUndoToken(null)
+      await queryClient.invalidateQueries({ queryKey: ['bookmarks'] })
+      await queryClient.invalidateQueries({ queryKey: folderQueryKey })
+      setNotice({ tone: 'success', message: '已恢复到整理前的文件夹结构。' })
+    } catch (error: unknown) {
+      setNotice({ tone: 'error', message: getErrorMessage(error, '撤销 AI 整理失败。') })
     }
   }
 
@@ -408,7 +608,7 @@ export function MainPage() {
     try {
       await mutations.toggleFavorite.mutateAsync(bookmarkId)
     } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '更新收藏状态失败') })
+      setNotice({ tone: 'error', message: getErrorMessage(error, '更新收藏状态失败。') })
     }
   }
 
@@ -432,7 +632,7 @@ export function MainPage() {
         message: ids.length === 1 ? '书签已删除。' : `已删除 ${ids.length} 条书签。`,
       })
     } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '删除书签失败') })
+      setNotice({ tone: 'error', message: getErrorMessage(error, '删除书签失败。') })
     }
   }
 
@@ -458,7 +658,7 @@ export function MainPage() {
       await mutations.reorderBookmarks.mutateAsync(ids)
       setNotice({ tone: 'success', message: '书签顺序已更新。' })
     } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '更新顺序失败') })
+      setNotice({ tone: 'error', message: getErrorMessage(error, '更新顺序失败。') })
     }
   }
 
@@ -493,7 +693,7 @@ export function MainPage() {
       setSelectionState({ ids: [], scopeKey: selectionScopeKey })
       setMoveTarget('')
     } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '批量移动失败') })
+      setNotice({ tone: 'error', message: getErrorMessage(error, '移动书签失败。') })
     }
   }
 
@@ -510,36 +710,23 @@ export function MainPage() {
       })
       setSelectionState({ ids: [], scopeKey: selectionScopeKey })
     } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '批量更新收藏失败') })
+      setNotice({ tone: 'error', message: getErrorMessage(error, '更新收藏状态失败。') })
     }
   }
 
   const contentError = error instanceof Error ? error.message : null
 
   return (
-    <div className="space-y-4">
-      <section className="page-section p-3">
-        {hasSelection ? (
-          <BatchActionBar
-            folderOptions={folderOptions}
-            moveTarget={moveTarget}
-            onClear={() => setSelectionState({ ids: [], scopeKey: selectionScopeKey })}
-            onDelete={() => setPendingDeleteIds(selectedIds)}
-            onMoveTargetChange={setMoveTarget}
-            onMoveToFolder={() => void handleBatchMove()}
-            onSetFavorite={(value) => void handleBatchFavorite(value)}
-            selectedCount={selectedIds.length}
-          />
-        ) : (
+    <div className="flex h-full min-h-0 flex-col">
+      <section className="sticky top-0 z-10 mb-4 bg-[var(--color-bg)] pb-1">
+        <div className="page-section p-3 shadow-[var(--shadow-subtle)]">
           <div className="space-y-3">
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-[18px] font-semibold leading-6 text-[var(--color-text)]">{headerTitle}</h1>
-                <span className="text-[12px] leading-4 text-[var(--color-text-secondary)]">{headerMeta}</span>
+                <h1 className="text-[18px] font-semibold leading-6 text-[var(--color-text)]">{currentLabel}</h1>
+                <span className="text-[12px] leading-4 text-[var(--color-text-secondary)]">{total} 条结果</span>
               </div>
-              <p className="max-w-[720px] text-[13px] leading-5 text-[var(--color-text-secondary)]">
-                {selectionDescription}
-              </p>
+              <p className="max-w-[720px] text-[13px] leading-5 text-[var(--color-text-secondary)]">{currentDescription}</p>
             </div>
 
             <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
@@ -594,14 +781,24 @@ export function MainPage() {
                 >
                   导入
                 </Button>
-                <Button
-                  leading={<Icon className="text-[14px]" name="sparkles" />}
-                  onClick={() => void handleAIReview()}
-                  size="sm"
-                  variant="secondary"
-                >
-                  AI 整理
-                </Button>
+                {aiEnabled ? (
+                  <Button
+                    leading={<Icon className="text-[14px]" name="sparkles" />}
+                    onClick={() => void handleAIReview()}
+                    size="sm"
+                    variant="secondary"
+                  >
+                    AI 整理
+                  </Button>
+                ) : (
+                  <Tooltip label={aiDisabledReason}>
+                    <span className="inline-flex">
+                      <Button disabled leading={<Icon className="text-[14px]" name="sparkles" />} size="sm" variant="secondary">
+                        AI 整理
+                      </Button>
+                    </span>
+                  </Tooltip>
+                )}
                 <Button
                   leading={<Icon className="text-[14px]" name="plus" />}
                   onClick={openCreateModal}
@@ -613,26 +810,37 @@ export function MainPage() {
               </div>
             </div>
 
-            <div className="text-[12px] leading-4 text-[var(--color-text-secondary)]">
-              {bookmarks.length} 条已加载 · {viewMode === 'list' ? '列表视图' : '卡片视图'}
-              {!canReorder ? ' · 当前视图不支持排序' : null}
+            <div className="min-h-[56px] rounded-[8px] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-3 py-2">
+              {hasSelection ? (
+                <BatchActionBar
+                  folderOptions={folderOptions}
+                  moveTarget={moveTarget}
+                  onClear={() => setSelectionState({ ids: [], scopeKey: selectionScopeKey })}
+                  onDelete={() => setPendingDeleteIds(selectedIds)}
+                  onMoveTargetChange={setMoveTarget}
+                  onMoveToFolder={() => void handleBatchMove()}
+                  onSetFavorite={(value) => void handleBatchFavorite(value)}
+                  selectedCount={selectedIds.length}
+                />
+              ) : (
+                <div className="flex h-full flex-wrap items-center gap-x-3 gap-y-2 text-[12px] leading-4 text-[var(--color-text-secondary)]">
+                  <span>{bookmarks.length} 条已加载</span>
+                  <span>{viewMode === 'list' ? '列表视图' : '卡片视图'}</span>
+                  <span>{reorderHint}</span>
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
       </section>
 
-      {notice ? <NoticeBanner notice={notice} onClose={() => setNotice(null)} /> : null}
+      {notice ? <div className="mb-4 shrink-0"><NoticeBanner notice={notice} onClose={() => setNotice(null)} /></div> : null}
 
-      <section>
+      <section className="min-h-0 flex-1 pb-4">
         {contentError ? (
           <StatePanel
             action={
-              <Button
-                leading={<Icon className="text-[14px]" name="sparkles" />}
-                onClick={() => window.location.reload()}
-                size="sm"
-                variant="primary"
-              >
+              <Button onClick={() => window.location.reload()} size="sm" variant="primary">
                 重新加载
               </Button>
             }
@@ -684,7 +892,7 @@ export function MainPage() {
             />
             <div ref={gridSentinelRef} />
             {isFetchingNextPage ? (
-              <div className="text-[12px] leading-4 text-[var(--color-text-secondary)]">正在加载更多书签…</div>
+              <div className="pt-3 text-[12px] leading-4 text-[var(--color-text-secondary)]">正在加载更多书签...</div>
             ) : null}
           </>
         )}
@@ -693,13 +901,14 @@ export function MainPage() {
       <CreateBookmarkModal
         draft={createDraft}
         folders={folders}
-        onChange={(patch) => setCreateDraft((current) => ({ ...current, ...patch }))}
-        onClose={() => setCreateOpen(false)}
+        onChange={handleCreateDraftChange}
+        onClose={closeCreateModal}
         onSubmit={handleCreate}
         onUrlBlur={() => void handleCreateUrlBlur()}
         open={createOpen}
         submitting={mutations.createBookmark.isPending}
-        titleFetching={titleFetching}
+        titleFetchMessage={titleFetchStatus.message}
+        titleFetchState={titleFetchStatus.state}
       />
 
       <EditBookmarkModal
@@ -714,12 +923,16 @@ export function MainPage() {
 
       <AIModal
         actionableFolderId={actionableFolderId}
-        aiApplying={mutations.applyAISuggestions.isPending}
-        aiLoading={aiLoading}
-        onApply={() => void handleAIApply()}
-        onClose={() => setAiOpen(false)}
+        cleanedTitles={aiCleanedTitles}
+        errorMessage={aiErrorMessage}
+        key={`ai:${aiOpen ? 'open' : 'closed'}:${aiLoading ? 'loading' : 'idle'}:${aiPlans.map((plan) => plan.id).join('|')}:${aiErrorMessage ?? ''}`}
+        loading={aiLoading}
+        loadingMessage={aiLoadingMessage}
+        onApply={(plan) => void handleAIApply(plan)}
+        onClose={handleAIModalClose}
+        onRetry={() => void requestAIPlans()}
         open={aiOpen}
-        suggestions={aiSuggestions}
+        plans={aiPlans}
       />
 
       <ImportModal
@@ -754,7 +967,7 @@ function LoadingState({ viewMode }: { viewMode: 'grid' | 'list' }) {
       <div className="page-section overflow-hidden">
         {Array.from({ length: 6 }).map((_, index) => (
           <div
-            className={`flex items-center gap-3 px-4 py-3 animate-pulse ${
+            className={`animate-pulse flex items-center gap-3 px-4 py-3 ${
               index < 5 ? 'border-b border-[var(--color-border)]' : ''
             }`}
             key={index}
@@ -774,7 +987,7 @@ function LoadingState({ viewMode }: { viewMode: 'grid' | 'list' }) {
   return (
     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
-        <div className="page-section space-y-4 p-4 animate-pulse" key={index}>
+        <div className="page-section animate-pulse space-y-4 p-4" key={index}>
           <div className="h-10 w-10 rounded-[8px] bg-[var(--color-bg-muted)]" />
           <div className="space-y-2">
             <div className="h-4 w-2/3 rounded bg-[var(--color-bg-muted)]" />

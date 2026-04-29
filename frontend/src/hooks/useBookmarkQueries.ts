@@ -81,9 +81,5 @@ export function useBookmarkMutations(input: BookmarkQueryInput) {
     importBookmarks: useMutation({
       mutationFn: (file: File) => api.startImportBookmarks(file),
     }),
-    applyAISuggestions: useMutation({
-      mutationFn: (folderId?: string) => api.aiOrganize(folderId, 'apply'),
-      onSuccess: invalidateBookmarks,
-    }),
   }
 }
