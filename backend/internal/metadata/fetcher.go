@@ -38,12 +38,17 @@ var (
 )
 
 func FetchPageMetadata(rawURL string) (*Metadata, error) {
-	headContent, err := loadHead(rawURL)
+	normalizedURL, err := NormalizeURL(rawURL)
 	if err != nil {
 		return nil, err
 	}
 
-	return parseMetadata(headContent, rawURL), nil
+	headContent, err := loadHead(normalizedURL)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseMetadata(headContent, normalizedURL), nil
 }
 
 func FetchTitle(rawURL string) (string, error) {
@@ -239,12 +244,14 @@ func resolveURL(base, ref string) string {
 }
 
 func normalizeSiteURL(rawURL string) (string, error) {
-	parsedURL, err := url.Parse(rawURL)
+	normalizedURL, err := NormalizeURL(rawURL)
 	if err != nil {
 		return "", err
 	}
-	if parsedURL.Scheme == "" || parsedURL.Host == "" {
-		return "", fmt.Errorf("invalid url %q", rawURL)
+
+	parsedURL, err := url.Parse(normalizedURL)
+	if err != nil {
+		return "", err
 	}
 
 	return fmt.Sprintf("%s://%s", parsedURL.Scheme, parsedURL.Hostname()), nil
@@ -291,7 +298,6 @@ func publicFaviconPath(fileName string) string {
 
 func applyRequestHeaders(req *http.Request) {
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml")
-	req.Header.Set("Accept-Encoding", "gzip, deflate")
 	req.Header.Set("DNT", "1")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
 	req.Header.Set("User-Agent", DefaultUserAgent)

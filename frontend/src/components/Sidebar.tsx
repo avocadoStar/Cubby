@@ -165,7 +165,7 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
 
   return (
     <aside className={`sidebar-shell ${mobile ? 'surface-elevated border-r border-[var(--color-border)]' : ''}`}>
-      <div className="flex h-full flex-col gap-4 px-3 py-4">
+      <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden px-3 py-4">
         <div className="flex items-center gap-3 px-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-accent)]">
             <LogoMark className="h-5 w-5" compact />
@@ -192,6 +192,7 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
                 return (
                   <button
                     className={`sidebar-item ${active ? 'sidebar-item-active' : ''}`}
+                    data-bookmark-drop-target={allowBookmarkDrop ? 'unsorted' : undefined}
                     key={item.label}
                     onClick={() => handleSelect(item.id)}
                     onDragOver={(event) => {
@@ -397,6 +398,8 @@ function FolderNode({
 
       <div
         className={`sidebar-tree-row ${isActive ? 'sidebar-tree-row-active' : isInActivePath ? 'sidebar-tree-row-path' : ''}`}
+        data-bookmark-drop-target="folder"
+        data-folder-id={folder.id}
         draggable
         onContextMenu={(event) => {
           event.preventDefault()
@@ -514,6 +517,7 @@ function RootDropZone({
   return (
     <div
       className="sidebar-root-drop-zone"
+      data-bookmark-drop-target="unsorted"
       onDragOver={(event) => {
         if (
           event.dataTransfer.types.includes('application/x-cubby-folder') ||

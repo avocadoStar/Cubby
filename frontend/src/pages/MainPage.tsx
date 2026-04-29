@@ -12,7 +12,7 @@ import type { BookmarkDraft } from '../components/bookmarks/types'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Icon } from '../components/ui/Icon'
-import { NoticeBanner } from '../components/ui/NoticeBanner'
+import { NoticeBanner, NoticeToast } from '../components/ui/NoticeBanner'
 import type { Notice } from '../components/ui/NoticeBanner'
 import { StatePanel } from '../components/ui/StatePanel'
 import { Tooltip } from '../components/ui/Tooltip'
@@ -24,6 +24,7 @@ import { useFolderStore } from '../stores/folderStore'
 import type { AIPlan, AITitleCleanupChange, Bookmark, BookmarkMutation, ImportTaskSnapshot } from '../types'
 import { findFolderName, flattenFolders, getActionableFolderId, isPseudoFolderId } from '../utils/bookmarkFilters'
 import { getErrorMessage } from '../utils/errors'
+import { normalizeBookmarkUrl } from '../utils/url'
 
 const emptyDraft: BookmarkDraft = {
   title: '',
@@ -43,6 +44,7 @@ type TitleFetchState = 'failed' | 'fetching' | 'idle' | 'success'
 
 const defaultTitleFetchStatus: { message?: string; state: TitleFetchState } = { state: 'idle' }
 const createTitleStatusMinMs = 700
+const createMetadataPreviewDebounceMs = 450
 
 export function MainPage() {
   const queryClient = useQueryClient()
@@ -53,6 +55,7 @@ export function MainPage() {
   const [searchInputValue, setSearchInputValue] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [notice, setNotice] = useState<Notice | null>(null)
+  const [reorderToast, setReorderToast] = useState<Notice | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
@@ -128,6 +131,12 @@ export function MainPage() {
   const createDraftRef = useRef(createDraft)
   const createModalOpenRef = useRef(createOpen)
   const createTitleRequestRef = useRef<{ promise: Promise<string>; url: string } | null>(null)
+  const createDescriptionModifiedRef = useRef(false)
+  const createPreviewAbortRef = useRef<AbortController | null>(null)
+  const createPreviewRequestIdRef = useRef(0)
+  const createPreviewTimerRef = useRef<number | null>(null)
+  const createTitleModifiedRef = useRef(false)
+  const createPreviewUrlRef = useRef('')
   const importEventSourceRef = useRef<EventSource | null>(null)
   const completedImportTaskRef = useRef<string | null>(null)
   const aiStageTimerRef = useRef<number | null>(null)
@@ -161,6 +170,20 @@ export function MainPage() {
   }, [notice])
 
   useEffect(() => {
+    if (!reorderToast) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setReorderToast(null)
+    }, 4000)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [reorderToast])
+
+  useEffect(() => {
     if (viewMode !== 'grid' || !hasNextPage || isFetchingNextPage) {
       return
     }
@@ -186,6 +209,16 @@ export function MainPage() {
   const closeImportEventSource = () => {
     importEventSourceRef.current?.close()
     importEventSourceRef.current = null
+  }
+
+  const cancelCreateMetadataPreview = () => {
+    if (createPreviewTimerRef.current) {
+      window.clearTimeout(createPreviewTimerRef.current)
+      createPreviewTimerRef.current = null
+    }
+
+    createPreviewAbortRef.current?.abort()
+    createPreviewAbortRef.current = null
   }
 
   useEffect(() => {
@@ -244,6 +277,7 @@ export function MainPage() {
 
   useEffect(
     () => () => {
+      cancelCreateMetadataPreview()
       closeImportEventSource()
       if (aiStageTimerRef.current) {
         window.clearTimeout(aiStageTimerRef.current)
@@ -251,6 +285,128 @@ export function MainPage() {
     },
     [],
   )
+
+  useEffect(() => {
+    if (!createOpen) {
+      cancelCreateMetadataPreview()
+      createPreviewUrlRef.current = ''
+      return
+    }
+
+    const rawUrl = createDraft.url.trim()
+    if (!rawUrl) {
+      cancelCreateMetadataPreview()
+      createPreviewUrlRef.current = ''
+      return
+    }
+
+    const normalized = normalizeBookmarkUrl(rawUrl)
+    if ('error' in normalized) {
+      cancelCreateMetadataPreview()
+      createPreviewUrlRef.current = ''
+      createPreviewTimerRef.current = window.setTimeout(() => {
+        if (createModalOpenRef.current && createDraftRef.current.url.trim() === rawUrl) {
+          setTitleFetchStatus({ state: 'failed', message: normalized.error })
+        }
+      }, createMetadataPreviewDebounceMs)
+      return
+    }
+
+    const normalizedUrl = normalized.normalizedUrl
+    if (createPreviewUrlRef.current === normalizedUrl) {
+      return
+    }
+
+    cancelCreateMetadataPreview()
+    setTitleFetchStatus({ state: 'fetching', message: 'Fetching website metadata...' })
+
+    createPreviewTimerRef.current = window.setTimeout(() => {
+      const controller = new AbortController()
+      const requestId = createPreviewRequestIdRef.current + 1
+      createPreviewAbortRef.current = controller
+      createPreviewRequestIdRef.current = requestId
+
+      const startedAt = Date.now()
+
+      void api
+        .fetchMetadataPreview(normalizedUrl, controller.signal)
+        .then(async (response) => {
+          const remain = createTitleStatusMinMs - (Date.now() - startedAt)
+          if (remain > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, remain))
+          }
+
+          if (
+            controller.signal.aborted ||
+            createPreviewRequestIdRef.current !== requestId ||
+            !createModalOpenRef.current
+          ) {
+            return
+          }
+
+          const currentUrl = normalizeBookmarkUrl(createDraftRef.current.url)
+          if ('error' in currentUrl || currentUrl.normalizedUrl !== normalizedUrl) {
+            return
+          }
+
+          createPreviewUrlRef.current = normalizedUrl
+
+          setCreateDraft((current) => {
+            const patch: Partial<BookmarkDraft> = {}
+            if (response.url && response.url !== current.url.trim()) {
+              patch.url = response.url
+            }
+            if (!createTitleModifiedRef.current) {
+              patch.title = response.title?.trim() ?? ''
+            }
+            if (!createDescriptionModifiedRef.current) {
+              patch.description = response.description?.trim() ?? ''
+            }
+
+            return Object.keys(patch).length > 0 ? { ...current, ...patch } : current
+          })
+
+          const hasMetadata = Boolean(response.title?.trim() || response.description?.trim())
+          setTitleFetchStatus(
+            hasMetadata
+              ? { state: 'success', message: 'Website metadata filled in automatically.' }
+              : { state: 'failed', message: 'No title or description was found. You can still save it.' },
+          )
+        })
+        .catch(async (error: unknown) => {
+          const remain = createTitleStatusMinMs - (Date.now() - startedAt)
+          if (remain > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, remain))
+          }
+
+          if (
+            controller.signal.aborted ||
+            createPreviewRequestIdRef.current !== requestId ||
+            !createModalOpenRef.current
+          ) {
+            return
+          }
+
+          createPreviewUrlRef.current = ''
+          setTitleFetchStatus({
+            state: 'failed',
+            message: getErrorMessage(error, 'Fetching website metadata failed. You can still save it.'),
+          })
+        })
+        .finally(() => {
+          if (createPreviewAbortRef.current === controller) {
+            createPreviewAbortRef.current = null
+          }
+        })
+    }, createMetadataPreviewDebounceMs)
+
+    return () => {
+      if (createPreviewTimerRef.current) {
+        window.clearTimeout(createPreviewTimerRef.current)
+        createPreviewTimerRef.current = null
+      }
+    }
+  }, [createDraft.url, createOpen])
 
   const updateSelectionIds = (updater: (current: string[]) => string[]) => {
     setSelectionState((current) => {
@@ -278,7 +434,14 @@ export function MainPage() {
 
   const handleCreateDraftChange = (patch: Partial<BookmarkDraft>) => {
     if (Object.prototype.hasOwnProperty.call(patch, 'url') && patch.url !== createDraftRef.current.url) {
+      createPreviewUrlRef.current = ''
       setTitleFetchStatus(defaultTitleFetchStatus)
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'title') && patch.title !== createDraftRef.current.title) {
+      createTitleModifiedRef.current = true
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'description') && patch.description !== createDraftRef.current.description) {
+      createDescriptionModifiedRef.current = true
     }
 
     setCreateDraft((current) => ({ ...current, ...patch }))
@@ -286,12 +449,18 @@ export function MainPage() {
 
   const openCreateModal = () => {
     setNotice(null)
+    cancelCreateMetadataPreview()
+    createDescriptionModifiedRef.current = false
+    createPreviewUrlRef.current = ''
+    createTitleModifiedRef.current = false
     setTitleFetchStatus(defaultTitleFetchStatus)
     setCreateDraft({ ...emptyDraft, folderId: actionableFolderId || '' })
     setCreateOpen(true)
   }
 
   const closeCreateModal = () => {
+    cancelCreateMetadataPreview()
+    createPreviewUrlRef.current = ''
     setCreateOpen(false)
     setTitleFetchStatus(defaultTitleFetchStatus)
   }
@@ -332,8 +501,9 @@ export function MainPage() {
           await new Promise((resolve) => window.setTimeout(resolve, remain))
         }
 
+        const currentUrl = normalizeBookmarkUrl(createDraftRef.current.url)
         const shouldUpdateStatus =
-          createModalOpenRef.current && createDraftRef.current.url.trim() === normalizedUrl
+          createModalOpenRef.current && !('error' in currentUrl) && currentUrl.normalizedUrl === normalizedUrl
 
         if (shouldUpdateStatus) {
           setTitleFetchStatus(
@@ -351,7 +521,8 @@ export function MainPage() {
           await new Promise((resolve) => window.setTimeout(resolve, remain))
         }
 
-        if (createModalOpenRef.current && createDraftRef.current.url.trim() === normalizedUrl) {
+        const currentUrl = normalizeBookmarkUrl(createDraftRef.current.url)
+        if (createModalOpenRef.current && !('error' in currentUrl) && currentUrl.normalizedUrl === normalizedUrl) {
           setTitleFetchStatus({
             state: 'failed',
             message: getErrorMessage(error, '标题抓取失败，你可以继续保存。'),
@@ -371,8 +542,24 @@ export function MainPage() {
   }
 
   const handleCreateUrlBlur = async () => {
-    const normalizedUrl = createDraftRef.current.url.trim()
-    if (!normalizedUrl || createDraftRef.current.title.trim()) {
+    const rawUrl = createDraftRef.current.url
+    if (!rawUrl.trim()) {
+      setTitleFetchStatus(defaultTitleFetchStatus)
+      return
+    }
+
+    const normalized = normalizeBookmarkUrl(rawUrl)
+    if ('error' in normalized) {
+      setTitleFetchStatus({ state: 'failed', message: normalized.error })
+      return
+    }
+
+    const normalizedUrl = normalized.normalizedUrl
+    if (normalizedUrl !== rawUrl.trim()) {
+      setCreateDraft((current) => (current.url.trim() === rawUrl.trim() ? { ...current, url: normalizedUrl } : current))
+    }
+
+    if (createDraftRef.current.title.trim()) {
       return
     }
 
@@ -382,36 +569,37 @@ export function MainPage() {
     }
 
     setCreateDraft((current) => {
-      if (current.title.trim() || current.url.trim() !== normalizedUrl) {
+      const currentUrl = normalizeBookmarkUrl(current.url)
+      if (current.title.trim() || ('error' in currentUrl ? current.url.trim() : currentUrl.normalizedUrl) !== normalizedUrl) {
         return current
       }
-      return { ...current, title: fetchedTitle }
+      return { ...current, title: fetchedTitle, url: normalizedUrl }
     })
   }
+  void handleCreateUrlBlur
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const normalizedUrl = createDraftRef.current.url.trim()
-    if (!normalizedUrl) {
+    const rawUrl = createDraftRef.current.url.trim()
+    if (!rawUrl) {
       setNotice({ tone: 'error', message: '请先填写有效的网址。' })
       return
     }
 
-    let resolvedTitle = createDraftRef.current.title.trim()
-    if (!resolvedTitle) {
-      resolvedTitle = await requestCreateTitle(normalizedUrl)
-      if (resolvedTitle) {
-        setCreateDraft((current) => {
-          if (current.title.trim() || current.url.trim() !== normalizedUrl) {
-            return current
-          }
-          return { ...current, title: resolvedTitle }
-        })
-      }
+    const normalized = normalizeBookmarkUrl(rawUrl)
+    if ('error' in normalized) {
+      setTitleFetchStatus({ state: 'failed', message: normalized.error })
+      setNotice({ tone: 'error', message: normalized.error })
+      return
+    }
+
+    const normalizedUrl = normalized.normalizedUrl
+    if (normalizedUrl !== rawUrl) {
+      setCreateDraft((current) => (current.url.trim() === rawUrl ? { ...current, url: normalizedUrl } : current))
     }
 
     const payload: BookmarkMutation = {
-      title: resolvedTitle,
+      title: createDraftRef.current.title.trim(),
       url: normalizedUrl,
       description: createDraftRef.current.description.trim(),
       folder_id: createDraftRef.current.folderId || null,
@@ -656,9 +844,21 @@ export function MainPage() {
 
     try {
       await mutations.reorderBookmarks.mutateAsync(ids)
-      setNotice({ tone: 'success', message: '书签顺序已更新。' })
+      setReorderToast({ tone: 'success', message: '书签顺序已更新。' })
     } catch (error: unknown) {
       setNotice({ tone: 'error', message: getErrorMessage(error, '更新顺序失败。') })
+    }
+  }
+
+  const handleMoveBookmarkToFolder = async (bookmarkId: string, folderId: string | null) => {
+    try {
+      await mutations.moveBookmark.mutateAsync({ id: bookmarkId, folderId })
+      setNotice({
+        tone: 'success',
+        message: folderId ? '书签已移动到目标文件夹。' : '书签已移动到未分类。',
+      })
+    } catch (error: unknown) {
+      setNotice({ tone: 'error', message: getErrorMessage(error, '移动书签失败。') })
     }
   }
 
@@ -718,6 +918,8 @@ export function MainPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {reorderToast ? <NoticeToast notice={reorderToast} onClose={() => setReorderToast(null)} /> : null}
+
       <section className="sticky top-0 z-10 mb-4 bg-[var(--color-bg)] pb-1">
         <div className="page-section p-3 shadow-[var(--shadow-subtle)]">
           <div className="space-y-3">
@@ -875,6 +1077,7 @@ export function MainPage() {
             onEdit={openEditModal}
             onFavorite={(bookmarkId) => void handleFavoriteToggle(bookmarkId)}
             onFetchNextPage={() => void fetchNextPage()}
+            onMoveToFolder={(bookmarkId, folderId) => void handleMoveBookmarkToFolder(bookmarkId, folderId)}
             onReorder={(activeId, overId, position) => void handleReorder(activeId, overId, position)}
             onToggleSelect={toggleSelection}
             searchQuery={searchQuery}
@@ -904,7 +1107,6 @@ export function MainPage() {
         onChange={handleCreateDraftChange}
         onClose={closeCreateModal}
         onSubmit={handleCreate}
-        onUrlBlur={() => void handleCreateUrlBlur()}
         open={createOpen}
         submitting={mutations.createBookmark.isPending}
         titleFetchMessage={titleFetchStatus.message}

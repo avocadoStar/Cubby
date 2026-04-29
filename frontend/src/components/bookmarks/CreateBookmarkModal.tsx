@@ -10,7 +10,6 @@ type CreateBookmarkModalProps = {
   onChange: (patch: Partial<BookmarkDraft>) => void
   onClose: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
-  onUrlBlur: () => void
   open: boolean
   submitting: boolean
   titleFetchMessage?: string
@@ -26,7 +25,6 @@ export function CreateBookmarkModal(props: CreateBookmarkModalProps) {
         onCancel={props.onClose}
         onChange={props.onChange}
         onSubmit={props.onSubmit}
-        onUrlBlur={props.onUrlBlur}
         submitLabel="保存书签"
         submitting={props.submitting}
         titleFetchMessage={props.titleFetchMessage}

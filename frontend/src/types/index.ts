@@ -70,6 +70,10 @@ export interface AIPlanResponse {
   undo_token?: string
 }
 
+export interface AuthStatusResponse {
+  authenticated: boolean
+}
+
 export interface ImportResult {
   created: number
   skipped: number

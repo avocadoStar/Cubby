@@ -6,6 +6,7 @@ import { Icon } from './ui/Icon'
 
 type TopBarProps = {
   hideRouteCopy?: boolean
+  onLogout: () => void
   onOpenSidebar: () => void
   onToggleTheme: () => void
   routeSubtitle: string
@@ -28,6 +29,7 @@ const themeIcon: Record<ThemeMode, ReactNode> = {
 
 export function TopBar({
   hideRouteCopy = false,
+  onLogout,
   onOpenSidebar,
   onToggleTheme,
   routeSubtitle,
@@ -73,6 +75,15 @@ export function TopBar({
             variant="ghost"
           >
             <span className="hidden sm:inline">设置</span>
+          </Button>
+          <Button
+            className="w-9 px-0 sm:w-auto sm:px-3"
+            leading={<Icon className="text-[14px]" name="log-out" />}
+            onClick={onLogout}
+            size="sm"
+            variant="ghost"
+          >
+            <span className="hidden sm:inline">退出</span>
           </Button>
         </div>
       </div>

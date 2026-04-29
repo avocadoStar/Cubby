@@ -308,9 +308,11 @@
   .sidebar-shell {
     display: flex;
     height: 100%;
+    min-height: 0;
     width: var(--sidebar-width);
     min-width: var(--sidebar-width);
     flex-direction: column;
+    overflow: hidden;
     background: var(--color-bg-subtle);
     transition:
       background-color var(--transition-standard),
@@ -354,6 +356,12 @@
   .sidebar-item:hover {
     border-color: var(--color-border);
     background: var(--color-bg-subtle);
+    color: var(--color-text);
+  }
+
+  .sidebar-item[data-dnd-active="true"] {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
     color: var(--color-text);
   }
 
@@ -421,6 +429,12 @@
     color: var(--color-text);
   }
 
+  .sidebar-root-drop-zone[data-dnd-active="true"] {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    color: var(--color-text);
+  }
+
   .sidebar-tree {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -459,6 +473,12 @@
   .sidebar-tree-row:hover {
     border-color: var(--color-border);
     background: var(--color-bg-subtle);
+    color: var(--color-text);
+  }
+
+  .sidebar-tree-row[data-dnd-active="true"] {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
     color: var(--color-text);
   }
 
@@ -534,18 +554,12 @@
   }
 
   .sidebar-drop-line {
-    height: 4px;
+    height: 6px;
     padding-right: 8px;
   }
 
   .sidebar-drop-line-indicator {
-    height: 100%;
-    border-top: 2px solid transparent;
-    transition: border-color var(--transition-standard);
-  }
-
-  .sidebar-drop-line:hover .sidebar-drop-line-indicator {
-    border-color: var(--color-accent);
+    display: none;
   }
 
   .folder-cascade-shell {
@@ -722,6 +736,14 @@
     background: var(--color-bg-muted);
   }
 
+  .notice-toast {
+    position: fixed;
+    top: 84px;
+    right: 16px;
+    z-index: 30;
+    width: min(360px, calc(100vw - 32px));
+  }
+
   .form-select {
     padding-right: 32px;
     background-image:
@@ -746,6 +768,12 @@
   .sidebar-shell {
     width: min(86vw, 320px);
     min-width: 0;
+  }
+
+  .notice-toast {
+    top: 76px;
+    right: 12px;
+    width: min(320px, calc(100vw - 24px));
   }
 
   .folder-cascade-columns {

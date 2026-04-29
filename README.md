@@ -84,3 +84,27 @@ npm run build
 cd backend
 go test ./...
 ```
+
+## Password Gate / Config
+
+在启动后端之前，先在 `backend` 目录准备一个 `.env`。
+可以直接复制 `backend/.env.sample`：
+
+```bash
+cd backend
+copy .env.sample .env
+```
+
+配置格式：
+
+```env
+PORT=8080
+APP_PASSWORD=your-password
+```
+
+说明：
+- `PORT` 用来控制后端监听端口，留空时默认 `8080`
+- `APP_PASSWORD` 是访问整个 Cubby 的单一登录密码
+- 第一次启动时，如果 `APP_PASSWORD` 还是明文，后端会自动把它改写成 bcrypt 哈希后再继续运行
+- 登录态使用服务端内存会话，刷新页面不会掉登录；但如果后端重启，需要重新输入密码
+- `backend/.env` 已加入 `.gitignore`，避免把真实部署密码提交进仓库

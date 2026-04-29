@@ -6,6 +6,7 @@ import { Icon } from './Icon'
 type ModalProps = {
   children: ReactNode
   contentClassName?: string
+  dismissible?: boolean
   onClose: () => void
   open: boolean
   panelClassName?: string
@@ -21,6 +22,7 @@ const widthClasses = {
 export function Modal({
   children,
   contentClassName = '',
+  dismissible = true,
   onClose,
   open,
   panelClassName = '',
@@ -35,7 +37,7 @@ export function Modal({
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (dismissible && event.key === 'Escape') {
         event.preventDefault()
         onClose()
       }
@@ -52,7 +54,7 @@ export function Modal({
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [onClose, open])
+  }, [dismissible, onClose, open])
 
   return (
     <AnimatePresence>
@@ -62,7 +64,7 @@ export function Modal({
           className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] px-4 py-5 sm:px-6"
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
-          onClick={onClose}
+          onClick={dismissible ? onClose : undefined}
           transition={{ duration: 0.18, ease: 'easeOut' }}
         >
           <motion.div
@@ -81,9 +83,11 @@ export function Modal({
               <div className="min-w-0">
                 <h2 className="truncate text-[16px] font-semibold text-[var(--color-text)]">{title}</h2>
               </div>
-              <button aria-label="关闭弹窗" className="icon-button shrink-0" onClick={onClose} type="button">
-                <Icon className="text-[15px]" name="close" />
-              </button>
+              {dismissible ? (
+                <button aria-label="关闭弹窗" className="icon-button shrink-0" onClick={onClose} type="button">
+                  <Icon className="text-[15px]" name="close" />
+                </button>
+              ) : null}
             </div>
             <div className={`min-h-0 flex-1 ${contentClassName}`.trim()}>{children}</div>
           </motion.div>

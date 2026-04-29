@@ -2,6 +2,7 @@ import axios from 'axios'
 import type {
   AIPlan,
   AIPlanResponse,
+  AuthStatusResponse,
   Bookmark,
   BookmarkListResult,
   BookmarkMutation,
@@ -11,6 +12,26 @@ import type {
 } from '../types'
 
 const api = axios.create({ baseURL: '/api/v1' })
+let unauthorizedHandler: (() => void) | null = null
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      unauthorizedHandler?.()
+    }
+    return Promise.reject(error)
+  },
+)
+
+export const setUnauthorizedHandler = (handler: (() => void) | null) => {
+  unauthorizedHandler = handler
+}
+
+export const getAuthStatus = () => api.get<AuthStatusResponse>('/auth/status').then((response) => response.data)
+export const login = (password: string) =>
+  api.post<AuthStatusResponse>('/auth/login', { password }).then((response) => response.data)
+export const logout = () => api.post<{ ok: boolean }>('/auth/logout').then((response) => response.data)
 
 export const getFolders = () => api.get<Folder[]>('/folders').then((response) => response.data)
 export const createFolder = (data: { name: string; parent_id?: string | null }) =>
@@ -111,6 +132,10 @@ export const aiCloseSession = (sessionId: string) =>
 
 export const fetchTitle = (url: string) =>
   api.post<{ title: string }>('/fetch-title', { url }).then((response) => response.data)
+export const fetchMetadataPreview = (url: string, signal?: AbortSignal) =>
+  api
+    .post<{ description: string; title: string; url: string }>('/metadata-preview', { url }, { signal })
+    .then((response) => response.data)
 export const getSettings = () => api.get<SettingsResponse>('/settings').then((response) => response.data)
 export const updateSettings = (data: Record<string, string>) =>
   api.put('/settings', data).then((response) => response.data)

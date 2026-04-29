@@ -17,7 +17,11 @@ const pageCopy: Record<string, { title: string; subtitle: string }> = {
   },
 }
 
-export function Layout() {
+type LayoutProps = {
+  onLogout: () => void
+}
+
+export function Layout({ onLogout }: LayoutProps) {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [contentScrolled, setContentScrolled] = useState(false)
@@ -30,7 +34,7 @@ export function Layout() {
       <AnimatedBackground theme={resolvedTheme} />
 
       <div className="relative z-10 h-full lg:grid lg:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
-        <div className="hidden h-full border-r border-[var(--color-border)] lg:block">
+        <div className="hidden min-h-0 overflow-hidden border-r border-[var(--color-border)] lg:block">
           <Sidebar />
         </div>
 
@@ -61,6 +65,7 @@ export function Layout() {
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           <TopBar
             hideRouteCopy={hideRouteCopy}
+            onLogout={onLogout}
             onOpenSidebar={() => setSidebarOpen(true)}
             onToggleTheme={toggleResolvedTheme}
             routeSubtitle={routeCopy.subtitle}

@@ -18,6 +18,7 @@ func SetupRouter(
 	bookmarkHandler *BookmarkHandler,
 	settingHandler *SettingHandler,
 	aiHandler *AIHandler,
+	authHandler *AuthHandler,
 	faviconDir string,
 	staticFS fs.FS,
 ) *gin.Engine {
@@ -26,12 +27,28 @@ func SetupRouter(
 
 	if faviconDir != "" {
 		_ = os.MkdirAll(faviconDir, 0o755)
-		r.Static("/favicons", faviconDir)
+		if authHandler != nil {
+			favicons := r.Group("/favicons")
+			favicons.Use(authHandler.RequireAuth())
+			favicons.StaticFS("/", gin.Dir(faviconDir, false))
+		} else {
+			r.Static("/favicons", faviconDir)
+		}
 	}
 
 	api := r.Group("/api/v1")
 	{
-		folders := api.Group("/folders")
+		if authHandler != nil {
+			authRoutes := api.Group("/auth")
+			authHandler.RegisterRoutes(authRoutes)
+		}
+
+		protected := api.Group("")
+		if authHandler != nil {
+			protected.Use(authHandler.RequireAuth())
+		}
+
+		folders := protected.Group("/folders")
 		{
 			folders.GET("", folderHandler.GetTree)
 			folders.POST("", folderHandler.Create)
@@ -41,7 +58,7 @@ func SetupRouter(
 			folders.PUT("/reorder", folderHandler.Reorder)
 		}
 
-		bookmarks := api.Group("/bookmarks")
+		bookmarks := protected.Group("/bookmarks")
 		{
 			bookmarks.GET("", bookmarkHandler.List)
 			bookmarks.GET("/:id", bookmarkHandler.GetByID)
@@ -59,16 +76,17 @@ func SetupRouter(
 			bookmarks.GET("/import/:taskID/events", bookmarkHandler.StreamImport)
 		}
 
-		api.POST("/fetch-title", bookmarkHandler.FetchTitle)
+		protected.POST("/fetch-title", bookmarkHandler.FetchTitle)
+		protected.POST("/metadata-preview", bookmarkHandler.FetchMetadataPreview)
 
-		settings := api.Group("/settings")
+		settings := protected.Group("/settings")
 		{
 			settings.GET("", settingHandler.GetAll)
 			settings.PUT("", settingHandler.Update)
 			settings.POST("/ai/test", settingHandler.TestAI)
 		}
 
-		aiGroup := api.Group("/ai")
+		aiGroup := protected.Group("/ai")
 		{
 			aiGroup.POST("/organize", aiHandler.Organize)
 		}

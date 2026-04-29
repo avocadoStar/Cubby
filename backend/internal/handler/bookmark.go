@@ -79,6 +79,13 @@ func (h *BookmarkHandler) Create(c *gin.Context) {
 		return
 	}
 
+	normalizedURL, err := metadata.NormalizeURL(req.URL)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL", "code": "INVALID_URL"})
+		return
+	}
+	req.URL = normalizedURL
+
 	autoTitle := strings.TrimSpace(req.Title) == ""
 	if autoTitle {
 		req.Title = req.URL
@@ -138,13 +145,22 @@ func (h *BookmarkHandler) Update(c *gin.Context) {
 		return
 	}
 
-	urlChanged := req.URL != "" && req.URL != bookmark.URL
+	normalizedURL := ""
+	if req.URL != "" {
+		normalizedURL, err = metadata.NormalizeURL(req.URL)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL", "code": "INVALID_URL"})
+			return
+		}
+	}
+
+	urlChanged := normalizedURL != "" && normalizedURL != bookmark.URL
 
 	if req.Title != "" {
 		bookmark.Title = req.Title
 	}
-	if req.URL != "" {
-		bookmark.URL = req.URL
+	if normalizedURL != "" {
+		bookmark.URL = normalizedURL
 	}
 	if req.Description != "" {
 		bookmark.Description = req.Description
@@ -310,6 +326,13 @@ func (h *BookmarkHandler) FetchMetadata(c *gin.Context) {
 		return
 	}
 
+	normalizedURL, err := metadata.NormalizeURL(bookmark.URL)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL", "code": "INVALID_URL"})
+		return
+	}
+	bookmark.URL = normalizedURL
+
 	h.refreshMetadata(bookmark, repository.MetadataUpdateOptions{ForceDescription: true, ForceTitle: true})
 
 	c.JSON(http.StatusOK, gin.H{"ok": true, "message": "元数据已刷新"})
@@ -394,7 +417,13 @@ func (h *BookmarkHandler) FetchTitle(c *gin.Context) {
 		return
 	}
 
-	title, err := metadata.FetchTitle(req.URL)
+	normalizedURL, err := metadata.NormalizeURL(req.URL)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL", "code": "INVALID_URL"})
+		return
+	}
+
+	title, err := metadata.FetchTitle(normalizedURL)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"title": ""})
 		return
@@ -403,7 +432,41 @@ func (h *BookmarkHandler) FetchTitle(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"title": title})
 }
 
+func (h *BookmarkHandler) FetchMetadataPreview(c *gin.Context) {
+	var req struct {
+		URL string `json:"url" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "URL 涓嶈兘涓虹┖", "code": "INVALID_REQUEST"})
+		return
+	}
+
+	normalizedURL, err := metadata.NormalizeURL(req.URL)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid URL", "code": "INVALID_URL"})
+		return
+	}
+
+	pageMetadata, err := metadata.FetchPageMetadata(normalizedURL)
+	if err != nil || pageMetadata == nil {
+		c.JSON(http.StatusOK, gin.H{"url": normalizedURL, "title": "", "description": ""})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"url":         normalizedURL,
+		"title":       pageMetadata.Title,
+		"description": pageMetadata.Description,
+	})
+}
+
 func (h *BookmarkHandler) refreshMetadata(bookmark *model.Bookmark, options repository.MetadataUpdateOptions) {
+	normalizedURL, err := metadata.NormalizeURL(bookmark.URL)
+	if err != nil {
+		return
+	}
+	bookmark.URL = normalizedURL
+
 	var (
 		description  string
 		faviconURL   string
@@ -411,14 +474,14 @@ func (h *BookmarkHandler) refreshMetadata(bookmark *model.Bookmark, options repo
 		title        string
 	)
 
-	pageMetadata, metadataErr := metadata.FetchPageMetadata(bookmark.URL)
+	pageMetadata, metadataErr := metadata.FetchPageMetadata(normalizedURL)
 	if metadataErr == nil && pageMetadata != nil {
 		description = pageMetadata.Description
 		thumbnailURL = pageMetadata.OGImage
 		title = pageMetadata.Title
 	}
 
-	downloadedFavicon, faviconErr := metadata.DownloadFavicon(bookmark.URL, h.faviconDir)
+	downloadedFavicon, faviconErr := metadata.DownloadFavicon(normalizedURL, h.faviconDir)
 	if faviconErr == nil {
 		faviconURL = downloadedFavicon
 	}

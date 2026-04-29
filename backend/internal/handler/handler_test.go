@@ -11,11 +11,13 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	testingfs "testing/fstest"
 )
 
@@ -50,6 +52,56 @@ func newTestServer(t *testing.T, staticFS fs.FS) (*repository.BookmarkRepo, *rep
 		bookmarkHandler,
 		settingHandler,
 		aiHandler,
+		nil,
+		faviconDir,
+		staticFS,
+	)
+
+	return bookmarkRepo, folderRepo, settingRepo, router
+}
+
+func newProtectedTestServer(t *testing.T, staticFS fs.FS) (*repository.BookmarkRepo, *repository.FolderRepo, *repository.SettingRepo, http.Handler) {
+	t.Helper()
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	faviconDir := filepath.Join(filepath.Dir(dbPath), "favicons")
+	db, err := repository.Init(dbPath)
+	if err != nil {
+		t.Fatalf("init db: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = db.Close()
+	})
+
+	folderRepo := repository.NewFolderRepo(db)
+	bookmarkRepo := repository.NewBookmarkRepo(db)
+	settingRepo := repository.NewSettingRepo(db)
+
+	folderHandler := NewFolderHandler(folderRepo)
+	bookmarkHandler := NewBookmarkHandler(bookmarkRepo, folderRepo, faviconDir)
+	aiClient := ai.NewClient(settingRepo)
+	settingHandler := NewSettingHandler(settingRepo, aiClient)
+	aiHandler := NewAIHandler(aiClient, bookmarkRepo, folderRepo)
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte("secret-pass"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("hash password: %v", err)
+	}
+
+	authHandler, err := NewAuthHandler(string(passwordHash))
+	if err != nil {
+		t.Fatalf("new auth handler: %v", err)
+	}
+
+	router := SetupRouter(
+		folderRepo,
+		bookmarkRepo,
+		settingRepo,
+		folderHandler,
+		bookmarkHandler,
+		settingHandler,
+		aiHandler,
+		authHandler,
 		faviconDir,
 		staticFS,
 	)
@@ -290,6 +342,328 @@ func TestCreateBookmarkFetchesMetadataAndPersistsFavicon(t *testing.T) {
 	}
 	if faviconRecorder.Body.String() != "png" {
 		t.Fatalf("expected favicon body, got %q", faviconRecorder.Body.String())
+	}
+}
+
+func TestProtectedRoutesRequireAuthentication(t *testing.T) {
+	_, _, _, router := newProtectedTestServer(t, testingfs.MapFS{
+		"index.html": {Data: []byte("index")},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/folders", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d with body %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestLoginSetsSessionCookieAndAllowsAuthenticatedRequests(t *testing.T) {
+	_, _, _, router := newProtectedTestServer(t, testingfs.MapFS{
+		"index.html": {Data: []byte("index")},
+	})
+
+	loginBody := bytes.NewBufferString(`{"password":"secret-pass"}`)
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", loginBody)
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginRecorder := httptest.NewRecorder()
+
+	router.ServeHTTP(loginRecorder, loginReq)
+
+	if loginRecorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d with body %s", loginRecorder.Code, loginRecorder.Body.String())
+	}
+
+	cookies := loginRecorder.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatalf("expected session cookie to be set")
+	}
+
+	foldersReq := httptest.NewRequest(http.MethodGet, "/api/v1/folders", nil)
+	foldersReq.AddCookie(cookies[0])
+	foldersRecorder := httptest.NewRecorder()
+
+	router.ServeHTTP(foldersRecorder, foldersReq)
+
+	if foldersRecorder.Code != http.StatusOK {
+		t.Fatalf("expected authenticated request to pass, got %d with body %s", foldersRecorder.Code, foldersRecorder.Body.String())
+	}
+}
+
+func TestLogoutInvalidatesAuthenticatedSession(t *testing.T) {
+	_, _, _, router := newProtectedTestServer(t, testingfs.MapFS{
+		"index.html": {Data: []byte("index")},
+	})
+
+	loginBody := bytes.NewBufferString(`{"password":"secret-pass"}`)
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", loginBody)
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginRecorder := httptest.NewRecorder()
+	router.ServeHTTP(loginRecorder, loginReq)
+
+	if loginRecorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d with body %s", loginRecorder.Code, loginRecorder.Body.String())
+	}
+
+	cookies := loginRecorder.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatalf("expected session cookie to be set")
+	}
+
+	logoutReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
+	logoutReq.AddCookie(cookies[0])
+	logoutRecorder := httptest.NewRecorder()
+	router.ServeHTTP(logoutRecorder, logoutReq)
+
+	if logoutRecorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d with body %s", logoutRecorder.Code, logoutRecorder.Body.String())
+	}
+
+	foldersReq := httptest.NewRequest(http.MethodGet, "/api/v1/folders", nil)
+	foldersReq.AddCookie(cookies[0])
+	foldersRecorder := httptest.NewRecorder()
+	router.ServeHTTP(foldersRecorder, foldersReq)
+
+	if foldersRecorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 after logout, got %d with body %s", foldersRecorder.Code, foldersRecorder.Body.String())
+	}
+}
+
+func TestProtectedFaviconRequiresAuthentication(t *testing.T) {
+	_, _, _, router := newProtectedTestServer(t, testingfs.MapFS{
+		"index.html": {Data: []byte("index")},
+	})
+
+	if err := os.MkdirAll(filepath.Join(t.TempDir(), "favicons"), 0o755); err != nil {
+		t.Fatalf("mkdir favicons: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/favicons/example.png", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d with body %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestCreateBookmarkNormalizesBareLoopbackURLAndFetchesMetadata(t *testing.T) {
+	_, _, _, router := newTestServer(t, testingfs.MapFS{
+		"index.html": {Data: []byte("index")},
+	})
+
+	siteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<!doctype html><html><head><title>Bare URL Title</title><meta name="description" content="Bare URL Description"></head><body>ok</body></html>`))
+	}))
+	defer siteServer.Close()
+
+	faviconServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write([]byte("png"))
+	}))
+	defer faviconServer.Close()
+
+	originalProvider := metadata.DefaultFaviconProvider
+	metadata.DefaultFaviconProvider = faviconServer.URL + "/favicon?url=%s"
+	t.Cleanup(func() {
+		metadata.DefaultFaviconProvider = originalProvider
+	})
+
+	normalizedURL := siteServer.URL + "/article"
+	bareURL := strings.TrimPrefix(normalizedURL, "http://")
+
+	body := bytes.NewBufferString(`{"url":"` + bareURL + `"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/bookmarks", body)
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d with body %s", recorder.Code, recorder.Body.String())
+	}
+
+	var bookmark model.Bookmark
+	if err := json.Unmarshal(recorder.Body.Bytes(), &bookmark); err != nil {
+		t.Fatalf("decode bookmark: %v", err)
+	}
+
+	if bookmark.URL != normalizedURL {
+		t.Fatalf("expected normalized url %q, got %#v", normalizedURL, bookmark)
+	}
+	if bookmark.Title != "Bare URL Title" {
+		t.Fatalf("expected fetched title, got %#v", bookmark)
+	}
+	if bookmark.Description != "Bare URL Description" {
+		t.Fatalf("expected fetched description, got %#v", bookmark)
+	}
+	if bookmark.FaviconURL == "" {
+		t.Fatalf("expected favicon to be persisted, got %#v", bookmark)
+	}
+	if !bookmark.MetadataFetched {
+		t.Fatalf("expected metadata fetched to be true, got %#v", bookmark)
+	}
+}
+
+func TestFetchTitleRejectsInvalidURL(t *testing.T) {
+	_, _, _, router := newTestServer(t, testingfs.MapFS{
+		"index.html": {Data: []byte("index")},
+	})
+
+	body := bytes.NewBufferString(`{"url":"not a valid url"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/fetch-title", body)
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d with body %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "INVALID_URL") {
+		t.Fatalf("expected INVALID_URL error, got %s", recorder.Body.String())
+	}
+}
+
+func TestFetchMetadataPreviewReturnsNormalizedMetadata(t *testing.T) {
+	_, _, _, router := newTestServer(t, testingfs.MapFS{
+		"index.html": {Data: []byte("index")},
+	})
+
+	siteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<!doctype html><html><head><title>Preview Title</title><meta name="description" content="Preview Description"></head><body>ok</body></html>`))
+	}))
+	defer siteServer.Close()
+
+	bareURL := strings.TrimPrefix(siteServer.URL+"/preview", "http://")
+	body := bytes.NewBufferString(`{"url":"` + bareURL + `"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/metadata-preview", body)
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d with body %s", recorder.Code, recorder.Body.String())
+	}
+
+	var response struct {
+		URL         string `json:"url"`
+		Title       string `json:"title"`
+		Description string `json:"description"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode metadata preview: %v", err)
+	}
+
+	expectedURL := siteServer.URL + "/preview"
+	if response.URL != expectedURL {
+		t.Fatalf("expected normalized url %q, got %#v", expectedURL, response)
+	}
+	if response.Title != "Preview Title" {
+		t.Fatalf("expected preview title, got %#v", response)
+	}
+	if response.Description != "Preview Description" {
+		t.Fatalf("expected preview description, got %#v", response)
+	}
+}
+
+func TestFetchMetadataPreviewRejectsInvalidURL(t *testing.T) {
+	_, _, _, router := newTestServer(t, testingfs.MapFS{
+		"index.html": {Data: []byte("index")},
+	})
+
+	body := bytes.NewBufferString(`{"url":"not a valid url"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/metadata-preview", body)
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d with body %s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "INVALID_URL") {
+		t.Fatalf("expected INVALID_URL error, got %s", recorder.Body.String())
+	}
+}
+
+func TestUpdateBookmarkURLReFetchesMetadata(t *testing.T) {
+	bookmarkRepo, _, _, router := newTestServer(t, testingfs.MapFS{
+		"index.html": {Data: []byte("index")},
+	})
+
+	bookmark := &model.Bookmark{
+		ID:              uuid.NewString(),
+		Title:           "Original",
+		URL:             "https://example.com/original",
+		FaviconURL:      "/favicons/original.png",
+		MetadataFetched: true,
+		SortOrder:       1,
+	}
+	if err := bookmarkRepo.Create(bookmark); err != nil {
+		t.Fatalf("seed bookmark: %v", err)
+	}
+
+	siteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<!doctype html><html><head><title>Updated Title</title><meta name="description" content="Updated Description"><meta property="og:image" content="/updated.png"></head><body>ok</body></html>`))
+	}))
+	defer siteServer.Close()
+
+	faviconServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write([]byte("png"))
+	}))
+	defer faviconServer.Close()
+
+	originalProvider := metadata.DefaultFaviconProvider
+	metadata.DefaultFaviconProvider = faviconServer.URL + "/favicon?url=%s"
+	t.Cleanup(func() {
+		metadata.DefaultFaviconProvider = originalProvider
+	})
+
+	updatedURL := siteServer.URL + "/fresh"
+	body := bytes.NewBufferString(`{"url":"` + updatedURL + `"}`)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/bookmarks/"+bookmark.ID, body)
+	req.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d with body %s", recorder.Code, recorder.Body.String())
+	}
+
+	updated, err := bookmarkRepo.GetByID(bookmark.ID)
+	if err != nil {
+		t.Fatalf("reload bookmark: %v", err)
+	}
+	if updated == nil {
+		t.Fatalf("expected bookmark to exist")
+	}
+	if updated.URL != updatedURL {
+		t.Fatalf("expected updated url %q, got %#v", updatedURL, updated)
+	}
+	if updated.Title != "Updated Title" {
+		t.Fatalf("expected refreshed title, got %#v", updated)
+	}
+	if updated.Description != "Updated Description" {
+		t.Fatalf("expected refreshed description, got %#v", updated)
+	}
+	if updated.FaviconURL == "" {
+		t.Fatalf("expected refreshed favicon, got %#v", updated)
+	}
+	if updated.ThumbnailURL != siteServer.URL+"/updated.png" {
+		t.Fatalf("expected refreshed thumbnail, got %#v", updated)
+	}
+	if !updated.MetadataFetched {
+		t.Fatalf("expected metadata fetched true, got %#v", updated)
 	}
 }
 

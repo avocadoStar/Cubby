@@ -57,3 +57,42 @@ export function NoticeBanner({ notice, onClose }: NoticeBannerProps) {
     </Surface>
   )
 }
+
+type NoticeToastProps = {
+  notice: Notice
+  onClose: () => void
+}
+
+export function NoticeToast({ notice, onClose }: NoticeToastProps) {
+  return (
+    <Surface className="notice-toast surface-elevated flex items-start gap-3 px-4 py-3" tone="elevated">
+      <span
+        className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+          notice.tone === 'error'
+            ? 'bg-[var(--color-danger-soft)] text-[var(--color-danger)]'
+            : 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+        }`}
+      >
+        <Icon className="text-[12px]" name={notice.tone === 'error' ? 'close' : 'check-circle'} />
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <p
+          className={`text-[13px] leading-5 ${
+            notice.tone === 'error' ? 'text-[var(--color-danger)]' : 'text-[var(--color-success)]'
+          }`}
+        >
+          {notice.message}
+        </p>
+      </div>
+
+      <button
+        className="text-left text-[12px] font-medium text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text)]"
+        onClick={onClose}
+        type="button"
+      >
+        关闭
+      </button>
+    </Surface>
+  )
+}
