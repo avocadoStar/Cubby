@@ -21,7 +21,7 @@ type BookmarkFormProps = {
 
 export function BookmarkForm({
   draft,
-  favoriteLabel = '娣诲姞鍚庡悓鏃舵爣璁颁负鏀惰棌',
+  favoriteLabel = '添加后同时标记为收藏',
   folders,
   onCancel,
   onChange,
@@ -43,7 +43,7 @@ export function BookmarkForm({
     <form className="space-y-4" onSubmit={onSubmit}>
       <div className="space-y-2">
         <Input
-          label="閾炬帴鍦板潃"
+          label="链接地址"
           onBlur={onUrlBlur}
           onChange={(event) => onChange({ url: event.target.value })}
           placeholder="https://example.com"
@@ -55,23 +55,23 @@ export function BookmarkForm({
       </div>
 
       <Input
-        label="鏍囬"
+        label="标题"
         onChange={(event) => onChange({ title: event.target.value })}
-        placeholder="鐣欑┖鏃朵細浼樺厛浣跨敤閾炬帴鍦板潃"
+        placeholder="留空时会优先使用链接地址"
         value={draft.title}
       />
 
       <Input
-        label="澶囨敞"
+        label="备注"
         multiline
         onChange={(event) => onChange({ description: event.target.value })}
-        placeholder="鍙€夛細璁板綍鐢ㄩ€斻€侀噸鐐规垨浣跨敤鍦烘櫙"
+        placeholder="可选：记录用途、重点或使用场景"
         value={draft.description}
       />
 
       <FolderCascadePicker
         folders={folders}
-        helper="宸︿晶鐐逛腑鏌愪竴绾э紝鍙充晶灏变細灞曞紑涓嬩竴灞傘€傜偣鍒板摢涓€绾э紝灏变繚瀛樺埌鍝竴绾с€?"
+        helper="左侧点中某一级，右侧就会展开下一层。点到哪一级，就保存到哪一级。"
         onChange={(folderId) => onChange({ folderId })}
         value={draft.folderId}
       />
@@ -88,10 +88,10 @@ export function BookmarkForm({
 
       <div className="flex flex-wrap justify-end gap-2 pt-1">
         <Button onClick={onCancel} size="sm" type="button" variant="secondary">
-          鍙栨秷
+          取消
         </Button>
         <Button disabled={submitting} size="sm" type="submit" variant="primary">
-          {submitting ? '淇濆瓨涓€?' : submitLabel}
+          {submitting ? '保存中…' : submitLabel}
         </Button>
       </div>
     </form>

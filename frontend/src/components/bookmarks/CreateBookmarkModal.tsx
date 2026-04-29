@@ -19,7 +19,7 @@ type CreateBookmarkModalProps = {
 
 export function CreateBookmarkModal(props: CreateBookmarkModalProps) {
   return (
-    <Modal onClose={props.onClose} open={props.open} title="娣诲姞涔︾" width="md">
+    <Modal onClose={props.onClose} open={props.open} title="添加书签" width="md">
       <BookmarkForm
         draft={props.draft}
         folders={props.folders}
@@ -27,7 +27,7 @@ export function CreateBookmarkModal(props: CreateBookmarkModalProps) {
         onChange={props.onChange}
         onSubmit={props.onSubmit}
         onUrlBlur={props.onUrlBlur}
-        submitLabel="淇濆瓨涔︾"
+        submitLabel="保存书签"
         submitting={props.submitting}
         titleFetchMessage={props.titleFetchMessage}
         titleFetchState={props.titleFetchState}
