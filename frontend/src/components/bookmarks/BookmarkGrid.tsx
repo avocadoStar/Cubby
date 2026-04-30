@@ -39,10 +39,44 @@ export function BookmarkGrid({
             key={bookmark.id}
             tone="panel"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="ml-auto flex items-center gap-1">
-                <BookmarkActionButton label={bookmark.is_favorite ? '取消收藏' : '加入收藏'} onClick={() => onFavorite(bookmark.id)}>
-                  <Icon className="text-[14px]" filled={bookmark.is_favorite} name={bookmark.is_favorite ? 'heart-filled' : 'heart'} />
+            <div className="flex items-start gap-3">
+              <a
+                className="flex min-w-0 flex-1 flex-col gap-3 cursor-default"
+                draggable={false}
+                href={bookmark.url}
+                onDragStart={(event) => event.preventDefault()}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)]">
+                    <FaviconImage faviconUrl={bookmark.favicon_url} title={bookmark.title} url={bookmark.url} />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="truncate text-[14px] font-medium leading-5 text-[var(--color-text)]">
+                      {renderHighlightedText(bookmark.title, searchQuery)}
+                    </div>
+                    <div className="truncate text-[12px] leading-4 text-[var(--color-text-secondary)]">
+                      {renderHighlightedText(hostname, searchQuery)}
+                    </div>
+                  </div>
+                </div>
+
+                <p className="line-clamp-2 text-[13px] leading-5 text-[var(--color-text-secondary)]">
+                  {renderHighlightedText(bookmark.description || '暂无备注', searchQuery)}
+                </p>
+              </a>
+
+              <div className="flex shrink-0 items-center gap-1">
+                <BookmarkActionButton
+                  label={bookmark.is_favorite ? '取消收藏' : '加入收藏'}
+                  onClick={() => onFavorite(bookmark.id)}
+                >
+                  <Icon
+                    className="text-[14px]"
+                    filled={bookmark.is_favorite}
+                    name={bookmark.is_favorite ? 'heart-filled' : 'heart'}
+                  />
                 </BookmarkActionButton>
                 <BookmarkActionButton label="编辑书签" onClick={() => onEdit(bookmark)}>
                   <Icon className="text-[14px]" name="pencil" />
@@ -52,23 +86,6 @@ export function BookmarkGrid({
                 </BookmarkActionButton>
               </div>
             </div>
-
-            <a className="flex min-w-0 flex-1 flex-col gap-3 cursor-default" draggable={false} href={bookmark.url} onDragStart={(event) => event.preventDefault()} rel="noreferrer" target="_blank">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)]">
-                <FaviconImage faviconUrl={bookmark.favicon_url} title={bookmark.title} url={bookmark.url} />
-              </div>
-              <div className="min-w-0 space-y-2">
-                <div className="truncate text-[14px] font-medium leading-5 text-[var(--color-text)]">
-                  {renderHighlightedText(bookmark.title, searchQuery)}
-                </div>
-                <div className="truncate text-[12px] leading-4 text-[var(--color-text-secondary)]">
-                  {renderHighlightedText(hostname, searchQuery)}
-                </div>
-                <p className="line-clamp-2 text-[13px] leading-5 text-[var(--color-text-secondary)]">
-                  {renderHighlightedText(bookmark.description || '暂无备注', searchQuery)}
-                </p>
-              </div>
-            </a>
 
             <div className="flex flex-wrap items-center gap-2">
               {bookmark.is_favorite ? <InlineTag>收藏</InlineTag> : null}
