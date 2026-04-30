@@ -29,5 +29,12 @@ func main() {
 	r := gin.Default()
 	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, cfg)
 
+	// Serve frontend static files in production
+	r.Static("/assets", "./cmd/server/static/assets")
+	r.StaticFile("/favicon.svg", "./cmd/server/static/favicon.svg")
+	r.NoRoute(func(c *gin.Context) {
+		c.File("./cmd/server/static/index.html")
+	})
+
 	r.Run(":" + cfg.Port)
 }

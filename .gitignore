@@ -2,3 +2,5 @@
 node_modules/
 *.db
 .env
+cubby-server
+backend/cmd/server/static/
