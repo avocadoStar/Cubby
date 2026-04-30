@@ -23,6 +23,7 @@ export function FaviconImage({ faviconUrl, title, url }: FaviconImageProps) {
     <img
       alt={`${title} favicon`}
       className="h-5 w-5 rounded-[4px] object-cover"
+      draggable={false}
       loading="lazy"
       onError={() => {
         setFailedSource(src)

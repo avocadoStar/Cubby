@@ -39,6 +39,7 @@ func (h *BookmarkHandler) List(c *gin.Context) {
 		Favorite: c.Query("favorite") == "true",
 		Unsorted: c.Query("unsorted") == "true",
 		Recent:   c.Query("recent") == "true",
+		All:      c.Query("all") == "true",
 		Page:     parseIntDefault(c.DefaultQuery("page", "1"), 1),
 		PageSize: parseIntDefault(c.DefaultQuery("page_size", "50"), 50),
 	}

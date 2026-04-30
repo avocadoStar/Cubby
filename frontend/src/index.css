@@ -681,13 +681,14 @@
 
   .search-submit-button {
     position: absolute;
-    top: 4px;
+    top: 50%;
     right: 4px;
     display: inline-flex;
     height: 28px;
     width: 28px;
     align-items: center;
     justify-content: center;
+    transform: translateY(-50%);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background: var(--color-bg-muted);

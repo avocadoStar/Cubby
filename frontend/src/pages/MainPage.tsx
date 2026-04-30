@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AIModal } from '../components/bookmarks/AIModal'
-import { BatchActionBar } from '../components/bookmarks/BatchActionBar'
 import { BookmarkGrid } from '../components/bookmarks/BookmarkGrid'
 import { BookmarkList } from '../components/bookmarks/BookmarkList'
 import { CreateBookmarkModal } from '../components/bookmarks/CreateBookmarkModal'
@@ -15,14 +14,15 @@ import { Icon } from '../components/ui/Icon'
 import { NoticeBanner, NoticeToast } from '../components/ui/NoticeBanner'
 import type { Notice } from '../components/ui/NoticeBanner'
 import { StatePanel } from '../components/ui/StatePanel'
+import { Surface } from '../components/ui/Surface'
 import { Tooltip } from '../components/ui/Tooltip'
-import { useBookmarkMutations, useInfiniteBookmarks } from '../hooks/useBookmarkQueries'
+import { useBookmarkMutations, useBookmarksQuery } from '../hooks/useBookmarkQueries'
 import { folderQueryKey, useFoldersQuery } from '../hooks/useFolderQueries'
 import * as api from '../services/api'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
 import type { AIPlan, AITitleCleanupChange, Bookmark, BookmarkMutation, ImportTaskSnapshot } from '../types'
-import { findFolderName, flattenFolders, getActionableFolderId, isPseudoFolderId } from '../utils/bookmarkFilters'
+import { findFolderName, getActionableFolderId, isPseudoFolderId } from '../utils/bookmarkFilters'
 import { getErrorMessage } from '../utils/errors'
 import { normalizeBookmarkUrl } from '../utils/url'
 
@@ -76,7 +76,6 @@ export function MainPage() {
     ids: [],
     scopeKey: 'all::',
   })
-  const [moveTarget, setMoveTarget] = useState('')
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([])
   const [importConnectionError, setImportConnectionError] = useState<string | null>(null)
   const [importTask, setImportTask] = useState<ImportTaskSnapshot | null>(null)
@@ -87,25 +86,16 @@ export function MainPage() {
   const aiDisabledReason = '请先进入具体文件夹或全部书签，再使用 AI 整理。'
 
   const selectionScopeKey = useMemo(
-    () => `${selectedFolderId ?? 'all'}::${searchQuery.trim()}`,
-    [searchQuery, selectedFolderId],
+    () => `${selectedFolderId ?? 'all'}::${searchQuery.trim()}::${viewMode}`,
+    [searchQuery, selectedFolderId, viewMode],
   )
   const queryInput = useMemo(
     () => ({ query: searchQuery.trim(), selection: selectedFolderId }),
     [searchQuery, selectedFolderId],
   )
   const mutations = useBookmarkMutations(queryInput)
-  const folderOptions = useMemo(
-    () =>
-      flattenFolders(folders).map((folder) => ({
-        label: `${'  '.repeat(folder.depth)}${folder.name}`,
-        value: folder.id,
-      })),
-    [folders],
-  )
-
-  const { data, error, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteBookmarks(queryInput)
-  const bookmarks = useMemo(() => data?.pages.flatMap((page) => page.items ?? []) ?? [], [data])
+  const { data, error, isLoading } = useBookmarksQuery(queryInput)
+  const bookmarks = useMemo(() => data?.items ?? [], [data])
   const bookmarkIdSet = useMemo(() => new Set(bookmarks.map((bookmark) => bookmark.id)), [bookmarks])
   const selectedIds = useMemo(() => {
     if (selectionState.scopeKey !== selectionScopeKey) {
@@ -114,7 +104,7 @@ export function MainPage() {
     return selectionState.ids.filter((id) => bookmarkIdSet.has(id))
   }, [bookmarkIdSet, selectionScopeKey, selectionState.ids, selectionState.scopeKey])
 
-  const total = data?.pages[0]?.total ?? 0
+  const total = data?.total ?? 0
   const hasSelection = selectedIds.length > 0
   const currentLabel = selectedFolderId
     ? pseudoLabels[selectedFolderId]?.title ?? findFolderName(folders, selectedFolderId) ?? '当前视图'
@@ -123,11 +113,19 @@ export function MainPage() {
     ? pseudoLabels[selectedFolderId]?.description ?? '当前文件夹中的书签列表。'
     : '整理、搜索和管理你的常用链接。'
   const canReorder = !searchQuery.trim() && (selectedFolderId === null || !isPseudoFolderId(selectedFolderId))
+  const isGridView = viewMode === 'grid'
   const reorderHint = canReorder
     ? '当前已加载内容可拖拽排序，也可拖到左侧文件夹中移动。'
     : '当前视图不支持排序。'
 
-  const gridSentinelRef = useRef<HTMLDivElement | null>(null)
+  const contentSectionClassName = isGridView
+    ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4'
+    : 'min-h-0 flex-1 pb-4'
+  const topSectionClassName = isGridView
+    ? 'relative z-20 mb-4 shrink-0 bg-[var(--color-bg)] pb-1'
+    : 'sticky top-0 z-10 mb-4 bg-[var(--color-bg)] pb-1'
+
+  const gridScrollContainerRef = useRef<HTMLElement | null>(null)
   const createDraftRef = useRef(createDraft)
   const createModalOpenRef = useRef(createOpen)
   const createTitleRequestRef = useRef<{ promise: Promise<string>; url: string } | null>(null)
@@ -182,29 +180,6 @@ export function MainPage() {
       window.clearTimeout(timer)
     }
   }, [reorderToast])
-
-  useEffect(() => {
-    if (viewMode !== 'grid' || !hasNextPage || isFetchingNextPage) {
-      return
-    }
-
-    const node = gridSentinelRef.current
-    if (!node) {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          void fetchNextPage()
-        }
-      },
-      { rootMargin: '200px' },
-    )
-
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, viewMode])
 
   const closeImportEventSource = () => {
     importEventSourceRef.current?.close()
@@ -811,10 +786,10 @@ export function MainPage() {
         await mutations.deleteBookmark.mutateAsync(ids[0])
       } else {
         await mutations.batchDeleteBookmarks.mutateAsync(ids)
-        updateSelectionIds((current) => current.filter((id) => !ids.includes(id)))
       }
 
       setPendingDeleteIds([])
+      clearSelection()
       setNotice({
         tone: 'success',
         message: ids.length === 1 ? '书签已删除。' : `已删除 ${ids.length} 条书签。`,
@@ -850,78 +825,80 @@ export function MainPage() {
     }
   }
 
-  const handleMoveBookmarkToFolder = async (bookmarkId: string, folderId: string | null) => {
-    try {
-      await mutations.moveBookmark.mutateAsync({ id: bookmarkId, folderId })
-      setNotice({
-        tone: 'success',
-        message: folderId ? '书签已移动到目标文件夹。' : '书签已移动到未分类。',
-      })
-    } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '移动书签失败。') })
-    }
-  }
-
-  const loadedAllSelected = bookmarks.length > 0 && bookmarks.every((bookmark) => selectedIds.includes(bookmark.id))
-
-  const selectLoaded = () => {
-    if (loadedAllSelected) {
-      setSelectionState({ ids: [], scopeKey: selectionScopeKey })
-      return
-    }
-
-    setSelectionState({
-      ids: bookmarks.map((bookmark) => bookmark.id),
-      scopeKey: selectionScopeKey,
-    })
-  }
-
   const toggleSelection = (bookmarkId: string) => {
     updateSelectionIds((current) =>
       current.includes(bookmarkId) ? current.filter((id) => id !== bookmarkId) : [...current, bookmarkId],
     )
   }
 
-  const handleBatchMove = async () => {
-    if (selectedIds.length === 0) {
-      return
+  useEffect(() => {
+    const handleSelectAll = (event: globalThis.KeyboardEvent) => {
+      if ((!event.ctrlKey && !event.metaKey) || event.key.toLowerCase() !== 'a') {
+        return
+      }
+
+      if (createOpen || editOpen || aiOpen || importOpen) {
+        return
+      }
+
+      if (isTextSelectionTarget(event.target)) {
+        return
+      }
+
+      if (bookmarks.length === 0) {
+        return
+      }
+
+      event.preventDefault()
+      setSelectionState({
+        ids: bookmarks.map((bookmark) => bookmark.id),
+        scopeKey: selectionScopeKey,
+      })
     }
 
-    try {
-      await mutations.batchMoveBookmarks.mutateAsync({ ids: selectedIds, folderId: moveTarget || null })
-      setNotice({ tone: 'success', message: `已移动 ${selectedIds.length} 条书签。` })
-      setSelectionState({ ids: [], scopeKey: selectionScopeKey })
-      setMoveTarget('')
-    } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '移动书签失败。') })
-    }
+    window.addEventListener('keydown', handleSelectAll)
+    return () => window.removeEventListener('keydown', handleSelectAll)
+  }, [aiOpen, bookmarks, createOpen, editOpen, importOpen, selectionScopeKey])
+
+  const clearSelection = () => {
+    setSelectionState({ ids: [], scopeKey: selectionScopeKey })
   }
 
-  const handleBatchFavorite = async (isFavorite: boolean) => {
-    if (selectedIds.length === 0) {
+  const handleMoveBookmarksToFolder = async (bookmarkIds: string[], folderId: string | null) => {
+    if (bookmarkIds.length === 0) {
       return
     }
 
     try {
-      await mutations.batchFavoriteBookmarks.mutateAsync({ ids: selectedIds, isFavorite })
+      if (bookmarkIds.length === 1) {
+        await mutations.moveBookmark.mutateAsync({ id: bookmarkIds[0], folderId })
+      } else {
+        await mutations.batchMoveBookmarks.mutateAsync({ ids: bookmarkIds, folderId })
+      }
+
+      clearSelection()
       setNotice({
         tone: 'success',
-        message: isFavorite ? '已加入收藏。' : '已取消收藏。',
+        message:
+          bookmarkIds.length === 1
+            ? folderId
+              ? '书签已移动到目标文件夹。'
+              : '书签已移动到未分类。'
+            : `已移动 ${bookmarkIds.length} 条书签。`,
       })
-      setSelectionState({ ids: [], scopeKey: selectionScopeKey })
     } catch (error: unknown) {
-      setNotice({ tone: 'error', message: getErrorMessage(error, '更新收藏状态失败。') })
+      setNotice({ tone: 'error', message: getErrorMessage(error, '移动书签失败。') })
     }
   }
 
   const contentError = error instanceof Error ? error.message : null
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className={`flex h-full min-h-0 flex-col ${isGridView ? 'overflow-hidden' : ''}`}>
       {reorderToast ? <NoticeToast notice={reorderToast} onClose={() => setReorderToast(null)} /> : null}
 
-      <section className="sticky top-0 z-10 mb-4 bg-[var(--color-bg)] pb-1">
-        <div className="page-section p-3 shadow-[var(--shadow-subtle)]">
+      <section className={topSectionClassName}>
+        <div className="page-section relative z-10 bg-[var(--color-surface)] p-3 shadow-[var(--shadow-subtle)]">
           <div className="space-y-3">
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -972,9 +949,6 @@ export function MainPage() {
                     卡片
                   </Button>
                 </div>
-                <Button onClick={selectLoaded} size="sm" variant="ghost">
-                  {loadedAllSelected ? '取消全选' : '全选已加载'}
-                </Button>
                 <Button
                   leading={<Icon className="text-[14px]" name="upload" />}
                   onClick={() => setImportOpen(true)}
@@ -1013,32 +987,35 @@ export function MainPage() {
             </div>
 
             <div className="min-h-[56px] rounded-[8px] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-3 py-2">
-              {hasSelection ? (
-                <BatchActionBar
-                  folderOptions={folderOptions}
-                  moveTarget={moveTarget}
-                  onClear={() => setSelectionState({ ids: [], scopeKey: selectionScopeKey })}
-                  onDelete={() => setPendingDeleteIds(selectedIds)}
-                  onMoveTargetChange={setMoveTarget}
-                  onMoveToFolder={() => void handleBatchMove()}
-                  onSetFavorite={(value) => void handleBatchFavorite(value)}
-                  selectedCount={selectedIds.length}
-                />
-              ) : (
-                <div className="flex h-full flex-wrap items-center gap-x-3 gap-y-2 text-[12px] leading-4 text-[var(--color-text-secondary)]">
-                  <span>{bookmarks.length} 条已加载</span>
-                  <span>{viewMode === 'list' ? '列表视图' : '卡片视图'}</span>
-                  <span>{reorderHint}</span>
-                </div>
-              )}
+              <div className="flex h-full flex-wrap items-center gap-x-3 gap-y-2 text-[12px] leading-4 text-[var(--color-text-secondary)]">
+                <span>{bookmarks.length} 条已加载</span>
+                <span>{viewMode === 'list' ? '列表视图' : '卡片视图'}</span>
+                <span>{reorderHint}</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
+      {hasSelection ? (
+        <div className="pointer-events-none fixed right-4 top-24 z-30 sm:right-6">
+          <Surface className="pointer-events-auto flex items-center gap-3 px-4 py-3 shadow-[var(--shadow-elevated)]" tone="elevated">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium leading-5 text-[var(--color-text)]">已选择 {selectedIds.length} 项</p>
+            </div>
+            <Button onClick={() => setPendingDeleteIds(selectedIds)} size="sm" variant="danger">
+              删除
+            </Button>
+            <Button onClick={clearSelection} size="sm" variant="ghost">
+              取消
+            </Button>
+          </Surface>
+        </div>
+      ) : null}
+
       {notice ? <div className="mb-4 shrink-0"><NoticeBanner notice={notice} onClose={() => setNotice(null)} /></div> : null}
 
-      <section className="min-h-0 flex-1 pb-4">
+      <section className={contentSectionClassName} ref={isGridView ? gridScrollContainerRef : undefined}>
         {contentError ? (
           <StatePanel
             action={
@@ -1071,33 +1048,28 @@ export function MainPage() {
             bookmarks={bookmarks}
             canReorder={canReorder}
             getFolderName={(folderId) => findFolderName(folders, folderId)}
-            hasNextPage={Boolean(hasNextPage)}
-            isFetchingNextPage={isFetchingNextPage}
             onDelete={(bookmarkId) => setPendingDeleteIds([bookmarkId])}
             onEdit={openEditModal}
             onFavorite={(bookmarkId) => void handleFavoriteToggle(bookmarkId)}
-            onFetchNextPage={() => void fetchNextPage()}
-            onMoveToFolder={(bookmarkId, folderId) => void handleMoveBookmarkToFolder(bookmarkId, folderId)}
+            onMoveToFolder={(bookmarkIds, folderId) => void handleMoveBookmarksToFolder(bookmarkIds, folderId)}
             onReorder={(activeId, overId, position) => void handleReorder(activeId, overId, position)}
             onToggleSelect={toggleSelection}
             searchQuery={searchQuery}
             selectedIds={new Set(selectedIds)}
           />
         ) : (
-          <>
+          <div className="relative z-0 space-y-3">
             <BookmarkGrid
               bookmarks={bookmarks}
               getFolderName={(folderId) => findFolderName(folders, folderId)}
-              onDelete={(bookmarkId) => setPendingDeleteIds([bookmarkId])}
-              onEdit={openEditModal}
-              onFavorite={(bookmarkId) => void handleFavoriteToggle(bookmarkId)}
-              searchQuery={searchQuery}
+            onDelete={(bookmarkId) => setPendingDeleteIds([bookmarkId])}
+            onEdit={openEditModal}
+            onFavorite={(bookmarkId) => void handleFavoriteToggle(bookmarkId)}
+            onToggleSelect={toggleSelection}
+            searchQuery={searchQuery}
+            selectedIds={new Set(selectedIds)}
             />
-            <div ref={gridSentinelRef} />
-            {isFetchingNextPage ? (
-              <div className="pt-3 text-[12px] leading-4 text-[var(--color-text-secondary)]">正在加载更多书签...</div>
-            ) : null}
-          </>
+          </div>
         )}
       </section>
 
@@ -1200,4 +1172,12 @@ function LoadingState({ viewMode }: { viewMode: 'grid' | 'list' }) {
       ))}
     </div>
   )
+}
+
+function isTextSelectionTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  return Boolean(target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]'))
 }

@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { MutableRefObject, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import {
   closestCenter,
   DndContext,
-  type DraggableAttributes,
-  type DraggableSyntheticListeners,
   DragOverlay,
   PointerSensor,
   type DragEndEvent,
@@ -14,80 +12,46 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import {
-  arrayMove,
   SortableContext,
+  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import type { Bookmark } from '../../types'
 import { renderHighlightedText } from '../../utils/searchHighlight'
 import { Icon } from '../ui/Icon'
-import { Tooltip } from '../ui/Tooltip'
+import { Surface } from '../ui/Surface'
 import { BookmarkActionButton } from './BookmarkActionButton'
+import {
+  applySidebarDropHighlight,
+  clearSidebarDropHighlight,
+  resolveSidebarDropTarget,
+} from './bookmarkDragTargets'
 import { FaviconImage } from './FaviconImage'
 
 type BookmarkListProps = {
   bookmarks: Bookmark[]
   canReorder: boolean
   getFolderName: (folderId: string | null) => string | null
-  hasNextPage: boolean
-  isFetchingNextPage: boolean
   onDelete: (bookmarkId: string) => void
   onEdit: (bookmark: Bookmark) => void
-  onFetchNextPage: () => void
   onFavorite: (bookmarkId: string) => void
-  onMoveToFolder: (bookmarkId: string, folderId: string | null) => void
+  onMoveToFolder: (bookmarkIds: string[], folderId: string | null) => void
   onReorder: (activeId: string, overId: string | null, position: 'before' | 'after' | 'end') => void
   onToggleSelect: (bookmarkId: string) => void
   searchQuery: string
   selectedIds: Set<string>
 }
 
-type BookmarkSidebarDropTarget = {
-  element: HTMLElement
-  folderId: string | null
-}
-
-type BookmarkRowProps = {
-  bookmark: Bookmark
-  dragEnabled: boolean
-  dragTooltip: string
-  folderName: string | null
-  hostname: string
-  overlay?: boolean
-  onDelete: (bookmarkId: string) => void
-  onEdit: (bookmark: Bookmark) => void
-  onFavorite: (bookmarkId: string) => void
-  onToggleSelect: (bookmarkId: string) => void
-  selected: boolean
-  searchQuery: string
-}
-
-type SortableBookmarkRowProps = BookmarkRowProps & {
-  bookmarkId: string
-  dragActive: boolean
-  dropActive: boolean
-  itemTop: number
-  measureElement: (element: HTMLDivElement | null) => void
-}
-
-const endDropZoneHeight = 12
-const listBottomPadding = 16
-const loadingIndicatorHeight = 36
 const bookmarkEndDropZoneId = '__bookmark-sort-end__'
-const bookmarkDropTargetSelector = '[data-bookmark-drop-target]'
 
 export function BookmarkList({
   bookmarks,
   canReorder,
   getFolderName,
-  hasNextPage,
-  isFetchingNextPage,
   onDelete,
   onEdit,
-  onFetchNextPage,
   onFavorite,
   onMoveToFolder,
   onReorder,
@@ -95,46 +59,24 @@ export function BookmarkList({
   searchQuery,
   selectedIds,
 }: BookmarkListProps) {
-  const parentRef = useRef<HTMLDivElement | null>(null)
   const [activeBookmarkId, setActiveBookmarkId] = useState<string | null>(null)
   const [overItemId, setOverItemId] = useState<string | null>(null)
   const highlightedSidebarTargetRef = useRef<HTMLElement | null>(null)
+  const suppressClickUntilRef = useRef(0)
 
-  const rows = useMemo(() => bookmarks, [bookmarks])
-  const bookmarkIds = useMemo(() => rows.map((bookmark) => bookmark.id), [rows])
+  const bookmarkIds = useMemo(() => bookmarks.map((bookmark) => bookmark.id), [bookmarks])
   const activeBookmark = useMemo(
-    () => rows.find((bookmark) => bookmark.id === activeBookmarkId) ?? null,
-    [activeBookmarkId, rows],
+    () => bookmarks.find((bookmark) => bookmark.id === activeBookmarkId) ?? null,
+    [activeBookmarkId, bookmarks],
   )
+  const activeSelectionCount =
+    activeBookmarkId && selectedIds.has(activeBookmarkId) ? selectedIds.size : activeBookmarkId ? 1 : 0
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 4 },
+      activationConstraint: { delay: 120, tolerance: 6 },
     }),
   )
-
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    estimateSize: () => 78,
-    getItemKey: (index) => rows[index]?.id ?? index,
-    getScrollElement: () => parentRef.current,
-    measureElement: (element) => element?.getBoundingClientRect().height ?? 78,
-    overscan: 8,
-  })
-
-  const virtualItems = rowVirtualizer.getVirtualItems()
-  const lastVirtualItem = virtualItems[virtualItems.length - 1]
-
-  useEffect(() => {
-    if (!lastVirtualItem || !hasNextPage || isFetchingNextPage) {
-      return
-    }
-
-    if (lastVirtualItem.index >= rows.length - 5) {
-      onFetchNextPage()
-    }
-  }, [hasNextPage, isFetchingNextPage, lastVirtualItem, onFetchNextPage, rows.length])
 
   useEffect(() => {
     return () => {
@@ -142,15 +84,18 @@ export function BookmarkList({
     }
   }, [])
 
-  const dragEnabled = canReorder
-  const dragTooltip = canReorder
-    ? '当前已加载内容可拖拽排序，也可拖到左侧文件夹中移动'
-    : '当前视图不支持排序'
-  const totalHeight =
-    rowVirtualizer.getTotalSize() +
-    (dragEnabled ? endDropZoneHeight : 0) +
-    (isFetchingNextPage ? loadingIndicatorHeight : 0) +
-    listBottomPadding
+  useEffect(() => {
+    if (!activeBookmarkId) {
+      return
+    }
+
+    const previousCursor = document.body.style.cursor
+    document.body.style.cursor = 'grabbing'
+
+    return () => {
+      document.body.style.cursor = previousCursor
+    }
+  }, [activeBookmarkId])
 
   const syncSidebarTarget = (event: DragMoveEvent | DragEndEvent) => {
     const target = resolveSidebarDropTarget(event.active.rect.current.translated)
@@ -159,12 +104,10 @@ export function BookmarkList({
   }
 
   const handleDragMove = (event: DragMoveEvent) => {
-    if (!dragEnabled) {
-      return
-    }
-
+    const activeId = String(event.active.id)
     const sidebarTarget = syncSidebarTarget(event)
-    if (sidebarTarget) {
+
+    if (sidebarTarget || (selectedIds.has(activeId) && selectedIds.size > 1)) {
       setOverItemId(null)
       return
     }
@@ -184,13 +127,15 @@ export function BookmarkList({
     clearSidebarDropHighlight(highlightedSidebarTargetRef)
     setActiveBookmarkId(null)
     setOverItemId(null)
+    suppressClickUntilRef.current = Date.now() + 180
 
     if (sidebarTarget) {
-      onMoveToFolder(activeId, sidebarTarget.folderId)
+      const bookmarkIdsToMove = selectedIds.has(activeId) ? Array.from(selectedIds) : [activeId]
+      onMoveToFolder(bookmarkIdsToMove, sidebarTarget.folderId)
       return
     }
 
-    if (!event.over) {
+    if (!canReorder || (selectedIds.has(activeId) && selectedIds.size > 1) || !event.over) {
       return
     }
 
@@ -226,6 +171,7 @@ export function BookmarkList({
     clearSidebarDropHighlight(highlightedSidebarTargetRef)
     setActiveBookmarkId(null)
     setOverItemId(null)
+    suppressClickUntilRef.current = Date.now() + 180
   }
 
   return (
@@ -234,70 +180,51 @@ export function BookmarkList({
       onDragCancel={handleDragCancel}
       onDragEnd={handleDragEnd}
       onDragMove={handleDragMove}
-      onDragStart={({ active }) => setActiveBookmarkId(String(active.id))}
+      onDragStart={({ active }) => {
+        setActiveBookmarkId(String(active.id))
+        suppressClickUntilRef.current = Date.now() + 180
+      }}
       sensors={sensors}
     >
-      <div className="page-section flex h-full min-h-[20rem] flex-col overflow-hidden">
-        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto" ref={parentRef}>
-          <div className="relative w-full" style={{ height: `${totalHeight}px` }}>
-            <SortableContext items={bookmarkIds} strategy={verticalListSortingStrategy}>
-              {virtualItems.map((virtualRow) => {
-                const bookmark = rows[virtualRow.index]
-                const folderName = getFolderName(bookmark.folder_id)
-                const hostname = formatHostname(bookmark.url)
-                const selected = selectedIds.has(bookmark.id)
+      <div className="page-section overflow-hidden">
+        <SortableContext items={bookmarkIds} strategy={verticalListSortingStrategy}>
+          {bookmarks.map((bookmark) => {
+            const folderName = getFolderName(bookmark.folder_id)
+            const hostname = formatHostname(bookmark.url)
 
-                return (
-                  <SortableBookmarkRow
-                    bookmark={bookmark}
-                    bookmarkId={bookmark.id}
-                    dragActive={activeBookmarkId === bookmark.id}
-                    dragEnabled={dragEnabled}
-                    dragTooltip={dragTooltip}
-                    dropActive={dragEnabled && overItemId === bookmark.id && activeBookmarkId !== bookmark.id}
-                    folderName={folderName}
-                    hostname={hostname}
-                    itemTop={virtualRow.start}
-                    key={bookmark.id}
-                    measureElement={rowVirtualizer.measureElement}
-                    onDelete={onDelete}
-                    onEdit={onEdit}
-                    onFavorite={onFavorite}
-                    onToggleSelect={onToggleSelect}
-                    searchQuery={searchQuery}
-                    selected={selected}
-                  />
-                )
-              })}
-
-              {dragEnabled ? (
-                <div className="absolute left-0 w-full" style={{ transform: `translateY(${rowVirtualizer.getTotalSize()}px)` }}>
-                  <BookmarkEndDropZone active={overItemId === bookmarkEndDropZoneId} />
-                </div>
-              ) : null}
-            </SortableContext>
-
-            {isFetchingNextPage ? (
-              <div
-                className="absolute left-0 w-full px-4 py-2 text-[12px] leading-4 text-[var(--color-text-secondary)]"
-                style={{
-                  transform: `translateY(${rowVirtualizer.getTotalSize() + (dragEnabled ? endDropZoneHeight : 0)}px)`,
-                }}
-              >
-                正在加载更多书签…
-              </div>
-            ) : null}
-          </div>
-        </div>
+            return (
+              <SortableBookmarkRow
+                bookmark={bookmark}
+                dropActive={overItemId === bookmark.id && activeBookmarkId !== bookmark.id}
+                folderName={folderName}
+                hostname={hostname}
+                isDragging={activeBookmarkId === bookmark.id}
+                key={bookmark.id}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onFavorite={onFavorite}
+                onToggleSelect={onToggleSelect}
+                searchQuery={searchQuery}
+                selected={selectedIds.has(bookmark.id)}
+                suppressClickUntilRef={suppressClickUntilRef}
+              />
+            )
+          })}
+          {canReorder ? <BookmarkEndDropZone active={overItemId === bookmarkEndDropZoneId} /> : null}
+        </SortableContext>
       </div>
 
       <DragOverlay>
         {activeBookmark ? (
-          <div className="pointer-events-none">
+          activeSelectionCount > 1 ? (
+            <Surface className="px-4 py-3 shadow-[var(--shadow-elevated)]" tone="elevated">
+              <p className="text-[13px] font-medium leading-5 text-[var(--color-text)]">
+                已选择 {activeSelectionCount} 项
+              </p>
+            </Surface>
+          ) : (
             <BookmarkRow
               bookmark={activeBookmark}
-              dragEnabled={false}
-              dragTooltip={dragTooltip}
               folderName={getFolderName(activeBookmark.folder_id)}
               hostname={formatHostname(activeBookmark.url)}
               onDelete={onDelete}
@@ -307,8 +234,9 @@ export function BookmarkList({
               overlay
               searchQuery={searchQuery}
               selected={selectedIds.has(activeBookmark.id)}
+              suppressClickUntilRef={suppressClickUntilRef}
             />
-          </div>
+          )
         ) : null}
       </DragOverlay>
     </DndContext>
@@ -317,138 +245,103 @@ export function BookmarkList({
 
 function SortableBookmarkRow({
   bookmark,
-  bookmarkId,
-  dragActive,
-  dragEnabled,
-  dragTooltip,
   dropActive,
   folderName,
   hostname,
-  itemTop,
-  measureElement,
+  isDragging,
   onDelete,
   onEdit,
   onFavorite,
   onToggleSelect,
   searchQuery,
   selected,
-}: SortableBookmarkRowProps) {
-  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition } = useSortable({
-    id: bookmarkId,
-    disabled: !dragEnabled,
+  suppressClickUntilRef,
+}: BookmarkRowProps & { dropActive: boolean; isDragging: boolean }) {
+  const { attributes, listeners, setNodeRef, transition, transform } = useSortable({
+    id: bookmark.id,
   })
 
   return (
     <div
-      className="absolute left-0 top-0 w-full"
-      data-index={bookmarkId}
-      ref={measureElement}
-      style={{ transform: `translateY(${itemTop}px)` }}
+      {...attributes}
+      {...listeners}
+      ref={setNodeRef}
+      className={`touch-none select-none ${isDragging ? 'cursor-grabbing' : ''}`}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
-        <BookmarkRow
-          bookmark={bookmark}
-          dragEnabled={dragEnabled}
-          dragHandleAttributes={attributes}
-          dragHandleListeners={listeners}
-          dragHandleRef={setActivatorNodeRef}
-          dragTooltip={dragTooltip}
-          dragActive={dragActive}
-          dropActive={dropActive}
-          folderName={folderName}
-          hostname={hostname}
-          onDelete={onDelete}
-          onEdit={onEdit}
-          onFavorite={onFavorite}
-          onToggleSelect={onToggleSelect}
-          searchQuery={searchQuery}
-          selected={selected}
-        />
-      </div>
+      <BookmarkRow
+        bookmark={bookmark}
+        dropActive={dropActive}
+        folderName={folderName}
+        hostname={hostname}
+        isDragging={isDragging}
+        onDelete={onDelete}
+        onEdit={onEdit}
+        onFavorite={onFavorite}
+        onToggleSelect={onToggleSelect}
+        searchQuery={searchQuery}
+        selected={selected}
+        suppressClickUntilRef={suppressClickUntilRef}
+      />
     </div>
   )
 }
 
+type BookmarkRowProps = {
+  bookmark: Bookmark
+  dropActive?: boolean
+  folderName: string | null
+  hostname: string
+  isDragging?: boolean
+  onDelete: (bookmarkId: string) => void
+  onEdit: (bookmark: Bookmark) => void
+  onFavorite: (bookmarkId: string) => void
+  onToggleSelect: (bookmarkId: string) => void
+  overlay?: boolean
+  searchQuery: string
+  selected: boolean
+  suppressClickUntilRef: { current: number }
+}
+
 function BookmarkRow({
   bookmark,
-  dragEnabled,
-  dragHandleAttributes,
-  dragHandleListeners,
-  dragHandleRef,
-  dragTooltip,
-  dragActive = false,
   dropActive = false,
   folderName,
   hostname,
-  overlay = false,
+  isDragging = false,
   onDelete,
   onEdit,
   onFavorite,
   onToggleSelect,
+  overlay = false,
   searchQuery,
   selected,
-}: BookmarkRowProps & {
-  dragActive?: boolean
-  dragHandleAttributes?: DraggableAttributes
-  dragHandleListeners?: DraggableSyntheticListeners
-  dragHandleRef?: (element: HTMLButtonElement | null) => void
-  dropActive?: boolean
-}) {
-  const rowClassName = [
-    'group grid grid-cols-[auto_auto_minmax(0,1fr)_auto] items-start gap-2 rounded-[10px] px-2 py-2 transition-all duration-150',
-    overlay
-      ? 'border border-[var(--color-border-strong)] bg-[var(--color-surface)] shadow-[var(--shadow-elevated)]'
-      : 'hover:bg-[var(--color-bg-muted)]',
-    dropActive ? 'bg-[rgba(29,155,240,0.08)] ring-1 ring-[var(--color-accent)]' : '',
-    dragActive && !overlay ? 'opacity-0' : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
-
+  suppressClickUntilRef,
+}: BookmarkRowProps) {
   return (
     <>
-      <div className={rowClassName}>
-        <div className="flex shrink-0 items-start pt-1">
-          <Tooltip label={dragTooltip}>
-            <button
-              {...dragHandleAttributes}
-              {...dragHandleListeners}
-              aria-label="拖拽排序"
-              className={`icon-button h-8 w-8 ${dragEnabled ? 'cursor-grab touch-none' : 'cursor-not-allowed opacity-45'}`}
-              disabled={!dragEnabled}
-              ref={dragHandleRef}
-              type="button"
-            >
-              <Icon className="text-[14px]" name="grip" />
-            </button>
-          </Tooltip>
-        </div>
-
-        <label className="flex shrink-0 items-center pt-3">
-          {overlay ? (
-            <span
-              className={`block h-4 w-4 rounded border ${
-                selected
-                  ? 'border-[var(--color-accent)] bg-[var(--color-accent)]'
-                  : 'border-[var(--color-border-strong)] bg-[var(--color-surface)]'
-              }`}
-            />
-          ) : (
-            <input
-              checked={selected}
-              className="h-4 w-4 rounded accent-[var(--color-accent)]"
-              onChange={() => onToggleSelect(bookmark.id)}
-              type="checkbox"
-            />
-          )}
+      <div
+        className={`group grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 px-3 py-3 transition-colors duration-150 ${
+          selected ? 'bg-[rgba(29,155,240,0.08)]' : ''
+        } ${dropActive ? 'bg-[rgba(29,155,240,0.12)] ring-1 ring-[var(--color-accent)]' : ''} ${
+          isDragging && !overlay ? 'opacity-60' : ''
+        } ${overlay ? 'rounded-[10px] border border-[var(--color-border-strong)] bg-[var(--color-surface)] shadow-[var(--shadow-elevated)]' : 'hover:bg-[var(--color-bg-muted)]'}`}
+      >
+        <label className="mt-2 flex items-center" onClick={(event) => event.stopPropagation()}>
+          <input
+            checked={selected}
+            className="h-4 w-4 rounded accent-[var(--color-accent)]"
+            onChange={() => onToggleSelect(bookmark.id)}
+            onPointerDown={(event) => event.stopPropagation()}
+            type="checkbox"
+          />
         </label>
 
         {overlay ? (
-          <div className="flex min-w-0 items-start gap-3 rounded-[8px] py-1 pr-1">
+          <div className="flex min-w-0 items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)]">
               <FaviconImage faviconUrl={bookmark.favicon_url} title={bookmark.title} url={bookmark.url} />
             </div>
-
             <BookmarkRowDetails
               bookmark={bookmark}
               folderName={folderName}
@@ -457,21 +350,34 @@ function BookmarkRow({
             />
           </div>
         ) : (
-          <a className="flex min-w-0 items-start gap-3 rounded-[8px] py-1 pr-1" href={bookmark.url} rel="noreferrer" target="_blank">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)]">
-              <FaviconImage faviconUrl={bookmark.favicon_url} title={bookmark.title} url={bookmark.url} />
-            </div>
-
-            <BookmarkRowDetails
-              bookmark={bookmark}
-              folderName={folderName}
-              hostname={hostname}
-              searchQuery={searchQuery}
-            />
-          </a>
+          <div className="flex min-w-0 items-start gap-3 rounded-[8px]">
+            <a
+              className="flex min-w-0 items-start gap-3 rounded-[8px] cursor-default"
+              draggable={false}
+              href={bookmark.url}
+              onDragStart={(event) => event.preventDefault()}
+              onClick={(event) => {
+                if (Date.now() < suppressClickUntilRef.current) {
+                  event.preventDefault()
+                }
+              }}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)]">
+                <FaviconImage faviconUrl={bookmark.favicon_url} title={bookmark.title} url={bookmark.url} />
+              </div>
+              <BookmarkRowDetails
+                bookmark={bookmark}
+                folderName={folderName}
+                hostname={hostname}
+                searchQuery={searchQuery}
+              />
+            </a>
+          </div>
         )}
 
-        <div className="flex shrink-0 items-center gap-1 self-start pt-1">
+        <div className="flex shrink-0 items-center gap-1">
           <BookmarkActionButton label={bookmark.is_favorite ? '取消收藏' : '加入收藏'} onClick={() => onFavorite(bookmark.id)}>
             <Icon
               className="text-[14px]"
@@ -488,7 +394,7 @@ function BookmarkRow({
         </div>
       </div>
 
-      <div className="mx-2 border-b border-[var(--color-border)] last:border-b-0" />
+      {!overlay ? <div className="mx-3 border-b border-[var(--color-border)] last:border-b-0" /> : null}
     </>
   )
 }
@@ -537,7 +443,7 @@ function BookmarkEndDropZone({ active }: { active: boolean }) {
       className={`h-3 w-full transition-colors ${active || isOver ? 'bg-[rgba(29,155,240,0.08)]' : 'bg-transparent'}`}
       ref={setNodeRef}
     >
-      <div className={`mx-2 h-full border-t-2 ${active || isOver ? 'border-[var(--color-accent)]' : 'border-transparent'}`} />
+      <div className={`mx-3 h-full border-t-2 ${active || isOver ? 'border-[var(--color-accent)]' : 'border-transparent'}`} />
     </div>
   )
 }
@@ -556,58 +462,4 @@ function formatHostname(url: string) {
   } catch {
     return url
   }
-}
-
-function applySidebarDropHighlight(
-  highlightedSidebarTargetRef: MutableRefObject<HTMLElement | null>,
-  element: HTMLElement | null,
-) {
-  if (highlightedSidebarTargetRef.current === element) {
-    return
-  }
-
-  if (highlightedSidebarTargetRef.current) {
-    delete highlightedSidebarTargetRef.current.dataset.dndActive
-  }
-
-  highlightedSidebarTargetRef.current = element
-
-  if (element) {
-    element.dataset.dndActive = 'true'
-  }
-}
-
-function clearSidebarDropHighlight(highlightedSidebarTargetRef: MutableRefObject<HTMLElement | null>) {
-  if (highlightedSidebarTargetRef.current) {
-    delete highlightedSidebarTargetRef.current.dataset.dndActive
-    highlightedSidebarTargetRef.current = null
-  }
-}
-
-function resolveSidebarDropTarget(
-  rect: { height: number; left: number; top: number; width: number } | null,
-): BookmarkSidebarDropTarget | null {
-  if (!rect) {
-    return null
-  }
-
-  const pointerX = rect.left + rect.width / 2
-  const pointerY = rect.top + rect.height / 2
-  const targetElement = document
-    .elementFromPoint(pointerX, pointerY)
-    ?.closest<HTMLElement>(bookmarkDropTargetSelector)
-
-  if (!targetElement) {
-    return null
-  }
-
-  if (targetElement.dataset.bookmarkDropTarget === 'unsorted') {
-    return { element: targetElement, folderId: null }
-  }
-
-  if (targetElement.dataset.bookmarkDropTarget === 'folder' && targetElement.dataset.folderId) {
-    return { element: targetElement, folderId: targetElement.dataset.folderId }
-  }
-
-  return null
 }

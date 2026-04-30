@@ -711,6 +711,68 @@ func TestBatchMoveBookmarksMovesAllItems(t *testing.T) {
 	}
 }
 
+func TestListBookmarksAllReturnsEveryMatchingItem(t *testing.T) {
+	bookmarkRepo, _, _, router := newTestServer(t, testingfs.MapFS{
+		"index.html": {Data: []byte("index")},
+	})
+
+	first := &model.Bookmark{
+		ID:         uuid.NewString(),
+		Title:      "Alpha",
+		URL:        "https://example.com/alpha",
+		IsFavorite: true,
+		SortOrder:  0,
+	}
+	second := &model.Bookmark{
+		ID:         uuid.NewString(),
+		Title:      "Beta",
+		URL:        "https://example.com/beta",
+		IsFavorite: true,
+		SortOrder:  1,
+	}
+	third := &model.Bookmark{
+		ID:        uuid.NewString(),
+		Title:     "Gamma",
+		URL:       "https://example.com/gamma",
+		SortOrder: 2,
+	}
+	for _, bookmark := range []*model.Bookmark{first, second, third} {
+		if err := bookmarkRepo.Create(bookmark); err != nil {
+			t.Fatalf("seed bookmark %s: %v", bookmark.Title, err)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/bookmarks?favorite=true&all=true&page=1&page_size=1", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d with body %s", recorder.Code, recorder.Body.String())
+	}
+
+	var result repository.BookmarkListResult
+	if err := json.Unmarshal(recorder.Body.Bytes(), &result); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if result.Total != 2 {
+		t.Fatalf("expected total 2, got %#v", result)
+	}
+	if result.Page != 1 {
+		t.Fatalf("expected page 1, got %#v", result)
+	}
+	if len(result.Items) != 2 {
+		t.Fatalf("expected all matching items returned, got %#v", result)
+	}
+	if result.PageSize != 2 {
+		t.Fatalf("expected page_size to report actual returned count, got %#v", result)
+	}
+	if result.Items[0].ID != first.ID || result.Items[1].ID != second.ID {
+		t.Fatalf("expected favorite order preserved, got %#v", result.Items)
+	}
+}
+
 func TestMoveFolderRejectsMovingIntoDescendant(t *testing.T) {
 	_, folderRepo, _, router := newTestServer(t, testingfs.MapFS{
 		"index.html": {Data: []byte("index")},

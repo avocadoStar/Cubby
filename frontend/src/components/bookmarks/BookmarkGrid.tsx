@@ -12,7 +12,9 @@ type BookmarkGridProps = {
   onDelete: (bookmarkId: string) => void
   onEdit: (bookmark: Bookmark) => void
   onFavorite: (bookmarkId: string) => void
+  onToggleSelect: (bookmarkId: string) => void
   searchQuery: string
+  selectedIds: Set<string>
 }
 
 export function BookmarkGrid({
@@ -21,7 +23,9 @@ export function BookmarkGrid({
   onDelete,
   onEdit,
   onFavorite,
+  onToggleSelect,
   searchQuery,
+  selectedIds,
 }: BookmarkGridProps) {
   return (
     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -31,11 +35,39 @@ export function BookmarkGrid({
 
         return (
           <Surface
-            className="group flex h-full flex-col gap-4 p-4 transition-colors duration-150 hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-subtle)]"
+            className={`group flex h-full flex-col gap-4 p-4 transition-colors duration-150 hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-subtle)] ${
+              selectedIds.has(bookmark.id) ? 'border-[var(--color-accent)] ring-1 ring-[var(--color-accent)]' : ''
+            }`}
             key={bookmark.id}
             tone="panel"
           >
-            <a className="flex min-w-0 flex-1 flex-col gap-3" href={bookmark.url} rel="noreferrer" target="_blank">
+            <div className="flex items-start justify-between gap-3">
+              <label className="flex shrink-0 items-center gap-2 text-[12px] leading-4 text-[var(--color-text-secondary)]">
+                <input
+                  checked={selectedIds.has(bookmark.id)}
+                  className="h-4 w-4 rounded accent-[var(--color-accent)]"
+                  onChange={() => onToggleSelect(bookmark.id)}
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  type="checkbox"
+                />
+                <span>选择</span>
+              </label>
+
+              <div className="flex items-center gap-1">
+                <BookmarkActionButton label={bookmark.is_favorite ? '取消收藏' : '加入收藏'} onClick={() => onFavorite(bookmark.id)}>
+                  <Icon className="text-[14px]" filled={bookmark.is_favorite} name={bookmark.is_favorite ? 'heart-filled' : 'heart'} />
+                </BookmarkActionButton>
+                <BookmarkActionButton label="编辑书签" onClick={() => onEdit(bookmark)}>
+                  <Icon className="text-[14px]" name="pencil" />
+                </BookmarkActionButton>
+                <BookmarkActionButton label="删除书签" onClick={() => onDelete(bookmark.id)}>
+                  <Icon className="text-[14px]" name="trash" />
+                </BookmarkActionButton>
+              </div>
+            </div>
+
+            <a className="flex min-w-0 flex-1 flex-col gap-3 cursor-default" draggable={false} href={bookmark.url} onDragStart={(event) => event.preventDefault()} rel="noreferrer" target="_blank">
               <div className="flex h-10 w-10 items-center justify-center rounded-[8px] border border-[var(--color-border)] bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)]">
                 <FaviconImage faviconUrl={bookmark.favicon_url} title={bookmark.title} url={bookmark.url} />
               </div>
@@ -52,22 +84,9 @@ export function BookmarkGrid({
               </div>
             </a>
 
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
-                {bookmark.is_favorite ? <InlineTag>收藏</InlineTag> : null}
-                {folderName ? <InlineTag>{folderName}</InlineTag> : null}
-              </div>
-              <div className="flex items-center gap-1">
-                <BookmarkActionButton label={bookmark.is_favorite ? '取消收藏' : '加入收藏'} onClick={() => onFavorite(bookmark.id)}>
-                  <Icon className="text-[14px]" filled={bookmark.is_favorite} name={bookmark.is_favorite ? 'heart-filled' : 'heart'} />
-                </BookmarkActionButton>
-                <BookmarkActionButton label="编辑书签" onClick={() => onEdit(bookmark)}>
-                  <Icon className="text-[14px]" name="pencil" />
-                </BookmarkActionButton>
-                <BookmarkActionButton label="删除书签" onClick={() => onDelete(bookmark.id)}>
-                  <Icon className="text-[14px]" name="trash" />
-                </BookmarkActionButton>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {bookmark.is_favorite ? <InlineTag>收藏</InlineTag> : null}
+              {folderName ? <InlineTag>{folderName}</InlineTag> : null}
             </div>
           </Surface>
         )

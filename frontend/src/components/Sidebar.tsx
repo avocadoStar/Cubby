@@ -52,6 +52,16 @@ function findFolderById(folders: Folder[], folderId: string): Folder | null {
   return null
 }
 
+function buildFolderPathMap(folders: Folder[], prefix = '', map = new Map<string, string>()) {
+  for (const folder of folders) {
+    const path = prefix ? `${prefix} / ${folder.name}` : folder.name
+    map.set(folder.id, path)
+    buildFolderPathMap(folder.children ?? [], path, map)
+  }
+
+  return map
+}
+
 export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
@@ -67,6 +77,7 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({})
   const [pendingDeleteFolderId, setPendingDeleteFolderId] = useState<string | null>(null)
   const flatFolders = useMemo(() => flattenFolderTree(folders), [folders])
+  const folderPathMap = useMemo(() => buildFolderPathMap(folders), [folders])
 
   const handleSelect = (nextSelection: string | null) => {
     setFolderActionError(null)
@@ -90,7 +101,7 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
       setNewFolderParent('')
       setShowNewFolder(false)
     } catch (error) {
-      setFolderActionError(error instanceof Error ? error.message : '创建文件夹失败')
+      setFolderActionError(error instanceof Error ? error.message : '创建文件夹失败。')
     }
   }
 
@@ -98,7 +109,7 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
     try {
       await bookmarkMutations.moveBookmark.mutateAsync({ id: bookmarkId, folderId })
     } catch (error) {
-      setFolderActionError(error instanceof Error ? error.message : '移动书签失败')
+      setFolderActionError(error instanceof Error ? error.message : '移动书签失败。')
     }
   }
 
@@ -120,7 +131,7 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
       await folderMutations.moveFolder.mutateAsync({ id: draggedFolderId, parentId, sortOrder: targetIndex })
       await folderMutations.reorderFolders.mutateAsync(nextSiblingIds)
     } catch (error) {
-      setFolderActionError(error instanceof Error ? error.message : '移动文件夹失败')
+      setFolderActionError(error instanceof Error ? error.message : '移动文件夹失败。')
     }
   }
 
@@ -137,7 +148,7 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
       })
       setExpandedIds((current) => ({ ...current, [targetFolder.id]: true }))
     } catch (error) {
-      setFolderActionError(error instanceof Error ? error.message : '移动文件夹失败')
+      setFolderActionError(error instanceof Error ? error.message : '移动文件夹失败。')
     }
   }
 
@@ -154,12 +165,12 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
       })
       await folderMutations.reorderFolders.mutateAsync(nextRootIds)
     } catch (error) {
-      setFolderActionError(error instanceof Error ? error.message : '移动文件夹失败')
+      setFolderActionError(error instanceof Error ? error.message : '移动文件夹失败。')
     }
   }
 
   const folderOptions = flatFolders.map((item) => ({
-    label: `${'路 '.repeat(item.depth)}${item.folder.name}`,
+    label: folderPathMap.get(item.folder.id) ?? item.folder.name,
     value: item.folder.id,
   }))
 
@@ -346,7 +357,7 @@ export function Sidebar({ mobile = false, onNavigate }: SidebarProps) {
               }
             })
             .catch((error: unknown) => {
-              setFolderActionError(error instanceof Error ? error.message : '删除文件夹失败')
+              setFolderActionError(error instanceof Error ? error.message : '删除文件夹失败。')
             })
             .finally(() => setPendingDeleteFolderId(null))
         }}

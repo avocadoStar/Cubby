@@ -10,7 +10,13 @@ type BookmarkActionButtonProps = {
 export function BookmarkActionButton({ children, label, onClick }: BookmarkActionButtonProps) {
   return (
     <Tooltip label={label}>
-      <button aria-label={label} className="icon-button" onClick={onClick} type="button">
+      <button
+        aria-label={label}
+        className="icon-button"
+        onClick={onClick}
+        onPointerDown={(event) => event.stopPropagation()}
+        type="button"
+      >
         {children}
       </button>
     </Tooltip>

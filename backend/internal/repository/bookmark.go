@@ -23,6 +23,7 @@ type BookmarkQuery struct {
 	Favorite bool
 	Unsorted bool
 	Recent   bool
+	All      bool
 	Page     int
 	PageSize int
 }
@@ -90,15 +91,25 @@ func (r *BookmarkRepo) List(q BookmarkQuery) (*BookmarkListResult, error) {
 		orderBy = "created_at DESC"
 	}
 
-	offset := (q.Page - 1) * q.PageSize
 	query := fmt.Sprintf(
 		`SELECT id, title, url, description, favicon_url, thumbnail_url,
 		        folder_id, is_favorite, sort_order, metadata_fetched,
 		        created_at, updated_at
-		 FROM bookmarks %s ORDER BY %s LIMIT ? OFFSET ?`,
+		 FROM bookmarks %s ORDER BY %s`,
 		where, orderBy)
+	queryArgs := args
+	resultPage := q.Page
+	resultPageSize := q.PageSize
 
-	queryArgs := append(args, q.PageSize, offset)
+	if q.All {
+		resultPage = 1
+		resultPageSize = total
+	} else {
+		offset := (q.Page - 1) * q.PageSize
+		query += " LIMIT ? OFFSET ?"
+		queryArgs = append(queryArgs, q.PageSize, offset)
+	}
+
 	rows, err := r.db.Query(query, queryArgs...)
 	if err != nil {
 		return nil, err
@@ -116,7 +127,11 @@ func (r *BookmarkRepo) List(q BookmarkQuery) (*BookmarkListResult, error) {
 		items = append(items, b)
 	}
 
-	return &BookmarkListResult{Items: items, Total: total, Page: q.Page, PageSize: q.PageSize}, nil
+	if q.All && total == 0 {
+		resultPageSize = 0
+	}
+
+	return &BookmarkListResult{Items: items, Total: total, Page: resultPage, PageSize: resultPageSize}, nil
 }
 
 func (r *BookmarkRepo) GetByID(id string) (*model.Bookmark, error) {
