@@ -1,165 +1,101 @@
 package handler
 
 import (
-	"cubby/internal/model"
-	"cubby/internal/repository"
 	"net/http"
-	"strconv"
+
+	"cubby/internal/model"
+	"cubby/internal/service"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type FolderHandler struct {
-	repo *repository.FolderRepo
+	svc *service.FolderService
 }
 
-func NewFolderHandler(repo *repository.FolderRepo) *FolderHandler {
-	return &FolderHandler{repo: repo}
+func NewFolderHandler(svc *service.FolderService) *FolderHandler {
+	return &FolderHandler{svc: svc}
 }
 
-func (h *FolderHandler) GetTree(c *gin.Context) {
-	tree, err := h.repo.GetTree()
+func (h *FolderHandler) List(c *gin.Context) {
+	parentID := c.Query("parent_id")
+	var pid *string
+	if parentID != "" {
+		pid = &parentID
+	}
+	folders, err := h.svc.List(pid)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	if tree == nil {
-		tree = []repository.FolderTree{}
+	if folders == nil {
+		folders = []model.Folder{}
 	}
-	c.JSON(http.StatusOK, tree)
+	c.JSON(http.StatusOK, folders)
 }
 
 func (h *FolderHandler) Create(c *gin.Context) {
 	var req struct {
-		Name     string  `json:"name" binding:"required"`
+		Name     string  `json:"name"`
 		ParentID *string `json:"parent_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "名称不能为空", "code": "INVALID_REQUEST"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	if req.ParentID != nil {
-		exists, err := h.repo.Exists(*req.ParentID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
-			return
-		}
-		if !exists {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "父文件夹不存在", "code": "PARENT_NOT_FOUND"})
-			return
-		}
-	}
-	folder := &model.Folder{
-		ID:        uuid.New().String(),
-		Name:      req.Name,
-		ParentID:  req.ParentID,
-		SortOrder: 999,
-	}
-	if err := h.repo.Create(folder); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name required"})
 		return
 	}
-	c.JSON(http.StatusCreated, folder)
+	f, err := h.svc.Create(req.Name, req.ParentID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, f)
 }
 
 func (h *FolderHandler) Update(c *gin.Context) {
-	id := c.Param("id")
 	var req struct {
-		Name      string  `json:"name" binding:"required"`
-		ParentID  *string `json:"parent_id"`
-		SortOrder *int    `json:"sort_order"`
+		Name    string `json:"name"`
+		Version int    `json:"version"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "名称不能为空", "code": "INVALID_REQUEST"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	sortOrder := 0
-	if req.SortOrder != nil {
-		sortOrder = *req.SortOrder
-	}
-	if err := h.repo.Update(id, req.Name, req.ParentID, sortOrder); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
+	f, err := h.svc.Update(c.Param("id"), req.Name, req.Version)
+	if err != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "conflict"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+	c.JSON(http.StatusOK, f)
 }
 
 func (h *FolderHandler) Delete(c *gin.Context) {
-	if err := h.repo.Delete(c.Param("id")); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
+	if err := h.svc.Delete(c.Param("id")); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"ok": true})
-}
-
-func (h *FolderHandler) Reorder(c *gin.Context) {
-	var req struct {
-		IDs []string `json:"ids" binding:"required"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "ids 不能为空", "code": "INVALID_REQUEST"})
-		return
-	}
-	if err := h.repo.Reorder(req.IDs); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+	c.Status(http.StatusNoContent)
 }
 
 func (h *FolderHandler) Move(c *gin.Context) {
-	id := c.Param("id")
-
 	var req struct {
-		ParentID  *string `json:"parent_id"`
-		SortOrder int     `json:"sort_order"`
+		ID       string  `json:"id"`
+		ParentID *string `json:"parent_id"`
+		PrevID   *string `json:"prev_id"`
+		NextID   *string `json:"next_id"`
+		Version  int     `json:"version"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求格式错误", "code": "INVALID_REQUEST"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-
-	if req.ParentID != nil {
-		if *req.ParentID == id {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "不能移动到自己下面", "code": "INVALID_PARENT"})
-			return
-		}
-		exists, err := h.repo.Exists(*req.ParentID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
-			return
-		}
-		if !exists {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "父文件夹不存在", "code": "PARENT_NOT_FOUND"})
-			return
-		}
-
-		descendantIDs, err := h.repo.GetDescendantIDs(id)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
-			return
-		}
-		for _, descendantID := range descendantIDs {
-			if descendantID == *req.ParentID {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "不能移动到子文件夹下面", "code": "INVALID_PARENT"})
-				return
-			}
-		}
-	}
-
-	if err := h.repo.Move(id, req.ParentID, req.SortOrder); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "code": "INTERNAL_ERROR"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"ok": true})
-}
-
-func parseIntDefault(s string, def int) int {
-	v, err := strconv.Atoi(s)
+	f, err := h.svc.Move(req.ID, req.ParentID, req.PrevID, req.NextID, req.Version)
 	if err != nil {
-		return def
+		c.JSON(http.StatusConflict, gin.H{"error": "conflict"})
+		return
 	}
-	return v
+	c.JSON(http.StatusOK, f)
 }

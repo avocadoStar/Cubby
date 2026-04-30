@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"cubby/internal/config"
 	"cubby/internal/service"
 
 	"github.com/gin-gonic/gin"
