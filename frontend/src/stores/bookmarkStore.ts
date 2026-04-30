@@ -8,6 +8,7 @@ interface BookmarkState {
   loading: boolean
   load: (folderId?: string | null) => Promise<void>
   toggleSelect: (id: string) => void
+  selectAll: () => void
   clearSelection: () => void
   deleteSelected: () => Promise<void>
   deleteOne: (id: string) => Promise<void>
@@ -30,6 +31,13 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       const next = new Set(state.selectedIds)
       if (next.has(id)) { next.delete(id) } else { next.add(id) }
       return { selectedIds: next }
+    })
+  },
+
+  selectAll: () => {
+    set((state) => {
+      const all = new Set(state.bookmarks.map((b) => b.id))
+      return { selectedIds: all }
     })
   },
 

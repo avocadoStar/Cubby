@@ -8,12 +8,23 @@ import { useEffect } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 
 export default function MainLayout() {
-  const { bookmarks, load } = useBookmarkStore()
+  const { bookmarks, load, selectAll } = useBookmarkStore()
   const { selectedId } = useFolderStore()
 
   useEffect(() => { load(null) }, [])
 
   useEffect(() => { load(selectedId) }, [selectedId])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault()
+        selectAll()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [selectAll])
 
   return (
     <div className="flex h-screen bg-white relative">
