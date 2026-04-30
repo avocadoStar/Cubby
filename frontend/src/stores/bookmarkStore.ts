@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Bookmark } from '../types'
+import type { Bookmark } from '../types'
 import { api, ConflictError } from '../services/api'
 
 interface BookmarkState {

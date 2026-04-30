@@ -1,5 +1,5 @@
 import { memo, useState } from 'react'
-import { Bookmark } from '../types'
+import type { Bookmark } from '../types'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 
 const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {

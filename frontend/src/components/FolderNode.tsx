@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Folder } from '../types'
+import type { Folder } from '../types'
 import { useFolderStore } from '../stores/folderStore'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 

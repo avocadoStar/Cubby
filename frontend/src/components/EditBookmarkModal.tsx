@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bookmark } from '../types'
+import type { Bookmark } from '../types'
 import { api } from '../services/api'
 
 export default function EditBookmarkModal({ bookmark, onClose, onSaved }: {

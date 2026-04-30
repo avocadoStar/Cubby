@@ -1,4 +1,4 @@
-import { Folder, Bookmark, MoveRequest, BatchMoveRequest } from '../types'
+import type { Folder, Bookmark, MoveRequest, BatchMoveRequest } from '../types'
 
 const BASE = '/api'
 
