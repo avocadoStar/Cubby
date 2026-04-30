@@ -1,0 +1,45 @@
+import { memo } from 'react'
+import { Folder } from '../types'
+import { useFolderStore } from '../stores/folderStore'
+import { ChevronRight, ChevronDown } from 'lucide-react'
+
+const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
+  const { expandedIds, selectedId, childrenMap, toggleExpand, select } = useFolderStore()
+  const isExpanded = expandedIds.has(node.id)
+  const isSelected = selectedId === node.id
+  const children = childrenMap.get(node.id)
+  const hasChildren = children === undefined || children.length > 0
+
+  return (
+    <div
+      className="flex items-center cursor-default rounded select-none"
+      style={{
+        height: 32,
+        paddingLeft: 8 + depth * 20,
+        paddingRight: 8,
+        margin: '0 4px',
+        background: isSelected ? '#E5F0FF' : 'transparent',
+      }}
+      onClick={() => select(node.id)}
+    >
+      <span
+        className="flex-shrink-0 flex items-center justify-center"
+        style={{ width: 16, height: 16 }}
+        onClick={(e) => { e.stopPropagation(); toggleExpand(node.id) }}
+      >
+        {hasChildren && (
+          isExpanded
+            ? <ChevronDown size={12} stroke="#666" strokeWidth={2} />
+            : <ChevronRight size={12} stroke="#666" strokeWidth={2} />
+        )}
+      </span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6" className="flex-shrink-0 ml-1">
+        <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
+      </svg>
+      <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">{node.name}</span>
+    </div>
+  )
+})
+
+FolderNode.displayName = 'FolderNode'
+export default FolderNode
