@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="ALL" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="780d1757-21b9-427e-a588-e3bcf6c8110f" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/.env.sample" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/cmd/server/main.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/cmd/server/static/.gitkeep" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/go.mod" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/go.sum" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/ai/client.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/config/config.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/config/config_test.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/ai.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/ai_session.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/ai_undo.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/auth.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/bookmark.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/folder.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/handler_test.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/import_tasks.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/importer.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/router.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/handler/setting.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/metadata/fetcher.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/metadata/url.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/metadata/url_test.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/model/model.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/repository/bookmark.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/repository/db.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/repository/folder.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/internal/repository/setting.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/superpowers/plans/2026-04-28-cubby-bookmark-manager.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/superpowers/plans/2026-04-30-ui-ux-remediation-plan.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/superpowers/specs/2026-04-28-cubby-bookmark-manager-design.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/eslint.config.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/public/favicon.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/public/icons.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/public/logo.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scripts/ensure-backend-static-dir.mjs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/assets/hero.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/assets/react.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/assets/vite.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/AnimatedBackground.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Layout.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Sidebar.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/TopBar.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/AIModal.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/BatchActionBar.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/BookmarkActionButton.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/BookmarkForm.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/BookmarkGrid.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/BookmarkList.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/CreateBookmarkModal.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/EditBookmarkModal.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/FaviconImage.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/FolderCascadePicker.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/ImportModal.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/bookmarkDragTargets.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/bookmarks/types.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/Button.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/ConfirmDialog.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/Icon.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/Input.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/LogoMark.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/Modal.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/NoticeBanner.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/Select.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/StatePanel.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/Surface.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ui/Tooltip.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useBookmarkQueries.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useDebouncedValue.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useFolderQueries.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useSettingsQueries.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/useThemeMode.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/index.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/lib/queryClient.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/main.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MainPage.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/SettingsPage.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/services/api.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/stores/bookmarkStore.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/stores/folderStore.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/stores/settingsStore.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/types/index.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/bookmarkFilters.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/errors.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/favicon.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/searchHighlight.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/utils/url.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/tsconfig.app.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/tsconfig.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/tsconfig.node.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/vite.config.ts" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="GOROOT" url="file://$PROJECT_DIR$/../../DevTools/Go" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;&quot;,
+  &quot;associatedIndex&quot;: 3
+}</component>
+  <component name="ProjectId" id="3CzcS1GUlWKKF4GglT7u4muoAgy" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.GoLinterPluginOnboardingV2&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.GoLinterPluginStorageMigration&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.analysis.ui.options.defaults&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.modules.go.list.on.any.changes.was.set&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;go.sdk.automatically.set&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/project/Cubby&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;
+  }
+}</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-gosdk-72a9cf600ed8-3105c3b11fe0-org.jetbrains.plugins.go.sharedIndexes.bundled-GO-261.22158.291" />
+        <option value="bundled-js-predefined-d6986cc7102b-3bd3a6803838-JavaScript-GO-261.22158.291" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="780d1757-21b9-427e-a588-e3bcf6c8110f" name="Changes" comment="" />
+      <created>1777391841907</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1777391841907</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

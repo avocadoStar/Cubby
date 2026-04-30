@@ -1,0 +1,53 @@
+<h2>AI 智能整理：两条路线对比</h2>
+<p class="subtitle">同样的用户体验，架构复杂度差10倍</p>
+
+<div class="section">
+  <h3>文档里的方案（1.md + 5.md）</h3>
+  <div class="mockup">
+    <div class="mockup-header">重型AI管线 — 过度设计</div>
+    <div class="mockup-body">
+      <div style="font-family:monospace;font-size:12px;line-height:2;color:#666">
+        Bookmark → 提取metadata → OpenAI Embedding (1536维) → pgvector/Pinecone 存储
+        → K-Means/HDBSCAN 聚类 → GPT-4.1 生成文件夹结构 → Diff预览 → 用户确认 → 写入DB
+      </div>
+    </div>
+  </div>
+  <div class="pros-cons">
+    <div class="pros"><h4>适用场景</h4><ul><li>10万+书签的语义搜索</li><li>持续增量分类</li></ul></div>
+    <div class="cons"><h4>对收藏夹项目的问题</h4><ul><li>99%用户书签 &lt; 1000条，embedding的价值趋近于零</li><li>需要 pgvector 扩展或 Pinecone 服务，运维成本高</li><li>Embedding API 调用增加延迟和费用</li><li>聚类参数调优是持续维护负担</li></ul></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>我的推荐：轻量AI管线</h3>
+  <div class="mockup">
+    <div class="mockup-header">直接LLM分类 — 够用且干净</div>
+    <div class="mockup-body">
+      <div style="font-family:monospace;font-size:12px;line-height:2;color:#666">
+        Bookmark列表 [{title, url}] → LLM一次性分类 → 返回文件夹结构 → Diff预览 → 用户确认 → 写入DB
+      </div>
+    </div>
+  </div>
+  <div class="pros-cons">
+    <div class="pros"><h4>优势</h4><ul><li>零新依赖 — 已有的 DashScope API 直接复用</li><li>一次 API 调用完成全部分类</li><li>无向量数据库、无聚类引擎、无新基础设施</li><li>LLM天然理解中英文混合书签</li><li>Prompt 调优比聚类参数调优简单10倍</li></ul></div>
+    <div class="cons"><h4>代价</h4><ul><li>单次输入有 token 上限（~1000条书签以内完全没问题）</li><li>不支持实时增量语义搜索（Edge Clone 本来也不做这个）</li></ul></div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>核心逻辑</h3>
+  <div class="mockup">
+    <div class="mockup-header">Embedding的价值在哪里？</div>
+    <div class="mockup-body">
+      <p style="margin:0 0 12px 0"><strong>Embedding 解决的是"海量数据中找相似"的问题</strong> — 语义搜索、推荐系统、RAG。</p>
+      <p style="margin:0"><strong>书签自动整理解决的是"给100条链接分个类"的问题</strong> — 这是LLM原生能力，不需要向量。</p>
+      <p style="margin:12px 0 0 0;color:#666">当你需要"在所有书签里搜索关于前端性能的内容"时再引入 embedding。那是搜索功能，不是整理功能。两个不同的需求，别混在一起。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>结论：AI智能整理 = 用户点一个按钮 + 后端调一次LLM + 展示diff + 用户确认</h3>
+  <p>就这么简单。embedding / vector DB / clustering 全部砍掉，等真需要语义搜索那天再加。</p>
+  <p style="color:#666">你觉得这个方向可以吗？</p>
+</div>

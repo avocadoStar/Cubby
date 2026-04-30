@@ -1,0 +1,200 @@
+<h2>最终设计方案 — 第2节（v3）：Fluent 风格对齐 edge://favorites/</h2>
+<p class="subtitle">Windows 11 Fluent Design System — 原生桌面级视觉</p>
+
+<div class="section">
+  <h3>视觉系统（Fluent Design）</h3>
+  <div style="display:flex;gap:12px;font-size:13px;margin-bottom:16px">
+    <div style="flex:1;background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:12px">
+      <strong style="font-size:11px;color:#999;text-transform:uppercase">字体</strong><br>
+      <span style="font-family:'Segoe UI';font-size:14px">Segoe UI</span><br>
+      <span style="font-size:11px;color:#888">Windows 11 系统字体<br>正文 13px, 标题 16px, 次级 11px</span>
+    </div>
+    <div style="flex:1;background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:12px">
+      <strong style="font-size:11px;color:#999;text-transform:uppercase">颜色</strong>
+      <div style="display:flex;gap:6px;margin-top:4px">
+        <div style="width:20px;height:20px;background:#0078D4;border-radius:2px" title="#0078D4 Primary"></div>
+        <div style="width:20px;height:20px;background:#E5F0FF;border-radius:2px;border:1px solid #ddd" title="#E5F0FF Selected"></div>
+        <div style="width:20px;height:20px;background:#F5F5F5;border-radius:2px;border:1px solid #ddd" title="#F5F5F5 Hover"></div>
+        <div style="width:20px;height:20px;background:#FFFFFF;border-radius:2px;border:1px solid #ddd" title="#FFFFFF Surface"></div>
+        <div style="width:20px;height:20px;background:#E8E8E8;border-radius:2px" title="#E8E8E8 Border"></div>
+        <div style="width:20px;height:20px;background:#1A1A1A;border-radius:2px" title="#1A1A1A Text"></div>
+      </div>
+    </div>
+    <div style="flex:1;background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:12px">
+      <strong style="font-size:11px;color:#999;text-transform:uppercase">效果</strong><br>
+      <span style="font-size:12px">无阴影 · 无圆角卡片 · 1px 实线分割<br>hover = 背景色微变 · selected = 浅蓝底<br>图标 = Fluent Icons (24px regular)</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>edge://favorites/ 精确布局</h3>
+  <div class="mockup">
+    <div class="mockup-header">Cubby — 100% 对齐 Edge Favorites</div>
+    <div class="mockup-body">
+      <div style="display:flex;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden;font-size:12px;font-family:'Segoe UI',-apple-system,sans-serif;background:#fff;box-shadow:none">
+
+        <!-- LEFT: Folder Tree Pane -->
+        <div style="width:260px;min-width:260px;border-right:1px solid #e8e8e8;display:flex;flex-direction:column;background:#fff">
+          <!-- Pane Header -->
+          <div style="padding:20px 20px 12px;font-size:18px;font-weight:600;color:#1a1a1a;font-family:'Segoe UI',sans-serif;letter-spacing:-0.2px">收藏夹</div>
+          <!-- Tree -->
+          <div style="flex:1;overflow-y:auto;padding:0 8px 12px">
+            <!-- All Bookmarks -->
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:4px;cursor:default;background:#e5f0ff;margin:0 4px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span style="font-size:13px;font-weight:400;color:#1a1a1a">所有书签</span>
+            </div>
+            <!-- Folder items with Fluent tree style -->
+            <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:4px;cursor:default;margin:0 4px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#F6C23E" stroke="#E8A820" stroke-width="0.8"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+              <span style="font-size:13px;color:#1a1a1a">工作</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding:8px 12px 8px 36px;border-radius:4px;cursor:default;margin:0 4px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#F6C23E" stroke="#E8A820" stroke-width="0.8"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+              <span style="font-size:13px;color:#1a1a1a">前端</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding:8px 12px 8px 60px;border-radius:4px;cursor:default;margin:0 4px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#F6C23E" stroke="#E8A820" stroke-width="0.8"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+              <span style="font-size:13px;color:#1a1a1a">React</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:4px;cursor:default;margin:0 4px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#F6C23E" stroke="#E8A820" stroke-width="0.8"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+              <span style="font-size:13px;color:#1a1a1a">设计</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:4px;cursor:default;margin:0 4px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#F6C23E" stroke="#E8A820" stroke-width="0.8"><path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+              <span style="font-size:13px;color:#1a1a1a">工具</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Main Content Pane -->
+        <div style="flex:1;display:flex;flex-direction:column;background:#fff;min-width:0">
+          <!-- Toolbar -->
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid #e8e8e8;background:#fff">
+            <!-- Breadcrumb -->
+            <div style="display:flex;align-items:center;gap:0;font-size:13px;font-family:'Segoe UI',sans-serif">
+              <span style="color:#0078D4;cursor:default;padding:2px 4px;border-radius:2px">收藏夹</span>
+              <span style="color:#999;margin:0 2px">/</span>
+              <span style="color:#0078D4;cursor:default;padding:2px 4px;border-radius:2px">工作</span>
+              <span style="color:#999;margin:0 2px">/</span>
+              <span style="color:#1a1a1a;font-weight:400;padding:2px 4px;border-radius:2px">前端</span>
+            </div>
+            <div style="flex:1"></div>
+            <!-- Search -->
+            <div style="position:relative">
+              <svg style="position:absolute;left:10px;top:7px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input style="width:220px;height:30px;border:1px solid #d1d1d1;border-radius:4px;padding:0 10px 0 30px;font-size:13px;font-family:'Segoe UI',sans-serif;outline:none;background:#fff" placeholder="搜索书签">
+            </div>
+            <!-- Buttons -->
+            <button style="height:30px;padding:0 12px;border:1px solid #d1d1d1;border-radius:4px;background:#fff;font-size:13px;font-family:'Segoe UI',sans-serif;cursor:default;display:flex;align-items:center;gap:4px;color:#1a1a1a">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              新建文件夹
+            </button>
+            <button style="height:30px;padding:0 12px;border:1px solid #d1d1d1;border-radius:4px;background:#fff;font-size:13px;font-family:'Segoe UI',sans-serif;cursor:default;display:flex;align-items:center;gap:4px;color:#1a1a1a">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              导入
+            </button>
+            <!-- View toggle -->
+            <div style="display:flex;border:1px solid #d1d1d1;border-radius:4px;overflow:hidden">
+              <button style="width:30px;height:30px;border:none;background:#f0f0f0;cursor:default;display:flex;align-items:center;justify-content:center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </button>
+              <button style="width:30px;height:30px;border:none;background:#fff;cursor:default;display:flex;align-items:center;justify-content:center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Column Headers -->
+          <div style="display:flex;align-items:center;padding:8px 20px;border-bottom:1px solid #e8e8e8;font-size:11px;color:#888;font-family:'Segoe UI',sans-serif;font-weight:400;gap:8px">
+            <div style="width:20px;flex-shrink:0"></div>
+            <div style="flex:1;display:flex;align-items:center;gap:4px;cursor:default">
+              名称
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div style="width:380px;display:flex;align-items:center;gap:4px;cursor:default">
+              URL
+            </div>
+            <div style="width:110px;display:flex;align-items:center;gap:4px;cursor:default">
+              添加日期
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+
+          <!-- Bookmark Rows -->
+          <div style="flex:1;overflow-y:auto">
+            <div style="display:flex;align-items:center;padding:7px 20px;cursor:default;gap:8px;font-family:'Segoe UI',sans-serif">
+              <div style="width:20px;flex-shrink:0;display:flex;align-items:center">
+                <div style="width:16px;height:16px;background:#e8e8e8;border-radius:2px;display:flex;align-items:center;justify-content:center">
+                  <span style="font-size:8px;color:#666">R</span>
+                </div>
+              </div>
+              <span style="flex:1;font-size:13px;color:#1a1a1a">React 官方文档</span>
+              <span style="width:380px;font-size:12px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">https://react.dev</span>
+              <span style="width:110px;font-size:12px;color:#888">2026-04-15</span>
+            </div>
+            <div style="display:flex;align-items:center;padding:7px 20px;cursor:default;gap:8px;font-family:'Segoe UI',sans-serif;background:#e5f0ff">
+              <div style="width:20px;flex-shrink:0;display:flex;align-items:center">
+                <div style="width:16px;height:16px;background:#e8e8e8;border-radius:2px;display:flex;align-items:center;justify-content:center">
+                  <span style="font-size:8px;color:#666">V</span>
+                </div>
+              </div>
+              <span style="flex:1;font-size:13px;color:#1a1a1a">Vite 构建工具</span>
+              <span style="width:380px;font-size:12px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">https://vitejs.dev</span>
+              <span style="width:110px;font-size:12px;color:#888">2026-04-12</span>
+            </div>
+            <div style="display:flex;align-items:center;padding:7px 20px;cursor:default;gap:8px;font-family:'Segoe UI',sans-serif">
+              <div style="width:20px;flex-shrink:0;display:flex;align-items:center">
+                <div style="width:16px;height:16px;background:#e8e8e8;border-radius:2px;display:flex;align-items:center;justify-content:center">
+                  <span style="font-size:8px;color:#666">T</span>
+                </div>
+              </div>
+              <span style="flex:1;font-size:13px;color:#1a1a1a">TypeScript Handbook</span>
+              <span style="width:380px;font-size:12px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">https://www.typescriptlang.org/docs/</span>
+              <span style="width:110px;font-size:12px;color:#888">2026-04-10</span>
+            </div>
+            <div style="display:flex;align-items:center;padding:7px 20px;cursor:default;gap:8px;font-family:'Segoe UI',sans-serif">
+              <div style="width:20px;flex-shrink:0;display:flex;align-items:center">
+                <div style="width:16px;height:16px;background:#e8e8e8;border-radius:2px;display:flex;align-items:center;justify-content:center">
+                  <span style="font-size:8px;color:#666">T</span>
+                </div>
+              </div>
+              <span style="flex:1;font-size:13px;color:#1a1a1a">Tailwind CSS</span>
+              <span style="width:380px;font-size:12px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">https://tailwindcss.com</span>
+              <span style="width:110px;font-size:12px;color:#888">2026-04-08</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Fluent 风格关键要素</h3>
+  <div style="display:flex;gap:12px;font-size:13px">
+    <div style="flex:1;background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:12px">
+      <strong>字体</strong><br>
+      <span style="font-size:12px;color:#666">Segoe UI（系统默认）<br>正文 13px, 标题 18px<br>次级文本 11-12px<br>数字等宽 tabular-nums</span>
+    </div>
+    <div style="flex:1;background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:12px">
+      <strong>颜色</strong><br>
+      <span style="font-size:12px;color:#666">主色 #0078D4<br>选中 #E5F0FF<br>hover #F5F5F5<br>背景 纯白 #FFFFFF<br>分割线 #E8E8E8</span>
+    </div>
+    <div style="flex:1;background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:12px">
+      <strong>间距 & 效果</strong><br>
+      <span style="font-size:12px;color:#666">行高 34-36px<br>缩进 24px/级<br>圆角 4px（微妙）<br>无阴影/无卡片<br>1px 实线分割</span>
+    </div>
+    <div style="flex:1;background:#fff;border:1px solid #e0e0e0;border-radius:6px;padding:12px">
+      <strong>图标</strong><br>
+      <span style="font-size:12px;color:#666">Lucide Icons<br>1.5-2px stroke<br>16-18px 尺寸<br>Fluent 文件夹图标<br>金黄色文件夹</span>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:24px;color:#666">这次 Fluent 风格和 edge://favorites/ 对齐了吗？</p>
