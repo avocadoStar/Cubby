@@ -12,7 +12,6 @@ type BookmarkGridProps = {
   onDelete: (bookmarkId: string) => void
   onEdit: (bookmark: Bookmark) => void
   onFavorite: (bookmarkId: string) => void
-  onToggleSelect: (bookmarkId: string) => void
   searchQuery: string
   selectedIds: Set<string>
 }
@@ -23,7 +22,6 @@ export function BookmarkGrid({
   onDelete,
   onEdit,
   onFavorite,
-  onToggleSelect,
   searchQuery,
   selectedIds,
 }: BookmarkGridProps) {
@@ -42,19 +40,7 @@ export function BookmarkGrid({
             tone="panel"
           >
             <div className="flex items-start justify-between gap-3">
-              <label className="flex shrink-0 items-center gap-2 text-[12px] leading-4 text-[var(--color-text-secondary)]">
-                <input
-                  checked={selectedIds.has(bookmark.id)}
-                  className="h-4 w-4 rounded accent-[var(--color-accent)]"
-                  onChange={() => onToggleSelect(bookmark.id)}
-                  onClick={(event) => event.stopPropagation()}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  type="checkbox"
-                />
-                <span>选择</span>
-              </label>
-
-              <div className="flex items-center gap-1">
+              <div className="ml-auto flex items-center gap-1">
                 <BookmarkActionButton label={bookmark.is_favorite ? '取消收藏' : '加入收藏'} onClick={() => onFavorite(bookmark.id)}>
                   <Icon className="text-[14px]" filled={bookmark.is_favorite} name={bookmark.is_favorite ? 'heart-filled' : 'heart'} />
                 </BookmarkActionButton>

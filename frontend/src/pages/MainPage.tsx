@@ -120,10 +120,10 @@ export function MainPage() {
 
   const contentSectionClassName = isGridView
     ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4'
-    : 'min-h-0 flex-1 pb-4'
+    : 'min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4'
   const topSectionClassName = isGridView
     ? 'relative z-20 mb-4 shrink-0 bg-[var(--color-bg)] pb-1'
-    : 'sticky top-0 z-10 mb-4 bg-[var(--color-bg)] pb-1'
+    : 'relative z-20 mb-4 shrink-0 bg-[var(--color-bg)] pb-1'
 
   const gridScrollContainerRef = useRef<HTMLElement | null>(null)
   const createDraftRef = useRef(createDraft)
@@ -799,26 +799,23 @@ export function MainPage() {
     }
   }
 
-  const handleReorder = async (activeId: string, overId: string | null, position: 'before' | 'after' | 'end') => {
-    const ids = bookmarks.map((bookmark) => bookmark.id)
-    const fromIndex = ids.indexOf(activeId)
-    if (fromIndex === -1) {
+  const handleReorder = async (orderedIds: string[]) => {
+    if (orderedIds.length !== bookmarks.length) {
       return
     }
 
-    ids.splice(fromIndex, 1)
-    if (position === 'end' || overId === null) {
-      ids.push(activeId)
-    } else {
-      const targetIndex = ids.indexOf(overId)
-      if (targetIndex === -1) {
-        return
-      }
-      ids.splice(position === 'after' ? targetIndex + 1 : targetIndex, 0, activeId)
+    const currentIds = bookmarks.map((bookmark) => bookmark.id)
+    if (currentIds.some((id) => !orderedIds.includes(id))) {
+      return
+    }
+
+    const hasChanged = currentIds.some((id, index) => id !== orderedIds[index])
+    if (!hasChanged) {
+      return
     }
 
     try {
-      await mutations.reorderBookmarks.mutateAsync(ids)
+      await mutations.reorderBookmarks.mutateAsync(orderedIds)
       setReorderToast({ tone: 'success', message: '书签顺序已更新。' })
     } catch (error: unknown) {
       setNotice({ tone: 'error', message: getErrorMessage(error, '更新顺序失败。') })
@@ -894,7 +891,7 @@ export function MainPage() {
   const contentError = error instanceof Error ? error.message : null
 
   return (
-    <div className={`flex h-full min-h-0 flex-col ${isGridView ? 'overflow-hidden' : ''}`}>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {reorderToast ? <NoticeToast notice={reorderToast} onClose={() => setReorderToast(null)} /> : null}
 
       <section className={topSectionClassName}>
@@ -1052,7 +1049,7 @@ export function MainPage() {
             onEdit={openEditModal}
             onFavorite={(bookmarkId) => void handleFavoriteToggle(bookmarkId)}
             onMoveToFolder={(bookmarkIds, folderId) => void handleMoveBookmarksToFolder(bookmarkIds, folderId)}
-            onReorder={(activeId, overId, position) => void handleReorder(activeId, overId, position)}
+            onReorder={(orderedIds) => void handleReorder(orderedIds)}
             onToggleSelect={toggleSelection}
             searchQuery={searchQuery}
             selectedIds={new Set(selectedIds)}
@@ -1062,12 +1059,11 @@ export function MainPage() {
             <BookmarkGrid
               bookmarks={bookmarks}
               getFolderName={(folderId) => findFolderName(folders, folderId)}
-            onDelete={(bookmarkId) => setPendingDeleteIds([bookmarkId])}
-            onEdit={openEditModal}
-            onFavorite={(bookmarkId) => void handleFavoriteToggle(bookmarkId)}
-            onToggleSelect={toggleSelection}
-            searchQuery={searchQuery}
-            selectedIds={new Set(selectedIds)}
+              onDelete={(bookmarkId) => setPendingDeleteIds([bookmarkId])}
+              onEdit={openEditModal}
+              onFavorite={(bookmarkId) => void handleFavoriteToggle(bookmarkId)}
+              searchQuery={searchQuery}
+              selectedIds={new Set(selectedIds)}
             />
           </div>
         )}

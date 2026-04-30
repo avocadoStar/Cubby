@@ -13,7 +13,6 @@ import {
 } from '@dnd-kit/core'
 import {
   SortableContext,
-  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
@@ -38,13 +37,17 @@ type BookmarkListProps = {
   onEdit: (bookmark: Bookmark) => void
   onFavorite: (bookmarkId: string) => void
   onMoveToFolder: (bookmarkIds: string[], folderId: string | null) => void
-  onReorder: (activeId: string, overId: string | null, position: 'before' | 'after' | 'end') => void
+  onReorder: (orderedIds: string[]) => void
   onToggleSelect: (bookmarkId: string) => void
   searchQuery: string
   selectedIds: Set<string>
 }
 
 const bookmarkEndDropZoneId = '__bookmark-sort-end__'
+type BookmarkDragData = {
+  isSelected: boolean
+  selectedIds: string[]
+}
 
 export function BookmarkList({
   bookmarks,
@@ -104,15 +107,21 @@ export function BookmarkList({
   }
 
   const handleDragMove = (event: DragMoveEvent) => {
-    const activeId = String(event.active.id)
     const sidebarTarget = syncSidebarTarget(event)
+    const dragData = event.active.data.current as BookmarkDragData | undefined
 
-    if (sidebarTarget || (selectedIds.has(activeId) && selectedIds.size > 1)) {
+    if (sidebarTarget) {
       setOverItemId(null)
       return
     }
 
     if (typeof event.over?.id === 'string') {
+      const nextOverId = event.over.id
+      if (dragData?.isSelected && dragData.selectedIds.includes(nextOverId)) {
+        setOverItemId(null)
+        return
+      }
+
       setOverItemId(event.over.id)
       return
     }
@@ -123,6 +132,8 @@ export function BookmarkList({
   const handleDragEnd = (event: DragEndEvent) => {
     const activeId = String(event.active.id)
     const sidebarTarget = syncSidebarTarget(event)
+    const dragData = event.active.data.current as BookmarkDragData | undefined
+    const draggedBookmarkIds = dragData?.isSelected ? dragData.selectedIds : [activeId]
 
     clearSidebarDropHighlight(highlightedSidebarTargetRef)
     setActiveBookmarkId(null)
@@ -130,41 +141,31 @@ export function BookmarkList({
     suppressClickUntilRef.current = Date.now() + 180
 
     if (sidebarTarget) {
-      const bookmarkIdsToMove = selectedIds.has(activeId) ? Array.from(selectedIds) : [activeId]
-      onMoveToFolder(bookmarkIdsToMove, sidebarTarget.folderId)
+      onMoveToFolder(draggedBookmarkIds, sidebarTarget.folderId)
       return
     }
 
-    if (!canReorder || (selectedIds.has(activeId) && selectedIds.size > 1) || !event.over) {
+    if (!canReorder || !event.over) {
       return
     }
 
     const overId = String(event.over.id)
-    if (overId === activeId) {
+    if (overId !== bookmarkEndDropZoneId && draggedBookmarkIds.includes(overId)) {
       return
     }
 
     if (overId === bookmarkEndDropZoneId) {
-      onReorder(activeId, null, 'end')
+      const reorderedToEnd = reorderDraggedBookmarks(bookmarks, draggedBookmarkIds, null)
+      if (reorderedToEnd) {
+        onReorder(reorderedToEnd)
+      }
       return
     }
 
-    const activeIndex = bookmarkIds.indexOf(activeId)
-    const overIndex = bookmarkIds.indexOf(overId)
-    if (activeIndex === -1 || overIndex === -1) {
-      return
+    const reorderedIds = reorderDraggedBookmarks(bookmarks, draggedBookmarkIds, overId)
+    if (reorderedIds) {
+      onReorder(reorderedIds)
     }
-
-    const reorderedIds = arrayMove(bookmarkIds, activeIndex, overIndex)
-    const finalIndex = reorderedIds.indexOf(activeId)
-    const nextId = reorderedIds[finalIndex + 1] ?? null
-
-    if (nextId === null) {
-      onReorder(activeId, null, 'end')
-      return
-    }
-
-    onReorder(activeId, nextId, 'before')
   }
 
   const handleDragCancel = () => {
@@ -206,6 +207,7 @@ export function BookmarkList({
                 onToggleSelect={onToggleSelect}
                 searchQuery={searchQuery}
                 selected={selectedIds.has(bookmark.id)}
+                selectedIds={Array.from(selectedIds)}
                 suppressClickUntilRef={suppressClickUntilRef}
               />
             )
@@ -255,10 +257,15 @@ function SortableBookmarkRow({
   onToggleSelect,
   searchQuery,
   selected,
+  selectedIds,
   suppressClickUntilRef,
-}: BookmarkRowProps & { dropActive: boolean; isDragging: boolean }) {
+}: BookmarkRowProps & { dropActive: boolean; isDragging: boolean; selectedIds: string[] }) {
   const { attributes, listeners, setNodeRef, transition, transform } = useSortable({
     id: bookmark.id,
+    data: {
+      isSelected: selected,
+      selectedIds,
+    } satisfies BookmarkDragData,
   })
 
   return (
@@ -462,4 +469,53 @@ function formatHostname(url: string) {
   } catch {
     return url
   }
+}
+
+function reorderDraggedBookmarks(
+  bookmarks: Bookmark[],
+  draggedBookmarkIds: string[],
+  overId: string | null,
+) {
+  const allBookmarkIds = bookmarks.map((bookmark) => bookmark.id)
+  const dragIdSet = new Set(draggedBookmarkIds.filter((id) => allBookmarkIds.includes(id)))
+
+  if (dragIdSet.size === 0) {
+    return null
+  }
+
+  if (overId && dragIdSet.has(overId)) {
+    return null
+  }
+
+  const indexedBookmarks = bookmarks.map((bookmark, index) => ({ bookmark, index }))
+  const selectedEntries = indexedBookmarks.filter(({ bookmark }) => dragIdSet.has(bookmark.id))
+  const remainingEntries = indexedBookmarks.filter(({ bookmark }) => !dragIdSet.has(bookmark.id))
+
+  const selectedIdsInOrder = selectedEntries.map(({ bookmark }) => bookmark.id)
+  const remainingIds = remainingEntries.map(({ bookmark }) => bookmark.id)
+
+  const nextIds =
+    overId === null
+      ? [...remainingIds, ...selectedIdsInOrder]
+      : (() => {
+          const targetEntry = indexedBookmarks.find(({ bookmark }) => bookmark.id === overId)
+          if (!targetEntry) {
+            return null
+          }
+
+          const removedBeforeTarget = selectedEntries.filter(({ index }) => index < targetEntry.index).length
+          const targetIndexInRemaining = targetEntry.index - removedBeforeTarget
+
+          return [
+            ...remainingIds.slice(0, targetIndexInRemaining + 1),
+            ...selectedIdsInOrder,
+            ...remainingIds.slice(targetIndexInRemaining + 1),
+          ]
+        })()
+
+  if (!nextIds || nextIds.every((id, index) => id === allBookmarkIds[index])) {
+    return null
+  }
+
+  return nextIds
 }
