@@ -70,7 +70,16 @@ export default function MainLayout() {
                     style={{ height: 32, background: 'transparent' }}
                     onClick={() => select(item.folder.id)}
                   >
-                    <div style={{ width: 18, marginRight: 10, flexShrink: 0 }} />
+                    <div
+                      className="flex-shrink-0 mr-2.5 flex items-center justify-center cursor-default"
+                      style={{
+                        width: 18, height: 18,
+                        borderRadius: '50%',
+                        border: '2px solid #c0c0c0',
+                        background: 'transparent',
+                      }}
+                      onClick={(e) => { e.stopPropagation() }}
+                    />
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6" className="flex-shrink-0 mr-2">
                       <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
                     </svg>
