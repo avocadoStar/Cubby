@@ -259,14 +259,15 @@ export default function Sidebar() {
       try {
         if (overId === 'all-bookmarks') {
           newParentId = null
-          const siblings = childrenMap.get(null) ?? []
+          // Exclude dragged item — it may or may not be a root sibling yet
+          const siblings = (childrenMap.get(null) ?? []).filter(id => id !== dragId)
           // "所有书签" sits above all root-level folders.
           // Both before and after it mean "at the very top of root level".
           if (dropPosition === 'before' || dropPosition === 'after') {
             prevId = null
             nextId = siblings.length > 0 ? siblings[0] : null
           } else {
-            // inside: keep current position among root siblings
+            // inside: reorder within root — keep current position
             const idx = siblings.indexOf(dragId)
             if (idx > 0) prevId = siblings[idx - 1]
             if (idx >= 0 && idx + 1 < siblings.length) nextId = siblings[idx + 1]
@@ -283,18 +284,20 @@ export default function Sidebar() {
 
           if (dropPosition === 'inside') {
             newParentId = folderId
-            const siblings = childrenMap.get(folderId) ?? []
-            if (siblings.length > 0) prevId = siblings[siblings.length - 1]
+            // Append as last child (exclude self from siblings)
+            const siblings = (childrenMap.get(folderId) ?? []).filter(id => id !== dragId)
+            prevId = siblings.length > 0 ? siblings[siblings.length - 1] : null
             nextId = null
           } else if (dropPosition === 'before') {
             newParentId = targetFolder.parent_id
-            const siblings = childrenMap.get(newParentId) ?? []
+            const siblings = (childrenMap.get(newParentId) ?? []).filter(id => id !== dragId)
             const targetIdx = siblings.indexOf(folderId)
             prevId = targetIdx > 0 ? siblings[targetIdx - 1] : null
             nextId = folderId
           } else {
+            // after
             newParentId = targetFolder.parent_id
-            const siblings = childrenMap.get(newParentId) ?? []
+            const siblings = (childrenMap.get(newParentId) ?? []).filter(id => id !== dragId)
             const targetIdx = siblings.indexOf(folderId)
             prevId = folderId
             nextId =
