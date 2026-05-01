@@ -13,6 +13,13 @@ interface FolderState {
   select: (id: string | null) => Promise<void>
   rebuildVisible: () => void
   create: (name: string, parentId: string | null) => Promise<void>
+  moveFolder: (
+    id: string,
+    newParentId: string | null,
+    prevId: string | null,
+    nextId: string | null,
+    version: number,
+  ) => Promise<void>
 }
 
 export const useFolderStore = create<FolderState>((set, get) => ({
@@ -109,5 +116,29 @@ export const useFolderStore = create<FolderState>((set, get) => ({
   create: async (name, parentId) => {
     await api.createFolder(name, parentId)
     await get().loadChildren(parentId)
+  },
+
+  moveFolder: async (id, newParentId, prevId, nextId, version) => {
+    try {
+      await api.moveFolder({ id, parent_id: newParentId, prev_id: prevId, next_id: nextId, version })
+
+      const { folderMap } = get()
+      const folder = folderMap.get(id)
+      const oldParentId = folder?.parent_id ?? null
+
+      if (oldParentId !== newParentId) {
+        await get().loadChildren(oldParentId)
+      }
+      await get().loadChildren(newParentId)
+
+      get().rebuildVisible()
+    } catch (e) {
+      if (e instanceof (await import('../services/api')).ConflictError) {
+        const { selectedId } = get()
+        await get().loadChildren(selectedId)
+        get().rebuildVisible()
+      }
+      throw e
+    }
   },
 }))
