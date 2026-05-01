@@ -6,6 +6,8 @@ import { useDraggable } from '@dnd-kit/core'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 
 const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
+  console.warn('[DEBUG-dnd] FolderNode RENDER', node.id)
+
   const { expandedIds, selectedId, childrenMap, toggleExpand, select } = useFolderStore()
   const overId = useDndStore((s) => s.overId)
   const dropPosition = useDndStore((s) => s.dropPosition)

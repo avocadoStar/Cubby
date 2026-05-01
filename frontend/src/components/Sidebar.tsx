@@ -125,6 +125,8 @@ export default function Sidebar() {
   } = useFolderStore()
   const { setActive, setOver, clearDrag, activeFolder, activeId } = useDndStore()
 
+  console.warn('[DEBUG-dnd] Sidebar RENDER', { nodes: visibleNodes.length, activeId })
+
   const scrollRef = useRef<HTMLDivElement>(null)
   const initialPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
