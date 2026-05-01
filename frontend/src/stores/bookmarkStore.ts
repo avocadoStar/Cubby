@@ -55,7 +55,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   clearSelection: () => set({ selectedIds: new Set(), selectedFolderIds: new Set() }),
 
   deleteSelected: async () => {
-    const { selectedIds, selectedFolderIds, load } = get()
+    const { selectedIds, selectedFolderIds } = get()
     const bookmarkIds = Array.from(selectedIds)
     const folderIds = Array.from(selectedFolderIds)
 
@@ -67,10 +67,12 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     }
 
     set({ selectedIds: new Set(), selectedFolderIds: new Set() })
-    await load((window as any).__currentFolderId)
-    // Also reload folder tree
     const { useFolderStore } = await import('./folderStore')
-    await useFolderStore.getState().loadChildren(null)
+    const folderStore = useFolderStore.getState()
+    const currentFolderId = folderStore.selectedId
+    await get().load(currentFolderId)
+    await folderStore.loadChildren(currentFolderId)
+    await folderStore.loadChildren(null)
   },
 
   deleteOne: async (id) => {
