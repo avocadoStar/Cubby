@@ -140,11 +140,23 @@ export default function Sidebar() {
   })
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+      onActivation: ({ event }) => {
+        console.debug('[DEBUG-dnd] PointerSensor onActivation', {
+          type: event.type,
+          target: (event.target as HTMLElement | null)?.tagName ?? null,
+        })
+      },
+    }),
   )
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
+      console.debug('[DEBUG-dnd] DndContext onDragStart', {
+        activeId: String(event.active.id),
+      })
+
       const id = String(event.active.id)
       const folder = folderMap.get(id)
       if (!folder) return
@@ -158,6 +170,12 @@ export default function Sidebar() {
 
   const handleDragMove = useCallback(
     (event: DragMoveEvent) => {
+      console.debug('[DEBUG-dnd] DndContext onDragMove', {
+        activeId: String(event.active.id),
+        overId: event.over ? String(event.over.id) : null,
+        delta: event.delta,
+      })
+
       const over = event.over
       if (!over) {
         setOver(null, null, null)
@@ -205,6 +223,14 @@ export default function Sidebar() {
 
   const handleDragEnd = useCallback(
     async (_event: DragEndEvent) => {
+      const debugState = useDndStore.getState()
+
+      console.debug('[DEBUG-dnd] DndContext onDragEnd', {
+        activeId: debugState.activeId,
+        overId: debugState.overId,
+        dropPosition: debugState.dropPosition,
+      })
+
       const state = useDndStore.getState()
       const { activeId: dragId, activeFolder: dragFolder, overId, dropPosition } = state
 
@@ -268,6 +294,7 @@ export default function Sidebar() {
   )
 
   const handleDragCancel = useCallback(() => {
+    console.debug('[DEBUG-dnd] DndContext onDragCancel')
     clearDrag()
   }, [clearDrag])
 

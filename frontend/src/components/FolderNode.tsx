@@ -1,4 +1,4 @@
-import { memo, useRef, useEffect } from 'react'
+import { memo, useRef, useEffect, useCallback } from 'react'
 import type { Folder } from '../types'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
@@ -30,6 +30,15 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
 
   // Hover expand: when hovering over a collapsed folder with 'inside', expand after 500ms
   const expandTimerRef = useRef<number | null>(null)
+  const rowRef = useRef<HTMLDivElement | null>(null)
+
+  const setDraggableRowRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      rowRef.current = element
+      setNodeRef(element)
+    },
+    [setNodeRef],
+  )
 
   useEffect(() => {
     if (isOver && dropPosition === 'inside' && !isExpanded && hasChildren) {
@@ -45,9 +54,29 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
     }
   }, [isOver, dropPosition, isExpanded, hasChildren, node.id, toggleExpand])
 
+  useEffect(() => {
+    const element = rowRef.current
+    if (!element) return
+
+    const rect = element.getBoundingClientRect()
+    const computed = window.getComputedStyle(element)
+
+    console.debug('[DEBUG-dnd] FolderNode wiring', {
+      id: node.id,
+      listenerKeys: listeners ? Object.keys(listeners) : [],
+      attributes,
+      width: rect.width,
+      height: rect.height,
+      pointerEvents: computed.pointerEvents,
+      touchAction: computed.touchAction,
+      visibility: computed.visibility,
+      display: computed.display,
+    })
+  }, [attributes, listeners, node.id])
+
   return (
     <div
-      ref={setNodeRef}
+      ref={setDraggableRowRef}
       data-context="folder"
       data-id={node.id}
       className="flex items-center cursor-default rounded select-none"
@@ -67,6 +96,41 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
         touchAction: 'none',
       }}
       onClick={() => select(node.id)}
+      onPointerDownCapture={(event) => {
+        console.debug('[DEBUG-dnd] FolderNode pointerdown', {
+          id: node.id,
+          target: (event.target as HTMLElement).tagName,
+          currentTarget: (event.currentTarget as HTMLElement).tagName,
+          button: event.button,
+          buttons: event.buttons,
+          clientX: event.clientX,
+          clientY: event.clientY,
+        })
+      }}
+      onPointerMoveCapture={(event) => {
+        if (event.buttons !== 1) return
+
+        console.debug('[DEBUG-dnd] FolderNode pointermove', {
+          id: node.id,
+          buttons: event.buttons,
+          clientX: event.clientX,
+          clientY: event.clientY,
+        })
+      }}
+      onPointerUpCapture={(event) => {
+        console.debug('[DEBUG-dnd] FolderNode pointerup', {
+          id: node.id,
+          button: event.button,
+          buttons: event.buttons,
+          clientX: event.clientX,
+          clientY: event.clientY,
+        })
+      }}
+      onClickCapture={() => {
+        console.debug('[DEBUG-dnd] FolderNode click', {
+          id: node.id,
+        })
+      }}
       {...listeners}
       {...attributes}
     >
