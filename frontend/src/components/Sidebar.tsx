@@ -144,7 +144,7 @@ export default function Sidebar() {
       const id = String(event.active.id)
       const folder = folderMap.get(id)
       if (!folder) return
-      setActive(id, folder)
+      setActive(id, folder, 'sidebar')
       const ev = event.activatorEvent as PointerEvent | MouseEvent
       livePointerRef.current = { x: ev.clientX, y: ev.clientY }
     },
@@ -426,7 +426,7 @@ export default function Sidebar() {
         )}
       </DragOverlay>
 
-      <DropIndicator />
+      <DropIndicator source="sidebar" />
     </DndContext>
   )
 }

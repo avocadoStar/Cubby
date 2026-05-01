@@ -149,8 +149,9 @@ function DraggableFolderRow({
 }) {
   const overId = useDndStore((s) => s.overId)
   const dropPosition = useDndStore((s) => s.dropPosition)
+  const dndSource = useDndStore((s) => s.source)
   const isOver = overId === `droppable:${folder.id}`
-  const isInside = isOver && dropPosition === 'inside'
+  const isInside = isOver && dropPosition === 'inside' && dndSource === 'main'
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: folder.id,
@@ -244,7 +245,7 @@ export default function MainLayout() {
       setActive(id, item.kind === 'folder' ? (item.folder as unknown as Folder & { parent_id?: string | null }) : ({
         ...item.bookmark,
         parent_id: item.bookmark.folder_id,
-      } as unknown as Folder & { parent_id?: string | null }))
+      } as unknown as Folder & { parent_id?: string | null }), 'main')
     }
   }, [items, setActive])
 
@@ -485,7 +486,7 @@ export default function MainLayout() {
           )}
         </DragOverlay>
 
-        <DropIndicator />
+        <DropIndicator source="main" />
       </DndContext>
     </div>
   )

@@ -11,8 +11,9 @@ const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
 
   const overId = useDndStore((s) => s.overId)
   const dropPosition = useDndStore((s) => s.dropPosition)
+  const dndSource = useDndStore((s) => s.source)
   const isOver = overId === `droppable:bookmark:${bookmark.id}`
-  const isOverInside = isOver && dropPosition === 'inside'
+  const isOverInside = isOver && dropPosition === 'inside' && dndSource === 'main'
 
   const {
     attributes,
