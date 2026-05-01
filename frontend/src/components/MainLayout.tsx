@@ -374,22 +374,32 @@ export default function MainLayout() {
         let nextId: string | null = null
 
         if (!targetItem) {
+          // Dropped in empty space → append to current folder's bookmarks
           const siblings = siblingsOf(selectedId)
           ;({ prevId, nextId } = placement(siblings, siblings.length))
-        } else if (targetItem.kind === 'folder' && dropPosition === 'inside') {
-          // Drop bookmark into folder
-          newFolderId = targetItem.folder.id
+        } else if (targetItem.kind === 'folder') {
+          // Bookmark relative to a folder:
+          //   inside → move bookmark into that folder
+          //   before/after → move into folder's parent, at start/end of bookmarks
+          if (dropPosition === 'inside') {
+            newFolderId = targetItem.folder.id
+          } else {
+            newFolderId = targetItem.folder.parent_id ?? selectedId
+          }
           const siblings = siblingsOf(newFolderId)
-          ;({ prevId, nextId } = placement(siblings, siblings.length))
+          if (dropPosition === 'before') {
+            ;({ prevId, nextId } = placement(siblings, 0))
+          } else {
+            ;({ prevId, nextId } = placement(siblings, siblings.length))
+          }
         } else {
-          // before or after
-          newFolderId = targetItem.kind === 'folder'
-            ? targetItem.folder.parent_id ?? selectedId
-            : targetItem.bookmark.folder_id ?? selectedId
+          // Bookmark relative to another bookmark: normal before/after ordering
+          newFolderId = targetItem.bookmark.folder_id ?? selectedId
           const siblings = siblingsOf(newFolderId)
-          const bookmarkTargetId = targetItem.kind === 'bookmark' ? targetItem.bookmark.id : null
-          const targetIdx = bookmarkTargetId ? siblings.indexOf(bookmarkTargetId) : siblings.length
-          const insertIdx = dropPosition === 'before' ? Math.max(0, targetIdx) : Math.min(siblings.length, targetIdx + 1)
+          const targetIdx = siblings.indexOf(targetItem.bookmark.id)
+          const insertIdx = dropPosition === 'before'
+            ? Math.max(0, targetIdx)
+            : Math.min(siblings.length, targetIdx + 1)
           ;({ prevId, nextId } = placement(siblings, insertIdx))
         }
 
