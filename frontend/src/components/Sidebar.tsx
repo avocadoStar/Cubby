@@ -143,7 +143,7 @@ export default function Sidebar() {
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
       onActivation: ({ event }) => {
-        console.debug('[DEBUG-dnd] PointerSensor onActivation', {
+        console.log('[DEBUG-dnd] PointerSensor onActivation', {
           type: event.type,
           target: (event.target as HTMLElement | null)?.tagName ?? null,
         })
@@ -153,7 +153,7 @@ export default function Sidebar() {
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      console.debug('[DEBUG-dnd] DndContext onDragStart', {
+      console.log('[DEBUG-dnd] DndContext onDragStart', {
         activeId: String(event.active.id),
       })
 
@@ -170,7 +170,7 @@ export default function Sidebar() {
 
   const handleDragMove = useCallback(
     (event: DragMoveEvent) => {
-      console.debug('[DEBUG-dnd] DndContext onDragMove', {
+      console.log('[DEBUG-dnd] DndContext onDragMove', {
         activeId: String(event.active.id),
         overId: event.over ? String(event.over.id) : null,
         delta: event.delta,
@@ -225,7 +225,7 @@ export default function Sidebar() {
     async (_event: DragEndEvent) => {
       const debugState = useDndStore.getState()
 
-      console.debug('[DEBUG-dnd] DndContext onDragEnd', {
+      console.log('[DEBUG-dnd] DndContext onDragEnd', {
         activeId: debugState.activeId,
         overId: debugState.overId,
         dropPosition: debugState.dropPosition,
@@ -294,7 +294,7 @@ export default function Sidebar() {
   )
 
   const handleDragCancel = useCallback(() => {
-    console.debug('[DEBUG-dnd] DndContext onDragCancel')
+    console.log('[DEBUG-dnd] DndContext onDragCancel')
     clearDrag()
   }, [clearDrag])
 

@@ -61,7 +61,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
     const rect = element.getBoundingClientRect()
     const computed = window.getComputedStyle(element)
 
-    console.debug('[DEBUG-dnd] FolderNode wiring', {
+    console.log('[DEBUG-dnd] FolderNode wiring', {
       id: node.id,
       listenerKeys: listeners ? Object.keys(listeners) : [],
       attributes,
@@ -97,7 +97,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       }}
       onClick={() => select(node.id)}
       onPointerDownCapture={(event) => {
-        console.debug('[DEBUG-dnd] FolderNode pointerdown', {
+        console.log('[DEBUG-dnd] FolderNode pointerdown', {
           id: node.id,
           target: (event.target as HTMLElement).tagName,
           currentTarget: (event.currentTarget as HTMLElement).tagName,
@@ -110,7 +110,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       onPointerMoveCapture={(event) => {
         if (event.buttons !== 1) return
 
-        console.debug('[DEBUG-dnd] FolderNode pointermove', {
+        console.log('[DEBUG-dnd] FolderNode pointermove', {
           id: node.id,
           buttons: event.buttons,
           clientX: event.clientX,
@@ -118,7 +118,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
         })
       }}
       onPointerUpCapture={(event) => {
-        console.debug('[DEBUG-dnd] FolderNode pointerup', {
+        console.log('[DEBUG-dnd] FolderNode pointerup', {
           id: node.id,
           button: event.button,
           buttons: event.buttons,
@@ -127,7 +127,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
         })
       }}
       onClickCapture={() => {
-        console.debug('[DEBUG-dnd] FolderNode click', {
+        console.log('[DEBUG-dnd] FolderNode click', {
           id: node.id,
         })
       }}
