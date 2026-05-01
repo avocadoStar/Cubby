@@ -121,6 +121,9 @@ export const api = {
     request<Bookmark[]>(`/search?q=${encodeURIComponent(q)}`),
 
   // Import
+  fetchMetadata: (url: string) =>
+    request<{ title: string }>(`/metadata?url=${encodeURIComponent(url)}`),
+
   importBookmarks: (file: File) => {
     const form = new FormData()
     form.append('file', file)

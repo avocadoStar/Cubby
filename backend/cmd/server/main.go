@@ -25,10 +25,11 @@ func main() {
 	bookmarkSvc := service.NewBookmarkService(bookmarkRepo)
 	searchSvc := service.NewSearchService(bookmarkRepo)
 	importSvc := service.NewImportService(folderRepo, bookmarkRepo)
+	metadataSvc := service.NewMetadataService()
 	folderSvc.SetBookmarkRepo(bookmarkRepo)
 
 	r := gin.Default()
-	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, cfg)
+	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, metadataSvc, cfg)
 
 	// Serve frontend static files in production
 	r.Static("/assets", "./cmd/server/static/assets")

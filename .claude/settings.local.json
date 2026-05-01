@@ -40,7 +40,11 @@
       "Bash(python \"C:/Users/15638/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"loading button disabled state double submit\" --domain ux --max-results 5)",
       "Bash(python \"C:/Users/15638/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"empty state error recovery confirmation\" --domain ux --max-results 5)",
       "Bash(python \"C:/Users/15638/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"content jump layout shift resize\" --domain ux --max-results 5)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Read(//e/project/linkding/**)"
+    ],
+    "additionalDirectories": [
+      "e:\\project\\Cubby\\backend\\internal\\handler"
     ]
   }
 }

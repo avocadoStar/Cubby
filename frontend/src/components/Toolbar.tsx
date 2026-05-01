@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Breadcrumb from './Breadcrumb'
 import MoreMenu from './MoreMenu'
 import { useFolderStore } from '../stores/folderStore'
@@ -13,6 +13,33 @@ export default function Toolbar() {
   const [showAddBookmark, setShowAddBookmark] = useState(false)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
+  const [fetchingTitle, setFetchingTitle] = useState(false)
+  const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  // Auto-fetch title when URL changes
+  useEffect(() => {
+    if (!url.trim() || !/^https?:\/\//i.test(url.trim())) return
+    clearTimeout(urlTimer.current)
+    urlTimer.current = setTimeout(async () => {
+      setFetchingTitle(true)
+      try {
+        const meta = await api.fetchMetadata(url.trim())
+        // Only set title if user hasn't manually changed it
+        setTitle(prev => prev ? prev : meta.title)
+      } catch { /* ignore fetch errors */ }
+      setFetchingTitle(false)
+    }, 600)
+    return () => clearTimeout(urlTimer.current)
+  }, [url])
+
+  const handleUrlChange = (value: string) => {
+    setUrl(value)
+    // Auto-prepend https://
+    if (value && !/^https?:\/\//i.test(value) && value.includes('.')) {
+      setUrl('https://' + value)
+      return
+    }
+  }
 
   const handleAddBookmark = async () => {
     if (!title.trim() || !url.trim()) return
@@ -63,12 +90,12 @@ export default function Toolbar() {
               autoFocus
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="名称"
+              placeholder={fetchingTitle ? "正在获取标题…" : "名称"}
               className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-3"
             />
             <input
               value={url}
-              onChange={e => setUrl(e.target.value)}
+              onChange={e => handleUrlChange(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddBookmark()}
               placeholder="URL"
               className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-4"

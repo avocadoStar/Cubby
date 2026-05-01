@@ -15,6 +15,7 @@ func SetupRoutes(
 	bookmarkSvc *service.BookmarkService,
 	searchSvc *service.SearchService,
 	importSvc *service.ImportService,
+	metadataSvc *service.MetadataService,
 	cfg *config.Config,
 ) {
 	authH := NewAuthHandler(authSvc)
@@ -22,6 +23,7 @@ func SetupRoutes(
 	bookmarkH := NewBookmarkHandler(bookmarkSvc)
 	searchH := NewSearchHandler(searchSvc)
 	importExportH := NewImportExportHandler(importSvc, folderSvc, bookmarkSvc)
+	metadataH := NewMetadataHandler(metadataSvc)
 
 	api := r.Group("/api")
 
@@ -52,6 +54,7 @@ func SetupRoutes(
 
 		// Search
 		protected.GET("/search", searchH.Search)
+			protected.GET("/metadata", metadataH.Fetch)
 
 		// Import/Export
 		protected.POST("/import", importExportH.Import)
