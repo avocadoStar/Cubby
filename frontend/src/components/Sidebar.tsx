@@ -6,7 +6,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  pointerWithin,
+  closestCenter,
   useSensor,
   useSensors,
   useDroppable,
@@ -167,7 +167,6 @@ export default function Sidebar() {
     (event: DragMoveEvent) => {
       const over = event.over
       if (!over) {
-        console.warn('[DND] no over')
         setOver(null, null, null)
         return
       }
@@ -179,17 +178,12 @@ export default function Sidebar() {
         document.querySelector(`[data-drop-id="${overId}"]`) ||
         document.querySelector(`[data-id="${overId}"]`)
       if (!el) {
-        console.warn('[DND] no el for', overId, {
-          dataDropCount: document.querySelectorAll('[data-drop-id]').length,
-        })
         setOver(null, null, null)
         return
       }
 
       const rect = el.getBoundingClientRect()
       const position = calcDropPosition(rect, pointerRef.current.y)
-
-      console.warn('[DND] indicator', { overId, position, ptrY: pointerRef.current.y.toFixed(0), rectTop: rect.top.toFixed(0), rectH: rect.height })
 
       if (position === 'inside') {
         if (overId === 'all-bookmarks') {
@@ -289,7 +283,7 @@ export default function Sidebar() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={pointerWithin}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
