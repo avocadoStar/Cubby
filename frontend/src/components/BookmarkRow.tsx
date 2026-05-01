@@ -9,13 +9,16 @@ const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
 
   return (
     <div
-      className="flex items-center mx-1 px-2 rounded select-none"
+      data-context="bookmark"
+      data-id={bookmark.id}
+      className="flex items-center mx-1 px-2 rounded select-none cursor-default"
       style={{
         height: 32,
         background: isSelected ? '#E5F0FF' : hovered ? '#F5F5F5' : 'transparent',
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => window.open(bookmark.url, '_blank')}
     >
       <div
         className="flex-shrink-0 mr-2.5 flex items-center justify-center cursor-default"

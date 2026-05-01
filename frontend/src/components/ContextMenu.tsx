@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useBookmarkStore } from '../stores/bookmarkStore'
+import { useFolderStore } from '../stores/folderStore'
+import { api } from '../services/api'
+import EditBookmarkModal from './EditBookmarkModal'
 
 interface MenuState {
   x: number
@@ -10,11 +13,14 @@ interface MenuState {
 
 export default function ContextMenu() {
   const [menu, setMenu] = useState<MenuState | null>(null)
+  const [editingBookmark, setEditingBookmark] = useState<string | null>(null)
+  const [renamingFolder, setRenamingFolder] = useState<string | null>(null)
+  const [folderName, setFolderName] = useState('')
 
   const handleContextMenu = useCallback((e: MouseEvent) => {
-    e.preventDefault()
     const el = (e.target as HTMLElement).closest('[data-context]') as HTMLElement | null
     if (el) {
+      e.preventDefault()
       setMenu({
         x: e.clientX,
         y: e.clientY,
@@ -38,45 +44,150 @@ export default function ContextMenu() {
 
   const isBookmark = menu.type === 'bookmark'
 
+  const getBookmark = () => useBookmarkStore.getState().bookmarks.find(b => b.id === menu.id)
+  const getFolder = () => useFolderStore.getState().folderMap.get(menu.id)
+
+  const openUrl = (target: string, features?: string) => {
+    const bm = getBookmark()
+    if (bm) window.open(bm.url, target, features)
+    setMenu(null)
+  }
+
+  const handleCopyLink = async () => {
+    const bm = getBookmark()
+    if (bm) {
+      try {
+        await navigator.clipboard.writeText(bm.url)
+      } catch {
+        // Fallback for older browsers
+        const input = document.createElement('input')
+        input.value = bm.url
+        document.body.appendChild(input)
+        input.select()
+        document.execCommand('copy')
+        document.body.removeChild(input)
+      }
+    }
+    setMenu(null)
+  }
+
+  const handleDelete = async () => {
+    if (isBookmark) {
+      await api.deleteBookmark(menu.id)
+    } else {
+      await api.deleteFolder(menu.id)
+    }
+    await useBookmarkStore.getState().load(useFolderStore.getState().selectedId)
+    await useFolderStore.getState().loadChildren(null)
+    setMenu(null)
+  }
+
+  const handleRename = async () => {
+    setMenu(null)
+    const folder = getFolder()
+    if (folder) {
+      setFolderName(folder.name)
+      setRenamingFolder(menu.id)
+    }
+  }
+
+  const submitRename = async () => {
+    if (!folderName.trim() || !renamingFolder) return
+    const folder = getFolder()
+    if (folder) {
+      await api.updateFolder(renamingFolder, folderName.trim(), folder.version)
+      await useFolderStore.getState().loadChildren(folder.parent_id)
+    }
+    setRenamingFolder(null)
+    setFolderName('')
+  }
+
   return (
-    <div
-      className="fixed z-[100] bg-white border border-[#e0e0e0] rounded-lg shadow-lg p-1 min-w-[160px]"
-      style={{ left: menu.x, top: menu.y }}
-    >
-      {isBookmark && (
-        <button
-          className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
-          onClick={() => {
-            const bm = useBookmarkStore.getState().bookmarks.find(b => b.id === menu.id)
-            if (bm) window.open(bm.url, '_blank')
-            setMenu(null)
-          }}
-        >
-          打开
-        </button>
+    <>
+      <div
+        className="fixed z-[100] bg-white border border-[#e0e0e0] rounded-lg shadow-lg p-1 min-w-[200px]"
+        style={{ left: menu.x, top: menu.y }}
+      >
+        {isBookmark && (
+          <>
+            <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              onClick={() => { setMenu(null); setEditingBookmark(menu.id) }}>
+              编辑
+            </button>
+            <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              onClick={handleCopyLink}>
+              复制链接
+            </button>
+            <div className="border-t border-[#e8e8e8] my-0.5" />
+            <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              onClick={() => openUrl('_blank')}>
+              在新标签页中打开
+            </button>
+            <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              onClick={() => openUrl('_blank', 'popup')}>
+              在新窗口中打开
+            </button>
+            <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              onClick={() => openUrl('_blank', 'private')}>
+              在新建 InPrivate 窗口中打开
+            </button>
+            <div className="border-t border-[#e8e8e8] my-0.5" />
+            <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-red-500 hover:bg-[#f5f5f5] cursor-default"
+              onClick={handleDelete}>
+              删除
+            </button>
+          </>
+        )}
+
+        {!isBookmark && (
+          <>
+            <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              onClick={handleRename}>
+              重命名
+            </button>
+            <div className="border-t border-[#e8e8e8] my-0.5" />
+            <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-red-500 hover:bg-[#f5f5f5] cursor-default"
+              onClick={handleDelete}>
+              删除
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Edit Bookmark Modal */}
+      {editingBookmark && (() => {
+        const bm = useBookmarkStore.getState().bookmarks.find(b => b.id === editingBookmark)
+        if (!bm) { setEditingBookmark(null); return null }
+        return (
+          <EditBookmarkModal
+            bookmark={bm}
+            onClose={() => setEditingBookmark(null)}
+            onSaved={async () => {
+              await useBookmarkStore.getState().load(useFolderStore.getState().selectedId)
+            }}
+          />
+        )
+      })()}
+
+      {/* Rename Folder Modal */}
+      {renamingFolder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onClick={() => setRenamingFolder(null)}>
+          <div className="bg-white border border-[#e0e0e0] rounded-lg shadow-xl p-6 w-80" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-[#1a1a1a] mb-4">重命名文件夹</h3>
+            <input
+              autoFocus
+              value={folderName}
+              onChange={e => setFolderName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && submitRename()}
+              className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setRenamingFolder(null)} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-[13px] cursor-default">取消</button>
+              <button onClick={submitRename} disabled={!folderName.trim()} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-[13px] font-medium cursor-default disabled:opacity-50">保存</button>
+            </div>
+          </div>
+        </div>
       )}
-      <button
-        className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
-        onClick={() => { setMenu(null) }}
-      >
-        重命名
-      </button>
-      <div className="border-t border-[#e8e8e8] my-0.5" />
-      <button
-        className="block w-full text-left h-8 px-3 rounded text-[13px] text-red-500 hover:bg-[#f5f5f5] cursor-default"
-        onClick={async () => {
-          const { api } = await import('../services/api')
-          if (isBookmark) {
-            await api.deleteBookmark(menu.id)
-          } else {
-            await api.deleteFolder(menu.id)
-          }
-          window.location.reload()
-          setMenu(null)
-        }}
-      >
-        删除
-      </button>
-    </div>
+    </>
   )
 }

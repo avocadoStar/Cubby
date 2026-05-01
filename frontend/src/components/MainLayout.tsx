@@ -62,6 +62,8 @@ export default function MainLayout() {
               if (item.kind === 'folder') {
                 return (
                   <div
+                    data-context="folder"
+                    data-id={item.folder.id}
                     className="flex items-center mx-1 px-2 rounded select-none cursor-default"
                     style={{ height: 32, background: 'transparent' }}
                     onClick={() => select(item.folder.id)}

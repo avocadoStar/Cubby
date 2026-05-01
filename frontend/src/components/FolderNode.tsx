@@ -12,6 +12,8 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
 
   return (
     <div
+      data-context="folder"
+      data-id={node.id}
       className="flex items-center cursor-default rounded select-none"
       style={{
         height: 32,
