@@ -18,6 +18,19 @@ import FolderNode from './FolderNode'
 import DropIndicator from './DropIndicator'
 import { Star, Search } from 'lucide-react'
 
+// Module-level so reference is stable across renders — prevents
+// useSensor from recreating the sensor descriptor on every render,
+// which would reset PointerSensor mid-drag and kill onDragMove.
+const POINTER_SENSOR_CONFIG = {
+  activationConstraint: { distance: 5 },
+  onActivation({ event }: { event: Event }) {
+    console.log('[DEBUG-dnd] PointerSensor onActivation', {
+      type: event.type,
+      target: (event.target as HTMLElement | null)?.tagName ?? null,
+    })
+  },
+} as const
+
 function calcDropPosition(
   rect: DOMRect,
   pointerY: number,
@@ -142,15 +155,7 @@ export default function Sidebar() {
   })
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
-      onActivation: ({ event }) => {
-        console.log('[DEBUG-dnd] PointerSensor onActivation', {
-          type: event.type,
-          target: (event.target as HTMLElement | null)?.tagName ?? null,
-        })
-      },
-    }),
+    useSensor(PointerSensor, POINTER_SENSOR_CONFIG),
   )
 
   const handleDragStart = useCallback(
