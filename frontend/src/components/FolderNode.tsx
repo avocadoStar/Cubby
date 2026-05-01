@@ -45,7 +45,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
 
   // Droppable — this node is a drop target
   const { setNodeRef: setDropRef } = useDroppable({
-    id: node.id,
+    id: `droppable:${node.id}`,
     data: { node, depth },
     disabled: invalidDrop,
   })
@@ -78,6 +78,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       ref={setNodeRef}
       data-context="folder"
       data-id={node.id}
+      data-drop-id={`droppable:${node.id}`}
       className="flex items-center cursor-default rounded select-none"
       style={{
         height: 32,

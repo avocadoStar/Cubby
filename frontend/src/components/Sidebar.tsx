@@ -6,6 +6,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
   useDroppable,
@@ -114,7 +115,8 @@ export default function Sidebar() {
       }
 
       const overId = String(over.id)
-      const el = document.querySelector(`[data-id="${overId}"]`)
+      // Match droppable by data-drop-id (droppable IDs are prefixed with "droppable:")
+      const el = document.querySelector(`[data-drop-id="${overId}"]`) || document.querySelector(`[data-id="${overId}"]`)
       if (!el) return
 
       const rect = el.getBoundingClientRect()
@@ -181,7 +183,9 @@ export default function Sidebar() {
             nextId = siblings[idx + 1]
           }
         } else {
-          const targetFolder = folderMap.get(overId)
+          // Strip droppable prefix to get actual folder ID
+          const folderId = overId.startsWith('droppable:') ? overId.slice('droppable:'.length) : overId
+          const targetFolder = folderMap.get(folderId)
           if (!targetFolder) {
             clearDrag()
             return
@@ -189,8 +193,8 @@ export default function Sidebar() {
 
           if (dropPosition === 'inside') {
             // Drop inside target folder — append as last child
-            newParentId = overId
-            const siblings = childrenMap.get(overId) ?? []
+            newParentId = folderId
+            const siblings = childrenMap.get(folderId) ?? []
             // If this folder already has children, use last child as prev
             if (siblings.length > 0) {
               prevId = siblings[siblings.length - 1]
@@ -200,15 +204,15 @@ export default function Sidebar() {
             // Insert before target
             newParentId = targetFolder.parent_id
             const siblings = childrenMap.get(newParentId) ?? []
-            const targetIdx = siblings.indexOf(overId)
+            const targetIdx = siblings.indexOf(folderId)
             prevId = targetIdx > 0 ? siblings[targetIdx - 1] : null
-            nextId = overId
+            nextId = folderId
           } else {
             // Insert after target
             newParentId = targetFolder.parent_id
             const siblings = childrenMap.get(newParentId) ?? []
-            const targetIdx = siblings.indexOf(overId)
-            prevId = overId
+            const targetIdx = siblings.indexOf(folderId)
+            prevId = folderId
             nextId =
               targetIdx >= 0 && targetIdx + 1 < siblings.length
                 ? siblings[targetIdx + 1]
@@ -239,6 +243,7 @@ export default function Sidebar() {
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
