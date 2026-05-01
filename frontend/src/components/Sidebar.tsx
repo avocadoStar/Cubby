@@ -6,6 +6,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  getClientRect,
   useSensor,
   useSensors,
   useDroppable,
@@ -313,6 +314,11 @@ export default function Sidebar() {
     <DndContext
       sensors={sensors}
       collisionDetection={pointerClosestCenter}
+      measuring={{
+        droppable: {
+          measure: getClientRect,
+        },
+      }}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
