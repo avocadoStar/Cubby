@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
 import { api } from '../services/api'
@@ -16,6 +16,7 @@ export default function ContextMenu() {
   const [editingBookmark, setEditingBookmark] = useState<string | null>(null)
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null)
   const [folderName, setFolderName] = useState('')
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const handleContextMenu = useCallback((e: MouseEvent) => {
     const el = (e.target as HTMLElement).closest('[data-context]') as HTMLElement | null
@@ -32,7 +33,12 @@ export default function ContextMenu() {
 
   useEffect(() => {
     document.addEventListener('contextmenu', handleContextMenu)
-    const close = () => setMenu(null)
+    const close = (e: MouseEvent) => {
+      // Only close if clicking outside the menu
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenu(null)
+      }
+    }
     document.addEventListener('mousedown', close)
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu)
@@ -105,6 +111,7 @@ export default function ContextMenu() {
   return (
     <>
       <div
+        ref={menuRef}
         className="fixed z-[100] bg-white border border-[#e0e0e0] rounded-lg shadow-lg p-1 min-w-[200px]"
         style={{ left: menu.x, top: menu.y }}
       >
