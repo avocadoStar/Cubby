@@ -5,9 +5,11 @@ import { api, ConflictError } from '../services/api'
 interface BookmarkState {
   bookmarks: Bookmark[]
   selectedIds: Set<string>
+  selectedFolderIds: Set<string>
   loading: boolean
   load: (folderId?: string | null) => Promise<void>
   toggleSelect: (id: string) => void
+  toggleFolderSelect: (id: string) => void
   selectAll: () => void
   clearSelection: () => void
   deleteSelected: () => Promise<void>
@@ -18,12 +20,13 @@ interface BookmarkState {
 export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   bookmarks: [],
   selectedIds: new Set(),
+  selectedFolderIds: new Set(),
   loading: false,
 
   load: async (folderId) => {
     set({ loading: true })
     const bookmarks = await api.getBookmarks(folderId)
-    set({ bookmarks, loading: false, selectedIds: new Set() })
+    set({ bookmarks, loading: false, selectedIds: new Set(), selectedFolderIds: new Set() })
   },
 
   toggleSelect: (id) => {
@@ -34,6 +37,14 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     })
   },
 
+  toggleFolderSelect: (id) => {
+    set((state) => {
+      const next = new Set(state.selectedFolderIds)
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
+      return { selectedFolderIds: next }
+    })
+  },
+
   selectAll: () => {
     set((state) => {
       const all = new Set(state.bookmarks.map((b) => b.id))
@@ -41,14 +52,25 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     })
   },
 
-  clearSelection: () => set({ selectedIds: new Set() }),
+  clearSelection: () => set({ selectedIds: new Set(), selectedFolderIds: new Set() }),
 
   deleteSelected: async () => {
-    const ids = Array.from(get().selectedIds)
-    await api.batchDeleteBookmarks(ids)
-    set({ selectedIds: new Set() })
-    const { load } = get()
+    const { selectedIds, selectedFolderIds, load } = get()
+    const bookmarkIds = Array.from(selectedIds)
+    const folderIds = Array.from(selectedFolderIds)
+
+    if (bookmarkIds.length > 0) {
+      await api.batchDeleteBookmarks(bookmarkIds)
+    }
+    if (folderIds.length > 0) {
+      await api.batchDeleteFolders(folderIds)
+    }
+
+    set({ selectedIds: new Set(), selectedFolderIds: new Set() })
     await load((window as any).__currentFolderId)
+    // Also reload folder tree
+    const { useFolderStore } = await import('./folderStore')
+    await useFolderStore.getState().loadChildren(null)
   },
 
   deleteOne: async (id) => {

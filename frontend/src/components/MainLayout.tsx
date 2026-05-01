@@ -7,7 +7,6 @@ import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
 import { useEffect, useMemo } from 'react'
 import { Virtuoso } from 'react-virtuoso'
-import { useState } from 'react'
 import type { Folder } from '../types'
 import { ChevronRight } from 'lucide-react'
 
@@ -16,13 +15,12 @@ type ListItem =
   | { kind: 'bookmark'; bookmark: import('../types').Bookmark }
 
 export default function MainLayout() {
-  const { bookmarks, load, selectAll } = useBookmarkStore()
+  const { bookmarks, load, selectAll, selectedFolderIds, toggleFolderSelect } = useBookmarkStore()
   const { selectedId, childrenMap, folderMap, select } = useFolderStore()
-  const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set())
 
   useEffect(() => { load(null) }, [])
 
-  useEffect(() => { load(selectedId); setSelectedFolderIds(new Set()) }, [selectedId])
+  useEffect(() => { load(selectedId) }, [selectedId])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -83,12 +81,7 @@ export default function MainLayout() {
                       }}
                       onClick={(e) => {
                         e.stopPropagation()
-                        setSelectedFolderIds(prev => {
-                          const next = new Set(prev)
-                          if (next.has(item.folder.id)) { next.delete(item.folder.id) }
-                          else { next.add(item.folder.id) }
-                          return next
-                        })
+                        toggleFolderSelect(item.folder.id)
                       }}
                     >
                       {isFolderSelected && (

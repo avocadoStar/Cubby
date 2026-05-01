@@ -11,11 +11,16 @@ import (
 var ErrConflict = errors.New("conflict")
 
 type FolderService struct {
-	repo *repository.FolderRepo
+	repo     *repository.FolderRepo
+	bookmarkRepo *repository.BookmarkRepo
 }
 
 func NewFolderService(repo *repository.FolderRepo) *FolderService {
 	return &FolderService{repo: repo}
+}
+
+func (s *FolderService) SetBookmarkRepo(br *repository.BookmarkRepo) {
+	s.bookmarkRepo = br
 }
 
 func (s *FolderService) List(parentID *string) ([]model.Folder, error) {
@@ -113,4 +118,36 @@ func (s *FolderService) computeSortKey(parentID, prevID, nextID *string) (string
 	}
 
 	return between(prev.SortKey, next.SortKey), nil
+}
+
+// BatchDelete recursively soft-deletes folders and all their contents.
+func (s *FolderService) BatchDelete(ids []string) error {
+	for _, id := range ids {
+		if err := s.deleteRecursive(id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *FolderService) deleteRecursive(folderID string) error {
+	// Soft-delete all bookmarks in this folder
+	children, _ := s.repo.List(&folderID)
+	for _, child := range children {
+		if err := s.deleteRecursive(child.ID); err != nil {
+			return err
+		}
+	}
+	// Soft-delete bookmarks in this folder
+	if s.bookmarkRepo != nil {
+		bookmarks, _ := s.bookmarkRepo.List(&folderID)
+		for _, b := range bookmarks {
+			s.bookmarkRepo.SoftDelete(b.ID)
+		}
+	}
+	// Soft-delete bookmarks directly in this folder (null parent is handled differently)
+	// Actually, bookmarks with folder_id = this folder
+	// The List method above already filters by folder_id, so the bookmarks
+	// list call above gets bookmarks directly in this folder
+	return s.repo.SoftDelete(folderID)
 }

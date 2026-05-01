@@ -39,6 +39,7 @@ func SetupRoutes(
 		protected.PUT("/folders/:id", folderH.Update)
 		protected.DELETE("/folders/:id", folderH.Delete)
 		protected.POST("/folders/move", folderH.Move)
+			protected.POST("/folders/batch-delete", folderH.BatchDelete)
 
 		// Bookmarks
 		protected.GET("/bookmarks", bookmarkH.List)

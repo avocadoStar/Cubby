@@ -1,8 +1,8 @@
 import { useBookmarkStore } from '../stores/bookmarkStore'
 
 export default function BatchActionBar() {
-  const { selectedIds, clearSelection, deleteSelected } = useBookmarkStore()
-  const count = selectedIds.size
+  const { selectedIds, selectedFolderIds, clearSelection, deleteSelected } = useBookmarkStore()
+  const count = selectedIds.size + selectedFolderIds.size
   if (count === 0) return null
 
   return (

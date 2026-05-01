@@ -110,6 +110,12 @@ export const api = {
       body: JSON.stringify({ ids }),
     }),
 
+  batchDeleteFolders: (ids: string[]) =>
+    request<void>('/folders/batch-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+
   // Search
   search: (q: string) =>
     request<Bookmark[]>(`/search?q=${encodeURIComponent(q)}`),
