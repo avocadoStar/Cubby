@@ -1,19 +1,41 @@
+import { useState } from 'react'
 import Breadcrumb from './Breadcrumb'
 import MoreMenu from './MoreMenu'
 import { useFolderStore } from '../stores/folderStore'
-import { useState } from 'react'
+import { useBookmarkStore } from '../stores/bookmarkStore'
+import { api } from '../services/api'
 import CreateFolderModal from './CreateFolderModal'
 
 export default function Toolbar() {
   const { selectedId } = useFolderStore()
+  const { load } = useBookmarkStore()
   const [showCreateFolder, setShowCreateFolder] = useState(false)
+  const [showAddBookmark, setShowAddBookmark] = useState(false)
+  const [title, setTitle] = useState('')
+  const [url, setUrl] = useState('')
+
+  const handleAddBookmark = async () => {
+    if (!title.trim() || !url.trim()) return
+    let normalizedUrl = url.trim()
+    if (!/^https?:\/\//i.test(normalizedUrl)) {
+      normalizedUrl = 'https://' + normalizedUrl
+    }
+    await api.createBookmark(title.trim(), normalizedUrl, selectedId)
+    await load(selectedId)
+    setShowAddBookmark(false)
+    setTitle('')
+    setUrl('')
+  }
 
   return (
     <>
       <div className="flex items-center gap-1 px-5 py-2 border-b border-[#e8e8e8]" style={{ height: 48 }}>
         <Breadcrumb />
         <div className="flex-1" />
-        <button className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default">
+        <button
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+          onClick={() => setShowAddBookmark(true)}
+        >
           <svg aria-hidden="true" fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
             <path d="M9.1 2.9a1 1 0 011.8 0l1.93 3.91 4.31.63a1 1 0 01.56 1.7l-.55.54a5.47 5.47 0 00-1-.43l.85-.82-4.32-.63a1 1 0 01-.75-.55L10 3.35l-1.93 3.9a1 1 0 01-.75.55L3 8.43l3.12 3.04a1 1 0 01.29.89l-.74 4.3 3.34-1.76c.03.36.09.7.18 1.04l-3.05 1.6a1 1 0 01-1.45-1.05l.73-4.3L2.3 9.14a1 1 0 01.56-1.7l4.31-.63L9.1 2.9z"/>
             <path d="M19 14.5a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zm-4-2a.5.5 0 00-1 0V14h-1.5a.5.5 0 000 1H14v1.5a.5.5 0 001 0V15h1.5a.5.5 0 000-1H15v-1.5z"/>
@@ -31,6 +53,34 @@ export default function Toolbar() {
         </button>
         <MoreMenu />
       </div>
+
+      {/* Add Bookmark Modal */}
+      {showAddBookmark && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onClick={() => setShowAddBookmark(false)}>
+          <div className="bg-white border border-[#e0e0e0] rounded-lg shadow-xl p-6 w-96" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-[#1a1a1a] mb-4">添加收藏夹</h3>
+            <input
+              autoFocus
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="名称"
+              className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-3"
+            />
+            <input
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAddBookmark()}
+              placeholder="URL"
+              className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowAddBookmark(false)} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-[13px] cursor-default">取消</button>
+              <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-[13px] font-medium cursor-default disabled:opacity-50">添加</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showCreateFolder && <CreateFolderModal parentId={selectedId} onClose={() => setShowCreateFolder(false)} />}
     </>
   )
