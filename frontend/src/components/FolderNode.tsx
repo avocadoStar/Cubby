@@ -1,17 +1,81 @@
-import { memo } from 'react'
+import { memo, useRef, useEffect, useMemo } from 'react'
 import type { Folder } from '../types'
 import { useFolderStore } from '../stores/folderStore'
+import { useDndStore } from '../stores/dndStore'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 
 const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
-  const { expandedIds, selectedId, childrenMap, toggleExpand, select } = useFolderStore()
+  const { expandedIds, selectedId, childrenMap, toggleExpand, select, folderMap } = useFolderStore()
+  const activeId = useDndStore((s) => s.activeId)
+  const overId = useDndStore((s) => s.overId)
+  const dropPosition = useDndStore((s) => s.dropPosition)
+
   const isExpanded = expandedIds.has(node.id)
   const isSelected = selectedId === node.id
   const children = childrenMap.get(node.id)
   const hasChildren = children === undefined || children.length > 0
 
+  const isOver = overId === node.id
+  const isInside = isOver && dropPosition === 'inside'
+
+  // Determine if this node is an invalid drop target (self or descendant of active)
+  const invalidDrop = useMemo(() => {
+    if (!activeId) return false
+    if (activeId === node.id) return true
+    // Walk up parent chain; if any ancestor equals activeId, this node is a descendant
+    let current: Folder | undefined = node
+    while (current) {
+      if (current.parent_id === activeId) return true
+      current = current.parent_id != null ? folderMap.get(current.parent_id) : undefined
+    }
+    return false
+  }, [activeId, node.id, folderMap])
+
+  // Draggable — make this node draggable
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
+    id: node.id,
+    data: { node, depth },
+  })
+
+  // Droppable — this node is a drop target
+  const { setNodeRef: setDropRef } = useDroppable({
+    id: node.id,
+    data: { node, depth },
+    disabled: invalidDrop,
+  })
+
+  // Combine both refs into one callback ref
+  function setNodeRef(el: HTMLDivElement | null) {
+    setDragRef(el)
+    setDropRef(el)
+  }
+
+  // Hover expand: when hovering over a collapsed folder with 'inside', expand after 500ms
+  const expandTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (isOver && dropPosition === 'inside' && !isExpanded && hasChildren) {
+      expandTimerRef.current = window.setTimeout(() => {
+        toggleExpand(node.id)
+      }, 500)
+    }
+    return () => {
+      if (expandTimerRef.current !== null) {
+        clearTimeout(expandTimerRef.current)
+        expandTimerRef.current = null
+      }
+    }
+  }, [isOver, dropPosition, isExpanded, hasChildren, node.id, toggleExpand])
+
   return (
     <div
+      ref={setNodeRef}
       data-context="folder"
       data-id={node.id}
       className="flex items-center cursor-default rounded select-none"
@@ -20,23 +84,44 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
         paddingLeft: 8 + depth * 20,
         paddingRight: 8,
         margin: '0 4px',
-        background: isSelected ? '#E5F0FF' : 'transparent',
+        opacity: isDragging ? 0.3 : 1,
+        background: isInside
+          ? '#E5F0FF'
+          : isSelected
+            ? '#E5F0FF'
+            : 'transparent',
+        outline: isInside ? '1px solid #0078D4' : undefined,
+        outlineOffset: -1,
       }}
       onClick={() => select(node.id)}
+      {...listeners}
+      {...attributes}
     >
       <span
         className="flex-shrink-0 flex items-center justify-center"
         style={{ width: 16, height: 16 }}
-        onClick={(e) => { e.stopPropagation(); toggleExpand(node.id) }}
+        onClick={(e) => {
+          e.stopPropagation()
+          toggleExpand(node.id)
+        }}
       >
-        {hasChildren && (
-          isExpanded
-            ? <ChevronDown size={12} stroke="#666" strokeWidth={2} />
-            : <ChevronRight size={12} stroke="#666" strokeWidth={2} />
-        )}
+        {hasChildren &&
+          (isExpanded ? (
+            <ChevronDown size={12} stroke="#666" strokeWidth={2} />
+          ) : (
+            <ChevronRight size={12} stroke="#666" strokeWidth={2} />
+          ))}
       </span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6" className="flex-shrink-0 ml-1">
-        <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="#F0C54F"
+        stroke="#D4A830"
+        strokeWidth="0.6"
+        className="flex-shrink-0 ml-1"
+      >
+        <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
       </svg>
       <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">{node.name}</span>
     </div>
