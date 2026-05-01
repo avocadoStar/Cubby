@@ -119,8 +119,10 @@ export const useFolderStore = create<FolderState>((set, get) => ({
   },
 
   moveFolder: async (id, newParentId, prevId, nextId, version) => {
-    try {
-      await api.moveFolder({ id, parent_id: newParentId, prev_id: prevId, next_id: nextId, version })
+    const { ConflictError } = await import('../services/api')
+
+    const doMove = async (ver: number) => {
+      await api.moveFolder({ id, parent_id: newParentId, prev_id: prevId, next_id: nextId, version: ver })
 
       const { folderMap } = get()
       const folder = folderMap.get(id)
@@ -130,13 +132,27 @@ export const useFolderStore = create<FolderState>((set, get) => ({
         await get().loadChildren(oldParentId)
       }
       await get().loadChildren(newParentId)
-
       get().rebuildVisible()
+    }
+
+    try {
+      await doMove(version)
     } catch (e) {
-      if (e instanceof (await import('../services/api')).ConflictError) {
+      if (e instanceof ConflictError) {
+        // Reload to get fresh versions, then retry once
         const { selectedId } = get()
         await get().loadChildren(selectedId)
+        // Also reload newParentId if different from selectedId
+        if (newParentId !== selectedId) {
+          await get().loadChildren(newParentId)
+        }
         get().rebuildVisible()
+
+        const freshFolder = get().folderMap.get(id)
+        if (freshFolder) {
+          await doMove(freshFolder.version)
+          return
+        }
       }
       throw e
     }
