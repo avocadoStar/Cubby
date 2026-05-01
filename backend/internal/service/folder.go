@@ -114,10 +114,38 @@ func (s *FolderService) computeSortKey(parentID, prevID, nextID *string) (string
 	}
 
 	if needsRebalance(prev.SortKey, next.SortKey) {
-		return "", fmt.Errorf("rebalance needed")
+		// Auto-rebalance: redistribute all children's sort keys, then recompute
+		if err := s.rebalanceChildren(parentID); err != nil {
+			return "", fmt.Errorf("rebalance failed: %w", err)
+		}
+		prev, err = s.repo.Get(*prevID)
+		if err != nil {
+			return "", fmt.Errorf("prev folder not found after rebalance: %w", err)
+		}
+		next, err2 = s.repo.Get(*nextID)
+		if err2 != nil {
+			return "", fmt.Errorf("next folder not found after rebalance: %w", err2)
+		}
 	}
 
 	return between(prev.SortKey, next.SortKey), nil
+}
+
+func (s *FolderService) rebalanceChildren(parentID *string) error {
+	children, err := s.repo.List(parentID)
+	if err != nil {
+		return err
+	}
+	if len(children) == 0 {
+		return nil
+	}
+
+	keys := rebalanceKeys(len(children))
+	updates := make([]struct{ ID, SortKey string }, len(children))
+	for i, child := range children {
+		updates[i] = struct{ ID, SortKey string }{child.ID, keys[i]}
+	}
+	return s.repo.Rebalance(updates)
 }
 
 // BatchDelete recursively soft-deletes folders and all their contents.

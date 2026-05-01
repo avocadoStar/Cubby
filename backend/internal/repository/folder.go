@@ -77,6 +77,24 @@ func (r *FolderRepo) SoftDelete(id string) error {
 	return err
 }
 
+// Rebalance updates the sort_key for a batch of folders in a single transaction.
+func (r *FolderRepo) Rebalance(updates []struct{ ID, SortKey string }) error {
+	tx, err := r.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, u := range updates {
+		_, err := tx.Exec(`UPDATE folder SET sort_key=?, version=version+1, updated_at=datetime('now') WHERE id=? AND deleted_at IS NULL`,
+			u.SortKey, u.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 func (r *FolderRepo) Move(id string, parentID *string, sortKey string, version int) (*model.Folder, error) {
 	res, err := r.DB.Exec(`UPDATE folder SET parent_id=?, sort_key=?, version=version+1, updated_at=datetime('now')
 		WHERE id=? AND version=? AND deleted_at IS NULL`,
