@@ -90,11 +90,15 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       await doMove(version)
     } catch (e) {
       if (e instanceof ConflictError) {
-        // Reload bookmarks to get fresh version, then retry once
+        // Get the bookmark's current folder before reloading
+        const current = get().bookmarks.find(b => b.id === id)
+        const sourceFolderId = current?.folder_id ?? null
+
+        // Reload all affected folders to get fresh versions
         const { selectedId } = (await import('./folderStore')).useFolderStore.getState()
-        await get().load(selectedId)
-        if (folderId !== selectedId) {
-          await get().load(folderId)
+        const toReload = new Set([selectedId, folderId, sourceFolderId])
+        for (const fid of toReload) {
+          await get().load(fid)
         }
 
         const fresh = get().bookmarks.find(b => b.id === id)
