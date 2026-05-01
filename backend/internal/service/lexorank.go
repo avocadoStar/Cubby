@@ -1,63 +1,105 @@
 package service
 
-// between generates a sort key between prev and next using string midpoint.
-func between(prev, next string) string {
-	if prev >= next {
-		// Should never happen; fall back to appending
-		return prev + "n"
-	}
+import (
+	"fmt"
+	"math"
+)
 
-	minLen := len(prev)
-	if len(next) < minLen {
-		minLen = len(next)
-	}
+const (
+	minSortByte = byte('!')
+	maxSortByte = byte('~')
+)
 
-	i := 0
-	for i < minLen && prev[i] == next[i] {
-		i++
-	}
-
-	if i == minLen {
-		// prev is a prefix of next. Use prev + "a" so the result sorts
-		// strictly before next (e.g. between("n","nn") → "na").
-		return prev + "a"
-	}
-
-	pc := int(prev[i])
-	nc := int(next[i])
-	if nc-pc > 1 {
-		return prev[:i] + string(rune(pc+(nc-pc)/2))
-	}
-
-	return prev[:i] + string(rune(pc)) + "n"
+func formatRank(v uint64) string {
+	return fmt.Sprintf("%016x", v)
 }
 
-// after returns a sort key after the given key.
+func isValidSortKey(key string) bool {
+	for i := 0; i < len(key); i++ {
+		if key[i] < minSortByte || key[i] > maxSortByte {
+			return false
+		}
+	}
+	return true
+}
+
+// between generates a sort key strictly between prev and next.
+// It returns an empty string when the keys are invalid or there is no gap.
+func between(prev, next string) string {
+	if !isValidSortKey(prev) || (next != "" && !isValidSortKey(next)) {
+		return ""
+	}
+	if next != "" && prev >= next {
+		return ""
+	}
+
+	prefix := make([]byte, 0, max(len(prev), len(next))+1)
+	for i := 0; ; i++ {
+		prevByte := minSortByte - 1
+		if i < len(prev) {
+			prevByte = prev[i]
+		}
+
+		nextByte := maxSortByte + 1
+		if next != "" && i < len(next) {
+			nextByte = next[i]
+		}
+
+		if prevByte == nextByte {
+			prefix = append(prefix, prevByte)
+			continue
+		}
+
+		if nextByte-prevByte > 1 {
+			mid := prevByte + (nextByte-prevByte)/2
+			return string(append(prefix, mid))
+		}
+
+		if i < len(prev) {
+			prefix = append(prefix, prevByte)
+			prev = prev[i+1:]
+			next = ""
+			i = -1
+			continue
+		}
+
+		if next != "" && i+1 < len(next) {
+			return next[:i+1]
+		}
+
+		return ""
+	}
+}
+
+// after returns a sort key strictly after the given key.
+// It returns an empty string when the key is invalid or there is no gap.
 func after(key string) string {
 	if key == "" {
 		return "n"
 	}
-	return key + "n"
+	return between(key, "")
 }
 
-// before returns a sort key before the given key.
+// before returns a sort key strictly before the given key.
+// It returns an empty string when the key is invalid or there is no gap.
 func before(key string) string {
 	if key == "" {
 		return "a"
 	}
-	lastChar := key[len(key)-1]
-	if lastChar > 'a' {
-		return key[:len(key)-1] + string(lastChar-1) + "n"
-	}
-	return key + "a"
+	return between("", key)
 }
 
-// needsRebalance checks if the gap between prev and next is too small.
+// needsRebalance checks if prev and next have no usable gap or are legacy keys.
 func needsRebalance(prev, next string) bool {
 	if prev == "" || next == "" {
 		return false
 	}
-	// If they differ by only 1 in the first differing position, gap is too small
+	if !isValidSortKey(prev) || !isValidSortKey(next) {
+		return true
+	}
+	if prev >= next {
+		return true
+	}
 	minLen := len(prev)
 	if len(next) < minLen {
 		minLen = len(next)
@@ -65,24 +107,24 @@ func needsRebalance(prev, next string) bool {
 	for i := 0; i < minLen; i++ {
 		diff := int(next[i]) - int(prev[i])
 		if diff > 1 {
-			return false // gap exists
+			return false
 		}
 		if diff < 0 {
-			return false // shouldn't happen
+			return true
 		}
 	}
 	return true
 }
 
-// rebalanceKeys generates evenly-spaced sort keys for n children.
+// rebalanceKeys generates evenly-spaced, ASCII-safe sort keys for n children.
 func rebalanceKeys(n int) []string {
 	if n == 0 {
 		return nil
 	}
 	keys := make([]string, n)
-	step := 256 / (n + 1)
+	step := math.MaxUint64 / uint64(n+1)
 	for i := 0; i < n; i++ {
-		keys[i] = string(rune((i + 1) * step))
+		keys[i] = formatRank(step * uint64(i+1))
 	}
 	return keys
 }

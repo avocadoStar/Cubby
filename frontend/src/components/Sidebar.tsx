@@ -147,8 +147,6 @@ export default function Sidebar() {
     select,
     loadChildren,
     folderMap,
-    childrenMap,
-    moveFolder,
   } = useFolderStore()
   const { setActive, setOver, clearDrag, activeFolder, activeId } = useDndStore()
 
@@ -249,6 +247,10 @@ export default function Sidebar() {
   const handleDragEnd = useCallback(
     async (_event: DragEndEvent) => {
       const state = useDndStore.getState()
+      const folderState = useFolderStore.getState()
+      const currentFolderMap = folderState.folderMap
+      const currentChildrenMap = folderState.childrenMap
+      const currentMoveFolder = folderState.moveFolder
       const { activeId: dragId, activeFolder: dragFolder, overId, dropPosition } = state
 
       if (!dragId || !overId || !dropPosition || !dragFolder) {
@@ -261,8 +263,10 @@ export default function Sidebar() {
       let nextId: string | null = null
       const sourceParentId = dragFolder.parent_id ?? null
 
+      // Use the latest store snapshot so back-to-back drags do not compute
+      // placement from a render-time childrenMap closure.
       const getSiblingsExcludingDragged = (parentId: string | null) =>
-        (childrenMap.get(parentId) ?? []).filter(id => id !== dragId)
+        (currentChildrenMap.get(parentId) ?? []).filter(id => id !== dragId)
 
       const getHeadPlacement = (parentId: string | null) => {
         const siblings = getSiblingsExcludingDragged(parentId)
@@ -321,7 +325,7 @@ export default function Sidebar() {
           const folderId = overId.startsWith('droppable:')
             ? overId.slice('droppable:'.length)
             : overId
-          const targetFolder = folderMap.get(folderId)
+          const targetFolder = currentFolderMap.get(folderId)
           if (!targetFolder) {
             clearDrag()
             return
@@ -354,14 +358,14 @@ export default function Sidebar() {
         }
 
         console.warn('[DND-END]', { dragId, newParentId, prevId, nextId, overId, dropPosition, srcParent: dragFolder.parent_id })
-        await moveFolder(dragId, newParentId, prevId, nextId, dragFolder.version)
+        await currentMoveFolder(dragId, newParentId, prevId, nextId, dragFolder.version)
       } catch (e) {
         console.error('Folder move failed', e)
       }
 
       clearDrag()
     },
-    [folderMap, childrenMap, moveFolder, clearDrag],
+    [clearDrag],
   )
 
   const handleDragCancel = useCallback(() => {

@@ -11,7 +11,7 @@ import (
 var ErrConflict = errors.New("conflict")
 
 type FolderService struct {
-	repo     *repository.FolderRepo
+	repo         *repository.FolderRepo
 	bookmarkRepo *repository.BookmarkRepo
 }
 
@@ -29,10 +29,24 @@ func (s *FolderService) List(parentID *string) ([]model.Folder, error) {
 
 func (s *FolderService) Create(name string, parentID *string) (*model.Folder, error) {
 	children, _ := s.repo.List(parentID)
-	sortKey := "n"
+	sortKey := after("")
 	if len(children) > 0 {
 		lastKey := children[len(children)-1].SortKey
 		sortKey = after(lastKey)
+		if sortKey == "" {
+			if err := s.rebalanceChildren(parentID, ""); err != nil {
+				return nil, fmt.Errorf("rebalance failed during create: %w", err)
+			}
+			children, _ = s.repo.List(parentID)
+			if len(children) == 0 {
+				sortKey = after("")
+			} else {
+				sortKey = after(children[len(children)-1].SortKey)
+			}
+		}
+	}
+	if sortKey == "" {
+		return nil, ErrConflict
 	}
 	for i := 0; i < 3; i++ {
 		f, err := s.repo.Create(name, parentID, sortKey)
@@ -61,33 +75,94 @@ func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string
 }
 
 func (s *FolderService) computeSortKey(parentID, prevID, nextID *string, excludeID string) (string, error) {
-	children, _ := s.repo.List(parentID)
+	loadSiblings := func() ([]model.Folder, error) {
+		children, err := s.repo.List(parentID)
+		if err != nil {
+			return nil, err
+		}
+		filtered := make([]model.Folder, 0, len(children))
+		for _, child := range children {
+			if child.ID != excludeID {
+				filtered = append(filtered, child)
+			}
+		}
+		return filtered, nil
+	}
+
+	children, err := loadSiblings()
+	if err != nil {
+		return "", err
+	}
 
 	if prevID == nil && nextID == nil {
-		// Only child in this parent
 		if len(children) == 0 {
-			return "n", nil
+			return after(""), nil
 		}
-		// Insert at end
-		return after(children[len(children)-1].SortKey), nil
+		sortKey := after(children[len(children)-1].SortKey)
+		if sortKey != "" {
+			return sortKey, nil
+		}
+		if err := s.rebalanceChildren(parentID, excludeID); err != nil {
+			return "", fmt.Errorf("rebalance failed: %w", err)
+		}
+		children, err = loadSiblings()
+		if err != nil {
+			return "", err
+		}
+		if len(children) == 0 {
+			return after(""), nil
+		}
+		sortKey = after(children[len(children)-1].SortKey)
+		if sortKey == "" {
+			return "", fmt.Errorf("could not generate tail sort key after rebalance")
+		}
+		return sortKey, nil
 	}
 
 	if prevID == nil && nextID != nil {
-		// Insert at head
 		next, err := s.repo.Get(*nextID)
 		if err != nil {
 			return "", fmt.Errorf("next folder not found: %w", err)
 		}
-		return before(next.SortKey), nil
+		sortKey := before(next.SortKey)
+		if sortKey != "" && sortKey < next.SortKey {
+			return sortKey, nil
+		}
+		if err := s.rebalanceChildren(parentID, excludeID); err != nil {
+			return "", fmt.Errorf("rebalance failed: %w", err)
+		}
+		next, err = s.repo.Get(*nextID)
+		if err != nil {
+			return "", fmt.Errorf("next folder not found after rebalance: %w", err)
+		}
+		sortKey = before(next.SortKey)
+		if sortKey == "" || sortKey >= next.SortKey {
+			return "", fmt.Errorf("could not generate head sort key after rebalance")
+		}
+		return sortKey, nil
 	}
 
 	if prevID != nil && nextID == nil {
-		// Insert at tail
 		prev, err := s.repo.Get(*prevID)
 		if err != nil {
 			return "", fmt.Errorf("prev folder not found: %w", err)
 		}
-		return after(prev.SortKey), nil
+		sortKey := after(prev.SortKey)
+		if sortKey != "" && sortKey > prev.SortKey {
+			return sortKey, nil
+		}
+		if err := s.rebalanceChildren(parentID, excludeID); err != nil {
+			return "", fmt.Errorf("rebalance failed: %w", err)
+		}
+		prev, err = s.repo.Get(*prevID)
+		if err != nil {
+			return "", fmt.Errorf("prev folder not found after rebalance: %w", err)
+		}
+		sortKey = after(prev.SortKey)
+		if sortKey == "" || sortKey <= prev.SortKey {
+			return "", fmt.Errorf("could not generate tail sort key after rebalance")
+		}
+		return sortKey, nil
 	}
 
 	// Insert between
@@ -118,6 +193,13 @@ func (s *FolderService) computeSortKey(parentID, prevID, nextID *string, exclude
 		if err := s.rebalanceChildren(parentID, excludeID); err != nil {
 			return "", fmt.Errorf("rebalance failed: %w", err)
 		}
+		children, err = loadSiblings()
+		if err != nil {
+			return "", err
+		}
+		if len(children) == 0 {
+			return "", fmt.Errorf("rebalance removed all siblings unexpectedly")
+		}
 		prev, err = s.repo.Get(*prevID)
 		if err != nil {
 			return "", fmt.Errorf("prev folder not found after rebalance: %w", err)
@@ -128,7 +210,11 @@ func (s *FolderService) computeSortKey(parentID, prevID, nextID *string, exclude
 		}
 	}
 
-	return between(prev.SortKey, next.SortKey), nil
+	sortKey := between(prev.SortKey, next.SortKey)
+	if sortKey == "" || sortKey <= prev.SortKey || sortKey >= next.SortKey {
+		return "", fmt.Errorf("could not generate sort key between %q and %q", prev.SortKey, next.SortKey)
+	}
+	return sortKey, nil
 }
 
 func (s *FolderService) rebalanceChildren(parentID *string, excludeID string) error {
