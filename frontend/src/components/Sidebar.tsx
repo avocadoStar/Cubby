@@ -172,37 +172,45 @@ export default function Sidebar() {
 
   const handleDragMove = useCallback(
     (event: DragMoveEvent) => {
-      console.log('[DEBUG-dnd] DndContext onDragMove', {
+      const over = event.over
+      const overId = over ? String(over.id) : null
+
+      console.log('[DEBUG-dnd] onDragMove', {
         activeId: String(event.active.id),
-        overId: event.over ? String(event.over.id) : null,
+        overId,
         delta: event.delta,
       })
 
-      const over = event.over
-      if (!over) {
+      if (!over || !overId) {
+        console.warn('[DEBUG-dnd] onDragMove NO OVER - clearing indicator')
         setOver(null, null, null)
         return
       }
 
-      const overId = String(over.id)
-      // Query by data-drop-id (for droppable wrappers) or data-id (for all-bookmarks)
       const el =
         document.querySelector(`[data-drop-id="${overId}"]`) ||
         document.querySelector(`[data-id="${overId}"]`)
-      if (!el) return
+      if (!el) {
+        console.warn('[DEBUG-dnd] onDragMove NO DOM ELEMENT for', overId)
+        return
+      }
 
       const rect = el.getBoundingClientRect()
       const { y: startY } = initialPointerRef.current
       const currentY = startY + event.delta.y
       const position = calcDropPosition(rect, currentY)
 
+      console.log('[DEBUG-dnd] onDragMove indicator', {
+        overId,
+        position,
+        rect: { top: rect.top, bottom: rect.bottom, height: rect.height },
+        pointerY: currentY,
+        ratio: ((currentY - rect.top) / rect.height).toFixed(2),
+      })
+
       if (position === 'inside') {
         if (overId === 'all-bookmarks') {
-          setOver(overId, 'inside', {
-            top: rect.top,
-            left: rect.left,
-            width: rect.width,
-          })
+          setOver(overId, 'inside', { top: rect.top, left: rect.left, width: rect.width })
         } else {
           setOver(overId, 'inside', null)
         }
