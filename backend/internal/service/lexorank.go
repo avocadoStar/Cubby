@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"math"
+	"time"
 )
 
 const (
@@ -117,14 +118,16 @@ func needsRebalance(prev, next string) bool {
 }
 
 // rebalanceKeys generates evenly-spaced, ASCII-safe sort keys for n children.
+// Uses a nanosecond prefix so keys from different rebalance calls never collide.
 func rebalanceKeys(n int) []string {
 	if n == 0 {
 		return nil
 	}
+	prefix := formatRank(uint64(time.Now().UnixNano()))
 	keys := make([]string, n)
 	step := math.MaxUint64 / uint64(n+1)
 	for i := 0; i < n; i++ {
-		keys[i] = formatRank(step * uint64(i+1))
+		keys[i] = prefix + formatRank(step*uint64(i+1))
 	}
 	return keys
 }

@@ -248,7 +248,7 @@ export default function MainLayout() {
       setActive(id, item.kind === 'folder' ? (item.folder as unknown as Folder & { parent_id?: string | null }) : ({
         ...item.bookmark,
         parent_id: item.bookmark.folder_id,
-      } as unknown as Folder & { parent_id?: string | null }), 'main')
+      } as unknown as Folder & { parent_id?: string | null }), 'main', item.kind)
     }
   }, [items, setActive])
 
@@ -492,9 +492,18 @@ export default function MainLayout() {
                 transform: 'scale(1.02)',
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6">
-                <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-              </svg>
+              {useDndStore.getState().activeKind === 'bookmark' ? (
+                <div
+                  className="flex-shrink-0 rounded-sm flex items-center justify-center text-[9px] text-[#666]"
+                  style={{ width: 16, height: 16, background: '#e8e8e8' }}
+                >
+                  {(activeFolder.name ?? '').charAt(0)}
+                </div>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6">
+                  <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                </svg>
+              )}
               <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">
                 {activeFolder.name ?? ''}
               </span>
