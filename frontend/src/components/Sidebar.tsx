@@ -260,9 +260,20 @@ export default function Sidebar() {
         if (overId === 'all-bookmarks') {
           newParentId = null
           const siblings = childrenMap.get(null) ?? []
-          const idx = siblings.indexOf(dragId)
-          if (idx > 0) prevId = siblings[idx - 1]
-          if (idx >= 0 && idx + 1 < siblings.length) nextId = siblings[idx + 1]
+          if (dropPosition === 'before') {
+            // Insert at head of root level
+            prevId = null
+            nextId = siblings.length > 0 ? siblings[0] : null
+          } else if (dropPosition === 'after') {
+            // Append at end of root level
+            prevId = siblings.length > 0 ? siblings[siblings.length - 1] : null
+            nextId = null
+          } else {
+            // inside: keep current position among root siblings
+            const idx = siblings.indexOf(dragId)
+            if (idx > 0) prevId = siblings[idx - 1]
+            if (idx >= 0 && idx + 1 < siblings.length) nextId = siblings[idx + 1]
+          }
         } else {
           const folderId = overId.startsWith('droppable:')
             ? overId.slice('droppable:'.length)
