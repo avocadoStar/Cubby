@@ -290,13 +290,11 @@ export default function Sidebar() {
       try {
         if (overId === 'all-bookmarks') {
           newParentId = null
+          // "所有书签" sits above all root folders. Both before and after
+          // it mean "at the very top". inside keeps current root position.
           const rootSiblings = getSiblingsExcludingDragged(null)
 
-          if (dropPosition === 'before') {
-            ;({ prevId, nextId } = getHeadPlacement(null))
-          } else if (dropPosition === 'after') {
-            ;({ prevId, nextId } = getTailPlacement(null))
-          } else {
+          if (dropPosition === 'inside') {
             const idx = rootSiblings.indexOf(dragId)
             if (idx >= 0) {
               prevId = idx > 0 ? rootSiblings[idx - 1] : null
@@ -304,6 +302,9 @@ export default function Sidebar() {
             } else {
               ;({ prevId, nextId } = getTailPlacement(null))
             }
+          } else {
+            // before or after — both go to head
+            ;({ prevId, nextId } = getHeadPlacement(null))
           }
         } else {
           const folderId = overId.startsWith('droppable:')
