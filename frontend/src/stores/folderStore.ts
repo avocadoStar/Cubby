@@ -10,7 +10,7 @@ interface FolderState {
   visibleNodes: { node: Folder; depth: number }[]
   loadChildren: (parentId: string | null) => Promise<void>
   toggleExpand: (id: string) => void
-  select: (id: string | null) => void
+  select: (id: string | null) => Promise<void>
   rebuildVisible: () => void
   create: (name: string, parentId: string | null) => Promise<void>
 }
@@ -55,11 +55,36 @@ export const useFolderStore = create<FolderState>((set, get) => ({
     get().rebuildVisible()
   },
 
-  select: (id) => {
-    set({ selectedId: id })
-    if (id && !get().childrenMap.has(id)) {
-      get().loadChildren(id)
+  select: async (id) => {
+    // Expand all ancestors so the selected folder is visible in the tree
+    if (id) {
+      const { folderMap, expandedIds, childrenMap } = get()
+      const newExpanded = new Set(expandedIds)
+      // Trace parent chain and expand each ancestor
+      let current: string | null = id
+      const ancestors: string[] = []
+      while (current) {
+        const f = folderMap.get(current)
+        if (!f || !f.parent_id) break
+        ancestors.push(f.parent_id)
+        current = f.parent_id
+      }
+      // Load children for each ancestor if not loaded
+      for (const ancestorId of ancestors) {
+        if (!childrenMap.has(ancestorId)) {
+          await get().loadChildren(ancestorId)
+        }
+        newExpanded.add(ancestorId)
+      }
+      // Load children for the selected folder
+      if (!childrenMap.has(id)) {
+        await get().loadChildren(id)
+      }
+      set({ selectedId: id, expandedIds: newExpanded })
+    } else {
+      set({ selectedId: null })
     }
+    get().rebuildVisible()
   },
 
   rebuildVisible: () => {
