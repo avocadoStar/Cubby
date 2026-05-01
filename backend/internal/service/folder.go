@@ -53,14 +53,14 @@ func (s *FolderService) Delete(id string) error {
 }
 
 func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string, version int) (*model.Folder, error) {
-	sortKey, err := s.computeSortKey(parentID, prevID, nextID)
+	sortKey, err := s.computeSortKey(parentID, prevID, nextID, id)
 	if err != nil {
 		return nil, err
 	}
 	return s.repo.Move(id, parentID, sortKey, version)
 }
 
-func (s *FolderService) computeSortKey(parentID, prevID, nextID *string) (string, error) {
+func (s *FolderService) computeSortKey(parentID, prevID, nextID *string, excludeID string) (string, error) {
 	children, _ := s.repo.List(parentID)
 
 	if prevID == nil && nextID == nil {
@@ -115,7 +115,7 @@ func (s *FolderService) computeSortKey(parentID, prevID, nextID *string) (string
 
 	if needsRebalance(prev.SortKey, next.SortKey) {
 		// Auto-rebalance: redistribute all children's sort keys, then recompute
-		if err := s.rebalanceChildren(parentID); err != nil {
+		if err := s.rebalanceChildren(parentID, excludeID); err != nil {
 			return "", fmt.Errorf("rebalance failed: %w", err)
 		}
 		prev, err = s.repo.Get(*prevID)
@@ -131,7 +131,7 @@ func (s *FolderService) computeSortKey(parentID, prevID, nextID *string) (string
 	return between(prev.SortKey, next.SortKey), nil
 }
 
-func (s *FolderService) rebalanceChildren(parentID *string) error {
+func (s *FolderService) rebalanceChildren(parentID *string, excludeID string) error {
 	children, err := s.repo.List(parentID)
 	if err != nil {
 		return err
@@ -140,9 +140,20 @@ func (s *FolderService) rebalanceChildren(parentID *string) error {
 		return nil
 	}
 
-	keys := rebalanceKeys(len(children))
-	updates := make([]struct{ ID, SortKey string }, len(children))
-	for i, child := range children {
+	// Filter out the excluded item (the folder being moved — its sort_key is set by Move)
+	filtered := children[:0]
+	for _, child := range children {
+		if child.ID != excludeID {
+			filtered = append(filtered, child)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+
+	keys := rebalanceKeys(len(filtered))
+	updates := make([]struct{ ID, SortKey string }, len(filtered))
+	for i, child := range filtered {
 		updates[i] = struct{ ID, SortKey string }{child.ID, keys[i]}
 	}
 	return s.repo.Rebalance(updates)
