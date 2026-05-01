@@ -2,6 +2,11 @@ package service
 
 // between generates a sort key between prev and next using string midpoint.
 func between(prev, next string) string {
+	if prev >= next {
+		// Should never happen; fall back to appending
+		return prev + "n"
+	}
+
 	minLen := len(prev)
 	if len(next) < minLen {
 		minLen = len(next)
@@ -13,10 +18,9 @@ func between(prev, next string) string {
 	}
 
 	if i == minLen {
-		if len(prev) < len(next) {
-			return prev + "n"
-		}
-		return prev + "n"
+		// prev is a prefix of next. Use prev + "a" so the result sorts
+		// strictly before next (e.g. between("n","nn") → "na").
+		return prev + "a"
 	}
 
 	pc := int(prev[i])
