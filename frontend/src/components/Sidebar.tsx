@@ -255,22 +255,62 @@ export default function Sidebar() {
       let newParentId: string | null = null
       let prevId: string | null = null
       let nextId: string | null = null
+      const sourceParentId = dragFolder.parent_id ?? null
+
+      const getSiblingsExcludingDragged = (parentId: string | null) =>
+        (childrenMap.get(parentId) ?? []).filter(id => id !== dragId)
+
+      const getHeadPlacement = (parentId: string | null) => {
+        const siblings = getSiblingsExcludingDragged(parentId)
+        return {
+          prevId: null as string | null,
+          nextId: siblings.length > 0 ? siblings[0] : null,
+        }
+      }
+
+      const getTailPlacement = (parentId: string | null) => {
+        const siblings = getSiblingsExcludingDragged(parentId)
+        return {
+          prevId: siblings.length > 0 ? siblings[siblings.length - 1] : null,
+          nextId: null as string | null,
+        }
+      }
+
+      const getPlacementAroundSibling = (
+        parentId: string | null,
+        siblingId: string,
+        position: 'before' | 'after',
+      ) => {
+        const siblings = getSiblingsExcludingDragged(parentId)
+        const siblingIdx = siblings.indexOf(siblingId)
+        if (siblingIdx === -1) {
+          return null
+        }
+
+        const insertIdx = position === 'before' ? siblingIdx : siblingIdx + 1
+        return {
+          prevId: insertIdx > 0 ? siblings[insertIdx - 1] : null,
+          nextId: insertIdx < siblings.length ? siblings[insertIdx] : null,
+        }
+      }
 
       try {
         if (overId === 'all-bookmarks') {
           newParentId = null
-          // Exclude dragged item — it may or may not be a root sibling yet
-          const siblings = (childrenMap.get(null) ?? []).filter(id => id !== dragId)
-          // "所有书签" sits above all root-level folders.
-          // Both before and after it mean "at the very top of root level".
-          if (dropPosition === 'before' || dropPosition === 'after') {
-            prevId = null
-            nextId = siblings.length > 0 ? siblings[0] : null
+          const rootSiblings = getSiblingsExcludingDragged(null)
+
+          if (dropPosition === 'before') {
+            ;({ prevId, nextId } = getHeadPlacement(null))
+          } else if (dropPosition === 'after') {
+            ;({ prevId, nextId } = getTailPlacement(null))
           } else {
-            // inside: reorder within root — keep current position
-            const idx = siblings.indexOf(dragId)
-            if (idx > 0) prevId = siblings[idx - 1]
-            if (idx >= 0 && idx + 1 < siblings.length) nextId = siblings[idx + 1]
+            const idx = rootSiblings.indexOf(dragId)
+            if (idx >= 0) {
+              prevId = idx > 0 ? rootSiblings[idx - 1] : null
+              nextId = idx + 1 < rootSiblings.length ? rootSiblings[idx + 1] : null
+            } else {
+              ;({ prevId, nextId } = getTailPlacement(null))
+            }
           }
         } else {
           const folderId = overId.startsWith('droppable:')
@@ -284,26 +324,27 @@ export default function Sidebar() {
 
           if (dropPosition === 'inside') {
             newParentId = folderId
-            // Append as last child (exclude self from siblings)
-            const siblings = (childrenMap.get(folderId) ?? []).filter(id => id !== dragId)
-            prevId = siblings.length > 0 ? siblings[siblings.length - 1] : null
-            nextId = null
+            if (sourceParentId === folderId) {
+              ;({ prevId, nextId } = getHeadPlacement(folderId))
+            } else {
+              ;({ prevId, nextId } = getTailPlacement(folderId))
+            }
           } else if (dropPosition === 'before') {
             newParentId = targetFolder.parent_id
-            const siblings = (childrenMap.get(newParentId) ?? []).filter(id => id !== dragId)
-            const targetIdx = siblings.indexOf(folderId)
-            prevId = targetIdx > 0 ? siblings[targetIdx - 1] : null
-            nextId = folderId
+            const placement = getPlacementAroundSibling(newParentId, folderId, 'before')
+            if (!placement) {
+              clearDrag()
+              return
+            }
+            ;({ prevId, nextId } = placement)
           } else {
-            // after
             newParentId = targetFolder.parent_id
-            const siblings = (childrenMap.get(newParentId) ?? []).filter(id => id !== dragId)
-            const targetIdx = siblings.indexOf(folderId)
-            prevId = folderId
-            nextId =
-              targetIdx >= 0 && targetIdx + 1 < siblings.length
-                ? siblings[targetIdx + 1]
-                : null
+            const placement = getPlacementAroundSibling(newParentId, folderId, 'after')
+            if (!placement) {
+              clearDrag()
+              return
+            }
+            ;({ prevId, nextId } = placement)
           }
         }
 
