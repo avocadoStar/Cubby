@@ -57,8 +57,8 @@ function calcDropPosition(
 ): 'before' | 'inside' | 'after' {
   const relY = pointerY - rect.top
   const h = rect.height
-  if (relY < h * 0.25) return 'before'
-  if (relY > h * 0.75) return 'after'
+  if (relY < h * 0.3) return 'before'
+  if (relY > h * 0.7) return 'after'
   return 'inside'
 }
 
@@ -153,7 +153,9 @@ export default function Sidebar() {
   const { setActive, setOver, clearDrag, activeFolder, activeId } = useDndStore()
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const pointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  // Store initial pointer position at drag start (never updated during drag).
+  // Used with event.delta to compute current pointer position reliably.
+  const dragOriginRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
   useEffect(() => {
     loadChildren(null)
@@ -170,25 +172,14 @@ export default function Sidebar() {
     useSensor(PointerSensor, POINTER_SENSOR_CONFIG),
   )
 
-  // Track pointer position during drag for accurate before/inside/after calculation
-  useEffect(() => {
-    if (!activeId) return
-    const handler = (e: PointerEvent) => {
-      pointerRef.current = { x: e.clientX, y: e.clientY }
-    }
-    window.addEventListener('pointermove', handler)
-    return () => window.removeEventListener('pointermove', handler)
-  }, [activeId])
-
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const id = String(event.active.id)
       const folder = folderMap.get(id)
       if (!folder) return
       setActive(id, folder)
-      // Seed pointer position from activator event
       const ev = event.activatorEvent as PointerEvent | MouseEvent
-      pointerRef.current = { x: ev.clientX, y: ev.clientY }
+      dragOriginRef.current = { x: ev.clientX, y: ev.clientY }
     },
     [folderMap, setActive],
   )
@@ -213,7 +204,9 @@ export default function Sidebar() {
       }
 
       const rect = el.getBoundingClientRect()
-      const position = calcDropPosition(rect, pointerRef.current.y)
+      // Compute current pointer Y from drag origin + accumulated delta
+      const currentY = dragOriginRef.current.y + event.delta.y
+      const position = calcDropPosition(rect, currentY)
 
       if (position === 'inside') {
         if (overId === 'all-bookmarks') {
