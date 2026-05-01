@@ -6,10 +6,10 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  closestCenter,
   useSensor,
   useSensors,
   useDroppable,
+  type CollisionDetection,
   type DragStartEvent,
   type DragMoveEvent,
   type DragEndEvent,
@@ -20,6 +20,35 @@ import { Star, Search } from 'lucide-react'
 
 // Module-level so reference is stable across renders
 const POINTER_SENSOR_CONFIG = { activationConstraint: { distance: 5 } } as const
+
+/** Custom collision detection: like closestCenter but uses pointer coords instead of draggable origin.
+ *  This makes the drop target follow the actual cursor, not the drag start point. */
+function pointerClosestCenter(args: Parameters<CollisionDetection>[0]) {
+  const { droppableContainers, pointerCoordinates } = args
+
+  if (!pointerCoordinates) return []
+
+  let closestDistance = Infinity
+  let closestId: string | null = null
+
+  for (const container of droppableContainers) {
+    const rect = container.rect.current
+    if (!rect) continue
+
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const dx = pointerCoordinates.x - centerX
+    const dy = pointerCoordinates.y - centerY
+    const distance = dx * dx + dy * dy // squared distance, no need for sqrt
+
+    if (distance < closestDistance) {
+      closestDistance = distance
+      closestId = container.id as string
+    }
+  }
+
+  return closestId ? [{ id: closestId }] : []
+}
 
 function calcDropPosition(
   rect: DOMRect,
@@ -283,7 +312,7 @@ export default function Sidebar() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={pointerClosestCenter}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
