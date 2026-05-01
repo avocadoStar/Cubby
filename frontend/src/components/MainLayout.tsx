@@ -7,6 +7,7 @@ import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
 import { useEffect, useMemo } from 'react'
 import { Virtuoso } from 'react-virtuoso'
+import { useState } from 'react'
 import type { Folder } from '../types'
 import { ChevronRight } from 'lucide-react'
 
@@ -17,10 +18,11 @@ type ListItem =
 export default function MainLayout() {
   const { bookmarks, load, selectAll } = useBookmarkStore()
   const { selectedId, childrenMap, folderMap, select } = useFolderStore()
+  const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set())
 
   useEffect(() => { load(null) }, [])
 
-  useEffect(() => { load(selectedId) }, [selectedId])
+  useEffect(() => { load(selectedId); setSelectedFolderIds(new Set()) }, [selectedId])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -62,12 +64,13 @@ export default function MainLayout() {
             itemContent={(i) => {
               const item = items[i]
               if (item.kind === 'folder') {
+                const isFolderSelected = selectedFolderIds.has(item.folder.id)
                 return (
                   <div
                     data-context="folder"
                     data-id={item.folder.id}
                     className="flex items-center mx-1 px-2 rounded select-none cursor-default"
-                    style={{ height: 32, background: 'transparent' }}
+                    style={{ height: 32, background: isFolderSelected ? '#E5F0FF' : 'transparent' }}
                     onClick={() => select(item.folder.id)}
                   >
                     <div
@@ -75,11 +78,25 @@ export default function MainLayout() {
                       style={{
                         width: 18, height: 18,
                         borderRadius: '50%',
-                        border: '2px solid #c0c0c0',
-                        background: 'transparent',
+                        border: isFolderSelected ? '2px solid #0078D4' : '2px solid #c0c0c0',
+                        background: isFolderSelected ? '#0078D4' : 'transparent',
                       }}
-                      onClick={(e) => { e.stopPropagation() }}
-                    />
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedFolderIds(prev => {
+                          const next = new Set(prev)
+                          if (next.has(item.folder.id)) { next.delete(item.folder.id) }
+                          else { next.add(item.folder.id) }
+                          return next
+                        })
+                      }}
+                    >
+                      {isFolderSelected && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6" className="flex-shrink-0 mr-2">
                       <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
                     </svg>
