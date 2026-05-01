@@ -2,6 +2,7 @@ import Sidebar from './Sidebar'
 import Toolbar from './Toolbar'
 import BookmarkRow from './BookmarkRow'
 import BatchActionBar from './BatchActionBar'
+import ContextMenu from './ContextMenu'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
 import { useEffect, useMemo } from 'react'
@@ -50,6 +51,7 @@ export default function MainLayout() {
 
   return (
     <div className="flex h-screen bg-white relative">
+      <ContextMenu />
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Toolbar />
