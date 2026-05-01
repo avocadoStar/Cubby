@@ -4,12 +4,18 @@ import BookmarkRow from './BookmarkRow'
 import BatchActionBar from './BatchActionBar'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Virtuoso } from 'react-virtuoso'
+import type { Folder } from '../types'
+import { ChevronRight } from 'lucide-react'
+
+type ListItem =
+  | { kind: 'folder'; folder: Folder }
+  | { kind: 'bookmark'; bookmark: import('../types').Bookmark }
 
 export default function MainLayout() {
   const { bookmarks, load, selectAll } = useBookmarkStore()
-  const { selectedId } = useFolderStore()
+  const { selectedId, childrenMap, folderMap, select } = useFolderStore()
 
   useEffect(() => { load(null) }, [])
 
@@ -26,6 +32,22 @@ export default function MainLayout() {
     return () => window.removeEventListener('keydown', handler)
   }, [selectAll])
 
+  // Build combined list: sub-folders first, then bookmarks
+  const items: ListItem[] = useMemo(() => {
+    const result: ListItem[] = []
+    // Sub-folders
+    const subFolderIds = childrenMap.get(selectedId) || []
+    for (const id of subFolderIds) {
+      const f = folderMap.get(id)
+      if (f) result.push({ kind: 'folder', folder: f })
+    }
+    // Bookmarks
+    for (const b of bookmarks) {
+      result.push({ kind: 'bookmark', bookmark: b })
+    }
+    return result
+  }, [selectedId, childrenMap, folderMap, bookmarks])
+
   return (
     <div className="flex h-screen bg-white relative">
       <Sidebar />
@@ -34,8 +56,29 @@ export default function MainLayout() {
         <BatchActionBar />
         <div className="flex-1">
           <Virtuoso
-            totalCount={bookmarks.length}
-            itemContent={(i) => <BookmarkRow bookmark={bookmarks[i]} />}
+            totalCount={items.length}
+            itemContent={(i) => {
+              const item = items[i]
+              if (item.kind === 'folder') {
+                return (
+                  <div
+                    className="flex items-center mx-1 px-2 rounded select-none cursor-default"
+                    style={{ height: 32, background: 'transparent' }}
+                    onClick={() => select(item.folder.id)}
+                  >
+                    <div style={{ width: 18, marginRight: 10, flexShrink: 0 }} />
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6" className="flex-shrink-0 mr-2">
+                      <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
+                    </svg>
+                    <span className="flex-1 truncate text-[13px] text-[#1a1a1a]">{item.folder.name}</span>
+                    <span className="flex-shrink-0 text-xs text-[#888] mr-8" style={{ width: 320 }}>文件夹</span>
+                    <span className="flex-shrink-0 text-xs text-[#888]" style={{ width: 100, minWidth: 100 }} />
+                    <ChevronRight size={14} stroke="#999" strokeWidth={1.5} className="flex-shrink-0" />
+                  </div>
+                )
+              }
+              return <BookmarkRow bookmark={item.bookmark} />
+            }}
           />
         </div>
       </div>

@@ -55,7 +55,12 @@ export const useFolderStore = create<FolderState>((set, get) => ({
     get().rebuildVisible()
   },
 
-  select: (id) => set({ selectedId: id }),
+  select: (id) => {
+    set({ selectedId: id })
+    if (id && !get().childrenMap.has(id)) {
+      get().loadChildren(id)
+    }
+  },
 
   rebuildVisible: () => {
     const { folderMap, childrenMap, expandedIds } = get()

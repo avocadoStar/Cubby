@@ -40,10 +40,10 @@ const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
         {bookmark.title.charAt(0)}
       </div>
       <span className="flex-1 truncate text-[13px] text-[#1a1a1a]">{bookmark.title}</span>
-      <span className="flex-shrink-0 truncate text-xs text-[#888]" style={{ width: 320 }}>
+      <span className="flex-shrink-0 truncate text-xs text-[#888] mr-8" style={{ width: 320 }}>
         {bookmark.url}
       </span>
-      <span className="flex-shrink-0 text-xs text-[#888]" style={{ width: 100 }}>
+      <span className="flex-shrink-0 text-xs text-[#888]" style={{ width: 100, minWidth: 100 }}>
         {bookmark.created_at.slice(0, 10)}
       </span>
       <div
