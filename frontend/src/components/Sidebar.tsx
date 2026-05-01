@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useCallback, useMemo, type CSSProperties } from 'react'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
 import { useVirtualizer } from '@tanstack/react-virtual'
@@ -70,11 +70,13 @@ function DroppableWrapper({
   nodeId,
   activeId,
   folderMap,
+  style,
   children,
 }: {
   nodeId: string
   activeId: string | null
   folderMap: Map<string, { parent_id: string | null }>
+  style: CSSProperties
   children: React.ReactNode
 }) {
   const invalidDrop = useMemo(() => {
@@ -101,7 +103,10 @@ function DroppableWrapper({
     <div
       ref={setNodeRef}
       data-drop-id={`droppable:${nodeId}`}
-      style={{ touchAction: 'none' }}
+      style={{
+        ...style,
+        touchAction: 'none',
+      }}
     >
       {children}
     </div>
@@ -314,19 +319,16 @@ export default function Sidebar() {
                   nodeId={item.node.id}
                   activeId={activeId}
                   folderMap={folderMap as Map<string, { parent_id: string | null }>}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${virtualItem.size}px`,
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
                 >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: `${virtualItem.size}px`,
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                  >
-                    <FolderNode node={item.node} depth={item.depth} />
-                  </div>
+                  <FolderNode node={item.node} depth={item.depth} />
                 </DroppableWrapper>
               )
             })}
