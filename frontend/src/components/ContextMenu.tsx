@@ -78,13 +78,24 @@ export default function ContextMenu() {
 
   const handleDelete = async () => {
     if (!targetId) return
+    const folderStore = useFolderStore.getState()
     if (isBookmark) {
       await api.deleteBookmark(targetId)
+      // Optimistic: remove from local state immediately
+      useBookmarkStore.getState().load(folderStore.selectedId)
     } else {
+      // Get parent before deleting so we can refresh it
+      const folder = folderStore.folderMap.get(targetId)
+      const parentId = folder?.parent_id ?? null
       await api.deleteFolder(targetId)
+      // Reload parent's children and root
+      await folderStore.loadChildren(parentId)
+      await folderStore.loadChildren(null)
+      // If deleted folder was selected, navigate to parent
+      if (folderStore.selectedId === targetId) {
+        folderStore.select(parentId)
+      }
     }
-    await useBookmarkStore.getState().load(useFolderStore.getState().selectedId)
-    await useFolderStore.getState().loadChildren(null)
     closeMenu()
   }
 
