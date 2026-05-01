@@ -65,7 +65,10 @@
       "Read(//c/Users/15638/AppData/Local/Temp/claude/e--project-Cubby/b232d2f5-fd52-4663-a4a6-05f10b1ea74b/tasks/**)",
       "Bash(node C:/Users/15638/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs task --write '<task> *)",
       "Bash(cp -r frontend/dist/assets/* backend/cmd/server/static/assets/)",
-      "Bash(cp frontend/dist/index.html backend/cmd/server/static/index.html)"
+      "Bash(cp frontend/dist/index.html backend/cmd/server/static/index.html)",
+      "Bash(node C:/Users/15638/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs task --write --background '<task> *)",
+      "Bash(node \"C:/Users/15638/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs\" status task-momxgiqt-63gvzx --json)",
+      "Bash(node \"C:/Users/15638/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs\" result task-momxgiqt-63gvzx --json)"
     ],
     "additionalDirectories": [
       "e:\\project\\Cubby\\backend\\internal\\handler",
