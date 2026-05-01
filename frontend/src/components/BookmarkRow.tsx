@@ -1,24 +1,54 @@
 import { memo, useState } from 'react'
 import type { Bookmark } from '../types'
 import { useBookmarkStore } from '../stores/bookmarkStore'
+import { useDndStore } from '../stores/dndStore'
+import { useDraggable } from '@dnd-kit/core'
 
 const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
   const { selectedIds, toggleSelect, deleteOne } = useBookmarkStore()
   const isSelected = selectedIds.has(bookmark.id)
   const [hovered, setHovered] = useState(false)
 
+  const overId = useDndStore((s) => s.overId)
+  const dropPosition = useDndStore((s) => s.dropPosition)
+  const isOver = overId === `droppable:bookmark:${bookmark.id}`
+  const isOverInside = isOver && dropPosition === 'inside'
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    isDragging,
+  } = useDraggable({
+    id: `bookmark:${bookmark.id}`,
+    data: { kind: 'bookmark', bookmark },
+  })
+
   return (
     <div
+      ref={setNodeRef}
       data-context="bookmark"
       data-id={bookmark.id}
       className="flex items-center mx-1 px-2 rounded select-none cursor-default"
       style={{
         height: 32,
-        background: isSelected ? '#E5F0FF' : hovered ? '#F5F5F5' : 'transparent',
+        opacity: isDragging ? 0.3 : 1,
+        background: isOverInside
+          ? '#E5F0FF'
+          : isSelected
+            ? '#E5F0FF'
+            : hovered
+              ? '#F5F5F5'
+              : 'transparent',
+        outline: isOverInside ? '1px solid #0078D4' : undefined,
+        outlineOffset: -1,
+        touchAction: 'none',
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => window.open(bookmark.url, '_blank')}
+      {...listeners}
+      {...attributes}
     >
       <div
         className="flex-shrink-0 mr-2.5 flex items-center justify-center cursor-default"
