@@ -68,7 +68,7 @@ func (h *BookmarkHandler) Update(c *gin.Context) {
 	}
 	b, err := h.svc.Update(c.Param("id"), req.Title, req.URL, req.Version)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "conflict"})
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, b)
@@ -96,7 +96,7 @@ func (h *BookmarkHandler) Move(c *gin.Context) {
 	}
 	b, err := h.svc.Move(req.ID, req.FolderID, req.PrevID, req.NextID, req.Version)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "conflict"})
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, b)

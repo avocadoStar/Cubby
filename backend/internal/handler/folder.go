@@ -109,7 +109,7 @@ func (h *FolderHandler) Move(c *gin.Context) {
 	}
 	f, err := h.svc.Move(req.ID, req.ParentID, req.PrevID, req.NextID, req.Version)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "conflict"})
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, f)

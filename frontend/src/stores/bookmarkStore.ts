@@ -80,11 +80,28 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   },
 
   move: async (id, folderId, prevId, nextId, version) => {
+    const { ConflictError } = await import('../services/api')
+
+    const doMove = async (ver: number) => {
+      await api.moveBookmark({ id, folder_id: folderId, prev_id: prevId, next_id: nextId, version: ver })
+    }
+
     try {
-      await api.moveBookmark({ id, folder_id: folderId, prev_id: prevId, next_id: nextId, version })
+      await doMove(version)
     } catch (e) {
       if (e instanceof ConflictError) {
-        await get().load(folderId)
+        // Reload bookmarks to get fresh version, then retry once
+        const { selectedId } = (await import('./folderStore')).useFolderStore.getState()
+        await get().load(selectedId)
+        if (folderId !== selectedId) {
+          await get().load(folderId)
+        }
+
+        const fresh = get().bookmarks.find(b => b.id === id)
+        if (fresh) {
+          await doMove(fresh.version)
+          return
+        }
       }
       throw e
     }
