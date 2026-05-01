@@ -271,6 +271,8 @@ export default function MainLayout() {
     const isFolderDropTarget = overId.startsWith('droppable:') && items.some(i => i.kind === 'folder' && `droppable:${i.folder.id}` === overId)
     const finalPosition = (position === 'inside' && !isFolderDropTarget) ? 'after' : position
 
+    console.warn('[BM-DRAG]', { overId, position, finalPosition, isFolderDropTarget })
+
     if (finalPosition === 'inside') {
       setOver(overId, 'inside', null)
     } else if (finalPosition === 'before') {
@@ -403,6 +405,7 @@ export default function MainLayout() {
           ;({ prevId, nextId } = placement(siblings, insertIdx))
         }
 
+        console.warn('[BM-MOVE]', { id: itemDragId, newFolderId, prevId, nextId, version: draggedBookmark.version })
         await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version)
       }
     } catch (e) {

@@ -84,6 +84,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       await api.moveBookmark({ id, folder_id: folderId, prev_id: prevId, next_id: nextId, version: ver })
       const { selectedId } = (await import('./folderStore')).useFolderStore.getState()
       await get().load(selectedId)
+      console.warn('[BM-MOVE-OK] reloaded', selectedId)
     }
 
     try {
