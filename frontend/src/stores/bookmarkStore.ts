@@ -80,24 +80,34 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   },
 
   move: async (id, folderId, prevId, nextId, version) => {
-    const { ConflictError } = await import('../services/api')
-
     const doMove = async (ver: number) => {
       await api.moveBookmark({ id, folder_id: folderId, prev_id: prevId, next_id: nextId, version: ver })
+      const { selectedId } = (await import('./folderStore')).useFolderStore.getState()
+      await get().load(selectedId)
     }
 
     try {
       await doMove(version)
     } catch (e) {
       if (e instanceof ConflictError) {
-        // Get the bookmark's current folder before reloading
         const current = get().bookmarks.find(b => b.id === id)
         const sourceFolderId = current?.folder_id ?? null
 
-        // Reload all affected folders to get fresh versions
         const { selectedId } = (await import('./folderStore')).useFolderStore.getState()
-        const toReload = new Set([selectedId, folderId, sourceFolderId])
-        for (const fid of toReload) {
+        const reloadOrder: Array<string | null> = []
+        const pushFolder = (fid: string | null) => {
+          const existingIdx = reloadOrder.findIndex((existing) => existing === fid)
+          if (existingIdx >= 0) {
+            reloadOrder.splice(existingIdx, 1)
+          }
+          reloadOrder.push(fid)
+        }
+
+        pushFolder(folderId)
+        pushFolder(selectedId)
+        pushFolder(sourceFolderId)
+
+        for (const fid of reloadOrder) {
           await get().load(fid)
         }
 

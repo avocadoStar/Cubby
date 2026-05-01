@@ -318,14 +318,14 @@ export default function MainLayout() {
       const folderStore = useFolderStore.getState()
       const bookmarkStore = useBookmarkStore.getState()
       const currentChildrenMap = folderStore.childrenMap
+      const currentBookmarks = bookmarkStore.bookmarks
 
       // Helper: siblings excluding dragged item
       const siblingsOf = (pid: string | null) => {
         if (isDraggedFolder) {
           return (currentChildrenMap.get(pid) ?? []).filter(id => id !== itemDragId)
         }
-        // Use getState for latest bookmark list (not closure value)
-        return useBookmarkStore.getState().bookmarks
+        return currentBookmarks
           .filter(b => b.folder_id === pid && b.id !== itemDragId)
           .map(b => b.id)
       }
@@ -368,7 +368,7 @@ export default function MainLayout() {
         await folderStore.moveFolder(itemDragId, newParentId, prevId, nextId, draggedFolder.version)
       } else {
         // Moving a bookmark
-        const draggedBookmark = draggedItem.bookmark
+        const draggedBookmark = currentBookmarks.find((b) => b.id === itemDragId) ?? draggedItem.bookmark
         let newFolderId: string | null = selectedId
         let prevId: string | null = null
         let nextId: string | null = null

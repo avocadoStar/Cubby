@@ -42,6 +42,25 @@ func (s *BookmarkService) Delete(id string) error {
 }
 
 func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID *string, version int) (*model.Bookmark, error) {
+	current, err := s.repo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	loadSiblings := func() ([]model.Bookmark, error) {
+		children, err := s.repo.List(folderID)
+		if err != nil {
+			return nil, err
+		}
+		filtered := make([]model.Bookmark, 0, len(children))
+		for _, child := range children {
+			if child.ID != current.ID {
+				filtered = append(filtered, child)
+			}
+		}
+		return filtered, nil
+	}
+
 	var prevKey, nextKey string
 
 	if prevID != nil {
@@ -62,7 +81,15 @@ func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID *stri
 	var sortKey string
 	switch {
 	case prevID == nil && nextID == nil:
-		sortKey = "n"
+		siblings, err := loadSiblings()
+		if err != nil {
+			return nil, err
+		}
+		if len(siblings) == 0 {
+			sortKey = after("")
+		} else {
+			sortKey = after(siblings[len(siblings)-1].SortKey)
+		}
 	case prevID == nil:
 		sortKey = before(nextKey)
 	case nextID == nil:
@@ -72,6 +99,9 @@ func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID *stri
 			return nil, ErrConflict
 		}
 		sortKey = between(prevKey, nextKey)
+	}
+	if sortKey == "" {
+		return nil, ErrConflict
 	}
 
 	return s.repo.Move(id, folderID, sortKey, version)
