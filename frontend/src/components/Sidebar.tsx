@@ -167,28 +167,29 @@ export default function Sidebar() {
     (event: DragMoveEvent) => {
       const over = event.over
       if (!over) {
+        console.warn('[DND] no over')
         setOver(null, null, null)
         return
       }
 
       const overId = String(over.id)
-      if (overId === activeId) {
-        setOver(null, null, null)
-        return
-      }
 
       // Find the DOM element for the droppable
       const el =
         document.querySelector(`[data-drop-id="${overId}"]`) ||
         document.querySelector(`[data-id="${overId}"]`)
       if (!el) {
+        console.warn('[DND] no el for', overId, {
+          dataDropCount: document.querySelectorAll('[data-drop-id]').length,
+        })
         setOver(null, null, null)
         return
       }
 
       const rect = el.getBoundingClientRect()
-      // Use tracked pointer position instead of delta math
       const position = calcDropPosition(rect, pointerRef.current.y)
+
+      console.warn('[DND] indicator', { overId, position, ptrY: pointerRef.current.y.toFixed(0), rectTop: rect.top.toFixed(0), rectH: rect.height })
 
       if (position === 'inside') {
         if (overId === 'all-bookmarks') {
