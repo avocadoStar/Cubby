@@ -260,14 +260,11 @@ export default function Sidebar() {
         if (overId === 'all-bookmarks') {
           newParentId = null
           const siblings = childrenMap.get(null) ?? []
-          if (dropPosition === 'before') {
-            // Insert at head of root level
+          // "所有书签" sits above all root-level folders.
+          // Both before and after it mean "at the very top of root level".
+          if (dropPosition === 'before' || dropPosition === 'after') {
             prevId = null
             nextId = siblings.length > 0 ? siblings[0] : null
-          } else if (dropPosition === 'after') {
-            // Append at end of root level
-            prevId = siblings.length > 0 ? siblings[siblings.length - 1] : null
-            nextId = null
           } else {
             // inside: keep current position among root siblings
             const idx = siblings.indexOf(dragId)

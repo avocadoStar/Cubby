@@ -41,10 +41,35 @@
       "Bash(python \"C:/Users/15638/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"empty state error recovery confirmation\" --domain ux --max-results 5)",
       "Bash(python \"C:/Users/15638/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/src/ui-ux-pro-max/scripts/search.py\" \"content jump layout shift resize\" --domain ux --max-results 5)",
       "Bash(git push *)",
-      "Read(//e/project/linkding/**)"
+      "Read(//e/project/linkding/**)",
+      "Read(//c/Users/15638/.claude/plugins/**)",
+      "Bash(\"C:/Users/15638/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh\" --project-dir e:/project/Cubby)",
+      "WebSearch",
+      "Bash(git -C \"E:\\\\project\\\\Cubby\\\\.worktrees\\\\folder-dnd\" log --oneline -20)",
+      "Bash(git -C \"E:\\\\project\\\\Cubby\\\\.worktrees\\\\folder-dnd\" show 824111c --stat)",
+      "Bash(git -C \"E:\\\\project\\\\Cubby\\\\.worktrees\\\\folder-dnd\" diff HEAD~3..HEAD --stat)",
+      "Bash(git -C \"E:/project/Cubby/.worktrees/folder-dnd\" show 1e86e12 --stat)",
+      "Bash(git -C \"E:/project/Cubby/.worktrees/folder-dnd\" status)",
+      "Bash(git -C \"E:/project/Cubby/.worktrees/folder-dnd\" diff --stat)",
+      "Bash(git -C \"E:/project/Cubby/.worktrees/folder-dnd\" log --oneline -5)",
+      "Bash(git -C \"E:/project/Cubby/.worktrees/folder-dnd\" add frontend/src/components/DropIndicator.tsx frontend/src/components/FolderNode.tsx frontend/src/components/Sidebar.tsx)",
+      "Bash(git -C E:/project/Cubby/.worktrees/folder-dnd commit -m ' *)",
+      "Read(//e/project/Cubby/frontend/**)",
+      "Bash(node -e \"const p = require\\('./node_modules/@dnd-kit/core/package.json'\\); console.log\\('@dnd-kit/core:', p.version\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/@dnd-kit/sortable/package.json'\\); console.log\\('@dnd-kit/sortable:', p.version\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/@tanstack/react-virtual/package.json'\\); console.log\\('@tanstack/react-virtual:', p.version\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/react/package.json'\\); console.log\\('react:', p.version\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/react-dom/package.json'\\); console.log\\('react-dom:', p.version\\)\")",
+      "Skill(codex:rescue)",
+      "Skill(codex:rescue:*)",
+      "Read(//c/Users/15638/AppData/Local/Temp/claude/e--project-Cubby/b232d2f5-fd52-4663-a4a6-05f10b1ea74b/tasks/**)",
+      "Bash(node C:/Users/15638/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs task --write '<task> *)",
+      "Bash(cp -r frontend/dist/assets/* backend/cmd/server/static/assets/)",
+      "Bash(cp frontend/dist/index.html backend/cmd/server/static/index.html)"
     ],
     "additionalDirectories": [
-      "e:\\project\\Cubby\\backend\\internal\\handler"
+      "e:\\project\\Cubby\\backend\\internal\\handler",
+      "e:\\project\\Cubby\\docs\\superpowers\\specs"
     ]
   }
 }
