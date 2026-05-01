@@ -233,9 +233,12 @@ export default function MainLayout() {
   // --- Drag handlers ---
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    const id = String(event.active.id)
+    const rawId = String(event.active.id)
     const ev = event.activatorEvent as PointerEvent | MouseEvent
     livePointerRef.current = { x: ev.clientX, y: ev.clientY }
+
+    // Strip prefix: folder draggables use bare id, bookmarks use "bookmark:"
+    const id = rawId.startsWith('bookmark:') ? rawId.slice('bookmark:'.length) : rawId
 
     // Find the item in our list
     const item = items.find(i =>
@@ -294,9 +297,12 @@ export default function MainLayout() {
       return
     }
 
+    // Strip bookmark: prefix to match items list
+    const itemDragId = dragId.startsWith('bookmark:') ? dragId.slice('bookmark:'.length) : dragId
+
     // Determine what was dragged
     const draggedItem = items.find(i =>
-      i.kind === 'folder' ? i.folder.id === dragId : i.bookmark.id === dragId
+      i.kind === 'folder' ? i.folder.id === itemDragId : i.bookmark.id === itemDragId
     )
     if (!draggedItem) { clearDrag(); return }
 
@@ -316,11 +322,11 @@ export default function MainLayout() {
       // Helper: siblings excluding dragged item
       const siblingsOf = (pid: string | null) => {
         if (isDraggedFolder) {
-          return (currentChildrenMap.get(pid) ?? []).filter(id => id !== dragId)
+          return (currentChildrenMap.get(pid) ?? []).filter(id => id !== itemDragId)
         }
         // Use getState for latest bookmark list (not closure value)
         return useBookmarkStore.getState().bookmarks
-          .filter(b => b.folder_id === pid && b.id !== dragId)
+          .filter(b => b.folder_id === pid && b.id !== itemDragId)
           .map(b => b.id)
       }
 
@@ -359,7 +365,7 @@ export default function MainLayout() {
           ;({ prevId, nextId } = placement(siblings, insertIdx))
         }
 
-        await folderStore.moveFolder(dragId, newParentId, prevId, nextId, draggedFolder.version)
+        await folderStore.moveFolder(itemDragId, newParentId, prevId, nextId, draggedFolder.version)
       } else {
         // Moving a bookmark
         const draggedBookmark = draggedItem.bookmark
@@ -387,7 +393,7 @@ export default function MainLayout() {
           ;({ prevId, nextId } = placement(siblings, insertIdx))
         }
 
-        await bookmarkStore.move(dragId, newFolderId, prevId, nextId, draggedBookmark.version)
+        await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version)
       }
     } catch (e) {
       console.error('Move failed', e)
