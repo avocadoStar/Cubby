@@ -22,7 +22,7 @@ import {
   type DragMoveEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { POINTER_SENSOR_CONFIG, pointerClosestCenter, calcDropPosition } from '../lib/dndUtils'
+import { POINTER_SENSOR_CONFIG, pointerClosestCenter, calcDropPosition, sortBefore, sortAfter } from '../lib/dndUtils'
 import type { Folder, Bookmark } from '../types'
 import { ChevronRight } from 'lucide-react'
 
@@ -207,6 +207,9 @@ export default function MainLayout() {
     for (const b of bookmarks) {
       result.push({ kind: 'bookmark', bookmark: b })
     }
+    // Interleave folders and bookmarks by sort_key
+    const getKey = (i: ListItem) => i.kind === 'folder' ? i.folder.sort_key : i.bookmark.sort_key
+    result.sort((a, b) => (getKey(a) < getKey(b) ? -1 : 1))
     return result
   }, [subFolderIds, folderMap, bookmarks])
 
@@ -374,25 +377,26 @@ export default function MainLayout() {
         let newFolderId: string | null = selectedId
         let prevId: string | null = null
         let nextId: string | null = null
+        let sortKey: string | undefined
 
         if (!targetItem) {
           // Dropped in empty space → append to current folder's bookmarks
           const siblings = siblingsOf(selectedId)
           ;({ prevId, nextId } = placement(siblings, siblings.length))
         } else if (targetItem.kind === 'folder') {
-          // Bookmark relative to a folder:
-          //   inside → move bookmark into that folder
-          //   before/after → move into folder's parent, at start/end of bookmarks
           if (dropPosition === 'inside') {
+            // Move bookmark into folder → append to that folder's bookmarks
             newFolderId = targetItem.folder.id
-          } else {
-            newFolderId = targetItem.folder.parent_id ?? selectedId
-          }
-          const siblings = siblingsOf(newFolderId)
-          if (dropPosition === 'before') {
-            ;({ prevId, nextId } = placement(siblings, 0))
-          } else {
+            const siblings = siblingsOf(newFolderId)
             ;({ prevId, nextId } = placement(siblings, siblings.length))
+          } else {
+            // before/after a folder → compute sort key relative to the folder
+            // so the bookmark appears before/after it in the interleaved list
+            newFolderId = targetItem.folder.parent_id ?? selectedId
+            const refKey = targetItem.folder.sort_key
+            sortKey = dropPosition === 'before' ? sortBefore(refKey) : sortAfter(refKey)
+            prevId = null
+            nextId = null
           }
         } else {
           // Bookmark relative to another bookmark: normal before/after ordering
@@ -405,8 +409,8 @@ export default function MainLayout() {
           ;({ prevId, nextId } = placement(siblings, insertIdx))
         }
 
-        console.warn('[BM-MOVE]', { id: itemDragId, newFolderId, prevId, nextId, version: draggedBookmark.version })
-        await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version)
+        console.warn('[BM-MOVE]', { id: itemDragId, newFolderId, prevId, nextId, sortKey, version: draggedBookmark.version })
+        await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version, sortKey)
       }
     } catch (e) {
       console.error('Move failed', e)

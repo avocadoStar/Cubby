@@ -25,6 +25,7 @@ export interface MoveRequest {
   folder_id?: string | null
   prev_id?: string | null
   next_id?: string | null
+  sort_key?: string | null
   version: number
 }
 

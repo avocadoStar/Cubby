@@ -14,7 +14,7 @@ interface BookmarkState {
   clearSelection: () => void
   deleteSelected: () => Promise<void>
   deleteOne: (id: string) => Promise<void>
-  move: (id: string, folderId: string | null, prevId: string | null, nextId: string | null, version: number) => Promise<void>
+  move: (id: string, folderId: string | null, prevId: string | null, nextId: string | null, version: number, sortKey?: string) => Promise<void>
 }
 
 export const useBookmarkStore = create<BookmarkState>((set, get) => ({
@@ -79,9 +79,9 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     await api.deleteBookmark(id)
   },
 
-  move: async (id, folderId, prevId, nextId, version) => {
+  move: async (id, folderId, prevId, nextId, version, sortKey) => {
     const doMove = async (ver: number) => {
-      await api.moveBookmark({ id, folder_id: folderId, prev_id: prevId, next_id: nextId, version: ver })
+      await api.moveBookmark({ id, folder_id: folderId, prev_id: prevId, next_id: nextId, sort_key: sortKey ?? null, version: ver })
       const { selectedId } = (await import('./folderStore')).useFolderStore.getState()
       await get().load(selectedId)
       console.warn('[BM-MOVE-OK] reloaded', selectedId)

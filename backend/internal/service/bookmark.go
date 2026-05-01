@@ -41,10 +41,15 @@ func (s *BookmarkService) Delete(id string) error {
 	return s.repo.SoftDelete(id)
 }
 
-func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID *string, version int) (*model.Bookmark, error) {
+func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID, sortKeyOverride *string, version int) (*model.Bookmark, error) {
 	current, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
+	}
+
+	// If client provides a sort key, use it directly (for cross-type drag)
+	if sortKeyOverride != nil && *sortKeyOverride != "" {
+		return s.repo.Move(id, folderID, *sortKeyOverride, version)
 	}
 
 	loadSiblings := func() ([]model.Bookmark, error) {

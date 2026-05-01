@@ -88,13 +88,14 @@ func (h *BookmarkHandler) Move(c *gin.Context) {
 		FolderID *string `json:"folder_id"`
 		PrevID   *string `json:"prev_id"`
 		NextID   *string `json:"next_id"`
+		SortKey  *string `json:"sort_key"`
 		Version  int     `json:"version"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	b, err := h.svc.Move(req.ID, req.FolderID, req.PrevID, req.NextID, req.Version)
+	b, err := h.svc.Move(req.ID, req.FolderID, req.PrevID, req.NextID, req.SortKey, req.Version)
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
