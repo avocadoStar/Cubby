@@ -153,9 +153,9 @@ export default function Sidebar() {
   const { setActive, setOver, clearDrag, activeFolder, activeId } = useDndStore()
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  // Store initial pointer position at drag start (never updated during drag).
-  // Used with event.delta to compute current pointer position reliably.
-  const dragOriginRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  // Track live pointer position during drag. Capture phase ensures
+  // this fires BEFORE dnd-kit's own handlers, so the value is fresh.
+  const livePointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
   useEffect(() => {
     loadChildren(null)
@@ -172,6 +172,18 @@ export default function Sidebar() {
     useSensor(PointerSensor, POINTER_SENSOR_CONFIG),
   )
 
+  // Track pointer position during drag using CAPTURE phase.
+  // Capture fires before dnd-kit's bubble-phase handlers, so
+  // livePointerRef is always current when handleDragMove runs.
+  useEffect(() => {
+    if (!activeId) return
+    const handler = (e: PointerEvent) => {
+      livePointerRef.current = { x: e.clientX, y: e.clientY }
+    }
+    window.addEventListener('pointermove', handler, true)
+    return () => window.removeEventListener('pointermove', handler, true)
+  }, [activeId])
+
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const id = String(event.active.id)
@@ -179,7 +191,7 @@ export default function Sidebar() {
       if (!folder) return
       setActive(id, folder)
       const ev = event.activatorEvent as PointerEvent | MouseEvent
-      dragOriginRef.current = { x: ev.clientX, y: ev.clientY }
+      livePointerRef.current = { x: ev.clientX, y: ev.clientY }
     },
     [folderMap, setActive],
   )
@@ -204,9 +216,8 @@ export default function Sidebar() {
       }
 
       const rect = el.getBoundingClientRect()
-      // Compute current pointer Y from drag origin + accumulated delta
-      const currentY = dragOriginRef.current.y + event.delta.y
-      const position = calcDropPosition(rect, currentY)
+      // Use capture-phase tracked pointer position (always fresh)
+      const position = calcDropPosition(rect, livePointerRef.current.y)
 
       if (position === 'inside') {
         if (overId === 'all-bookmarks') {
