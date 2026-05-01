@@ -10,7 +10,7 @@ interface BookmarkState {
   load: (folderId?: string | null) => Promise<void>
   toggleSelect: (id: string) => void
   toggleFolderSelect: (id: string) => void
-  selectAll: () => void
+  selectAll: (folderIds?: string[]) => void
   clearSelection: () => void
   deleteSelected: () => Promise<void>
   deleteOne: (id: string) => Promise<void>
@@ -45,10 +45,10 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     })
   },
 
-  selectAll: () => {
+  selectAll: (folderIds) => {
     set((state) => {
       const all = new Set(state.bookmarks.map((b) => b.id))
-      return { selectedIds: all }
+      return { selectedIds: all, selectedFolderIds: new Set(folderIds ?? []) }
     })
   },
 

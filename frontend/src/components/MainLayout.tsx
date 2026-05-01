@@ -22,32 +22,33 @@ export default function MainLayout() {
 
   useEffect(() => { load(selectedId) }, [selectedId])
 
+  const subFolderIds = useMemo(() => {
+    return (childrenMap.get(selectedId) || []).filter((id) => folderMap.has(id))
+  }, [selectedId, childrenMap, folderMap])
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault()
-        selectAll()
+        selectAll(subFolderIds)
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [selectAll])
+  }, [selectAll, subFolderIds])
 
   // Build combined list: sub-folders first, then bookmarks
   const items: ListItem[] = useMemo(() => {
     const result: ListItem[] = []
-    // Sub-folders
-    const subFolderIds = childrenMap.get(selectedId) || []
     for (const id of subFolderIds) {
       const f = folderMap.get(id)
       if (f) result.push({ kind: 'folder', folder: f })
     }
-    // Bookmarks
     for (const b of bookmarks) {
       result.push({ kind: 'bookmark', bookmark: b })
     }
     return result
-  }, [selectedId, childrenMap, folderMap, bookmarks])
+  }, [subFolderIds, folderMap, bookmarks])
 
   return (
     <div className="flex h-screen bg-white relative">
