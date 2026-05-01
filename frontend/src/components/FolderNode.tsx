@@ -1,13 +1,12 @@
-import { memo, useRef, useEffect, useMemo } from 'react'
+import { memo, useRef, useEffect } from 'react'
 import type { Folder } from '../types'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
-import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { useDraggable } from '@dnd-kit/core'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 
 const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
-  const { expandedIds, selectedId, childrenMap, toggleExpand, select, folderMap } = useFolderStore()
-  const activeId = useDndStore((s) => s.activeId)
+  const { expandedIds, selectedId, childrenMap, toggleExpand, select } = useFolderStore()
   const overId = useDndStore((s) => s.overId)
   const dropPosition = useDndStore((s) => s.dropPosition)
 
@@ -16,45 +15,18 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
   const children = childrenMap.get(node.id)
   const hasChildren = children === undefined || children.length > 0
 
-  const isOver = overId === node.id
+  const isOver = overId === `droppable:${node.id}`
   const isInside = isOver && dropPosition === 'inside'
 
-  // Determine if this node is an invalid drop target (self or descendant of active)
-  const invalidDrop = useMemo(() => {
-    if (!activeId) return false
-    if (activeId === node.id) return true
-    // Walk up parent chain; if any ancestor equals activeId, this node is a descendant
-    let current: Folder | undefined = node
-    while (current) {
-      if (current.parent_id === activeId) return true
-      current = current.parent_id != null ? folderMap.get(current.parent_id) : undefined
-    }
-    return false
-  }, [activeId, node.id, folderMap])
-
-  // Draggable — make this node draggable
   const {
     attributes,
     listeners,
-    setNodeRef: setDragRef,
+    setNodeRef,
     isDragging,
   } = useDraggable({
     id: node.id,
     data: { node, depth },
   })
-
-  // Droppable — this node is a drop target
-  const { setNodeRef: setDropRef } = useDroppable({
-    id: `droppable:${node.id}`,
-    data: { node, depth },
-    disabled: invalidDrop,
-  })
-
-  // Combine both refs into one callback ref
-  function setNodeRef(el: HTMLDivElement | null) {
-    setDragRef(el)
-    setDropRef(el)
-  }
 
   // Hover expand: when hovering over a collapsed folder with 'inside', expand after 500ms
   const expandTimerRef = useRef<number | null>(null)
@@ -78,7 +50,6 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       ref={setNodeRef}
       data-context="folder"
       data-id={node.id}
-      data-drop-id={`droppable:${node.id}`}
       className="flex items-center cursor-default rounded select-none"
       style={{
         height: 32,
@@ -93,6 +64,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
             : 'transparent',
         outline: isInside ? '1px solid #0078D4' : undefined,
         outlineOffset: -1,
+        touchAction: 'none',
       }}
       onClick={() => select(node.id)}
       {...listeners}

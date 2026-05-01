@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
 import { useVirtualizer } from '@tanstack/react-virtual'
@@ -29,7 +29,7 @@ function calcDropPosition(
   return 'inside'
 }
 
-/** "所有书签" row rendered as a droppable (target for moving to root). */
+/** "所有书签" row rendered as a droppable (target for moving to root level). */
 function AllBookmarksDroppable({
   isSelected,
   onSelect,
@@ -63,6 +63,51 @@ function AllBookmarksDroppable({
   )
 }
 
+/** Wrapper that registers a droppable zone for each virtual folder row.
+ *  Separated from FolderNode so useDroppable and useDraggable live on
+ *  different DOM elements — avoids registration conflicts. */
+function DroppableWrapper({
+  nodeId,
+  activeId,
+  folderMap,
+  children,
+}: {
+  nodeId: string
+  activeId: string | null
+  folderMap: Map<string, { parent_id: string | null }>
+  children: React.ReactNode
+}) {
+  const invalidDrop = useMemo(() => {
+    if (!activeId) return false
+    if (activeId === nodeId) return true
+    // Walk up parent chain: if activeId is an ancestor, this node is a descendant
+    let current: string | null = nodeId
+    while (current) {
+      const f = folderMap.get(current)
+      if (!f || !f.parent_id) break
+      if (f.parent_id === activeId) return true
+      current = f.parent_id
+    }
+    return false
+  }, [activeId, nodeId, folderMap])
+
+  const { setNodeRef } = useDroppable({
+    id: `droppable:${nodeId}`,
+    data: { nodeId },
+    disabled: invalidDrop,
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-drop-id={`droppable:${nodeId}`}
+      style={{ touchAction: 'none' }}
+    >
+      {children}
+    </div>
+  )
+}
+
 export default function Sidebar() {
   const {
     visibleNodes,
@@ -73,7 +118,7 @@ export default function Sidebar() {
     childrenMap,
     moveFolder,
   } = useFolderStore()
-  const { setActive, setOver, clearDrag, activeFolder } = useDndStore()
+  const { setActive, setOver, clearDrag, activeFolder, activeId } = useDndStore()
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const initialPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -86,6 +131,7 @@ export default function Sidebar() {
     count: visibleNodes.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 32,
+    overscan: 10,
   })
 
   const sensors = useSensors(
@@ -99,7 +145,6 @@ export default function Sidebar() {
       if (!folder) return
       setActive(id, folder)
 
-      // Store initial pointer position for coordinate math in onDragMove
       const ev = event.activatorEvent as PointerEvent | MouseEvent
       initialPointerRef.current = { x: ev.clientX, y: ev.clientY }
     },
@@ -115,8 +160,10 @@ export default function Sidebar() {
       }
 
       const overId = String(over.id)
-      // Match droppable by data-drop-id (droppable IDs are prefixed with "droppable:")
-      const el = document.querySelector(`[data-drop-id="${overId}"]`) || document.querySelector(`[data-id="${overId}"]`)
+      // Query by data-drop-id (for droppable wrappers) or data-id (for all-bookmarks)
+      const el =
+        document.querySelector(`[data-drop-id="${overId}"]`) ||
+        document.querySelector(`[data-id="${overId}"]`)
       if (!el) return
 
       const rect = el.getBoundingClientRect()
@@ -125,17 +172,13 @@ export default function Sidebar() {
       const position = calcDropPosition(rect, currentY)
 
       if (position === 'inside') {
-        // Only allow 'inside' for actual folder nodes, not the "所有书签" root item
         if (overId === 'all-bookmarks') {
-          // For "所有书签" (root), we treat any position as "move to root"
-          // Show indicator at top (before first child)
           setOver(overId, 'inside', {
             top: rect.top,
             left: rect.left,
             width: rect.width,
           })
         } else {
-          // Folder node: show highlight (no line indicator)
           setOver(overId, 'inside', null)
         }
       } else if (position === 'before') {
@@ -158,33 +201,28 @@ export default function Sidebar() {
   const handleDragEnd = useCallback(
     async (_event: DragEndEvent) => {
       const state = useDndStore.getState()
-      const { activeId, activeFolder, overId, dropPosition } = state
+      const { activeId: dragId, activeFolder: dragFolder, overId, dropPosition } = state
 
-      if (!activeId || !overId || !dropPosition || !activeFolder) {
+      if (!dragId || !overId || !dropPosition || !dragFolder) {
         clearDrag()
         return
       }
 
-      // Compute new parent / prev / next based on drop position
       let newParentId: string | null = null
       let prevId: string | null = null
       let nextId: string | null = null
 
       try {
         if (overId === 'all-bookmarks') {
-          // Dropped on "所有书签" — move to root level
           newParentId = null
           const siblings = childrenMap.get(null) ?? []
-          const idx = siblings.indexOf(activeId)
-          if (idx > 0) {
-            prevId = siblings[idx - 1]
-          }
-          if (idx >= 0 && idx + 1 < siblings.length) {
-            nextId = siblings[idx + 1]
-          }
+          const idx = siblings.indexOf(dragId)
+          if (idx > 0) prevId = siblings[idx - 1]
+          if (idx >= 0 && idx + 1 < siblings.length) nextId = siblings[idx + 1]
         } else {
-          // Strip droppable prefix to get actual folder ID
-          const folderId = overId.startsWith('droppable:') ? overId.slice('droppable:'.length) : overId
+          const folderId = overId.startsWith('droppable:')
+            ? overId.slice('droppable:'.length)
+            : overId
           const targetFolder = folderMap.get(folderId)
           if (!targetFolder) {
             clearDrag()
@@ -192,23 +230,17 @@ export default function Sidebar() {
           }
 
           if (dropPosition === 'inside') {
-            // Drop inside target folder — append as last child
             newParentId = folderId
             const siblings = childrenMap.get(folderId) ?? []
-            // If this folder already has children, use last child as prev
-            if (siblings.length > 0) {
-              prevId = siblings[siblings.length - 1]
-            }
+            if (siblings.length > 0) prevId = siblings[siblings.length - 1]
             nextId = null
           } else if (dropPosition === 'before') {
-            // Insert before target
             newParentId = targetFolder.parent_id
             const siblings = childrenMap.get(newParentId) ?? []
             const targetIdx = siblings.indexOf(folderId)
             prevId = targetIdx > 0 ? siblings[targetIdx - 1] : null
             nextId = folderId
           } else {
-            // Insert after target
             newParentId = targetFolder.parent_id
             const siblings = childrenMap.get(newParentId) ?? []
             const targetIdx = siblings.indexOf(folderId)
@@ -220,13 +252,7 @@ export default function Sidebar() {
           }
         }
 
-        await moveFolder(
-          activeId,
-          newParentId,
-          prevId,
-          nextId,
-          activeFolder.version,
-        )
+        await moveFolder(dragId, newParentId, prevId, nextId, dragFolder.version)
       } catch (e) {
         console.error('Folder move failed', e)
       }
@@ -273,10 +299,7 @@ export default function Sidebar() {
         />
 
         {/* Virtualized folder tree */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-auto"
-        >
+        <div ref={scrollRef} className="flex-1 overflow-auto">
           <div
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
@@ -286,19 +309,25 @@ export default function Sidebar() {
             {rowVirtualizer.getVirtualItems().map((virtualItem) => {
               const item = visibleNodes[virtualItem.index]
               return (
-                <div
-                  key={virtualItem.key}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${virtualItem.size}px`,
-                    transform: `translateY(${virtualItem.start}px)`,
-                  }}
+                <DroppableWrapper
+                  key={item.node.id}
+                  nodeId={item.node.id}
+                  activeId={activeId}
+                  folderMap={folderMap as Map<string, { parent_id: string | null }>}
                 >
-                  <FolderNode node={item.node} depth={item.depth} />
-                </div>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualItem.size}px`,
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <FolderNode node={item.node} depth={item.depth} />
+                  </div>
+                </DroppableWrapper>
               )
             })}
           </div>
