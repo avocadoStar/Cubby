@@ -353,6 +353,7 @@ export default function Sidebar() {
           }
         }
 
+        console.warn('[DND-END]', { dragId, newParentId, prevId, nextId, overId, dropPosition, srcParent: dragFolder.parent_id })
         await moveFolder(dragId, newParentId, prevId, nextId, dragFolder.version)
       } catch (e) {
         console.error('Folder move failed', e)
