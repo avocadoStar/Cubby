@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useMemo, type CSSProperties } from 'react'
+import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
 import { useVirtualizer } from '@tanstack/react-virtual'
@@ -6,7 +6,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  closestCenter,
+  pointerWithin,
   useSensor,
   useSensors,
   useDroppable,
@@ -18,18 +18,8 @@ import FolderNode from './FolderNode'
 import DropIndicator from './DropIndicator'
 import { Star, Search } from 'lucide-react'
 
-// Module-level so reference is stable across renders — prevents
-// useSensor from recreating the sensor descriptor on every render,
-// which would reset PointerSensor mid-drag and kill onDragMove.
-const POINTER_SENSOR_CONFIG = {
-  activationConstraint: { distance: 5 },
-  onActivation({ event }: { event: Event }) {
-    console.log('[DEBUG-dnd] PointerSensor onActivation', {
-      type: event.type,
-      target: (event.target as HTMLElement | null)?.tagName ?? null,
-    })
-  },
-} as const
+// Module-level so reference is stable across renders
+const POINTER_SENSOR_CONFIG = { activationConstraint: { distance: 5 } } as const
 
 function calcDropPosition(
   rect: DOMRect,
@@ -42,7 +32,7 @@ function calcDropPosition(
   return 'inside'
 }
 
-/** "所有书签" row rendered as a droppable (target for moving to root level). */
+/** "所有书签" row as a droppable (target for moving to root level). */
 function AllBookmarksDroppable({
   isSelected,
   onSelect,
@@ -76,9 +66,7 @@ function AllBookmarksDroppable({
   )
 }
 
-/** Wrapper that registers a droppable zone for each virtual folder row.
- *  Separated from FolderNode so useDroppable and useDraggable live on
- *  different DOM elements — avoids registration conflicts. */
+/** Wrapper that registers a droppable zone for each virtual folder row. */
 function DroppableWrapper({
   nodeId,
   activeId,
@@ -89,13 +77,12 @@ function DroppableWrapper({
   nodeId: string
   activeId: string | null
   folderMap: Map<string, { parent_id: string | null }>
-  style: CSSProperties
+  style: React.CSSProperties
   children: React.ReactNode
 }) {
   const invalidDrop = useMemo(() => {
     if (!activeId) return false
     if (activeId === nodeId) return true
-    // Walk up parent chain: if activeId is an ancestor, this node is a descendant
     let current: string | null = nodeId
     while (current) {
       const f = folderMap.get(current)
@@ -116,10 +103,7 @@ function DroppableWrapper({
     <div
       ref={setNodeRef}
       data-drop-id={`droppable:${nodeId}`}
-      style={{
-        ...style,
-        touchAction: 'none',
-      }}
+      style={{ ...style, touchAction: 'none' }}
     >
       {children}
     </div>
@@ -138,10 +122,8 @@ export default function Sidebar() {
   } = useFolderStore()
   const { setActive, setOver, clearDrag, activeFolder, activeId } = useDndStore()
 
-  console.warn('[DEBUG-dnd] Sidebar RENDER', { nodes: visibleNodes.length, activeId })
-
   const scrollRef = useRef<HTMLDivElement>(null)
-  const initialPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const pointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
   useEffect(() => {
     loadChildren(null)
@@ -158,19 +140,25 @@ export default function Sidebar() {
     useSensor(PointerSensor, POINTER_SENSOR_CONFIG),
   )
 
+  // Track pointer position during drag for accurate before/inside/after calculation
+  useEffect(() => {
+    if (!activeId) return
+    const handler = (e: PointerEvent) => {
+      pointerRef.current = { x: e.clientX, y: e.clientY }
+    }
+    window.addEventListener('pointermove', handler)
+    return () => window.removeEventListener('pointermove', handler)
+  }, [activeId])
+
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      console.log('[DEBUG-dnd] DndContext onDragStart', {
-        activeId: String(event.active.id),
-      })
-
       const id = String(event.active.id)
       const folder = folderMap.get(id)
       if (!folder) return
       setActive(id, folder)
-
+      // Seed pointer position from activator event
       const ev = event.activatorEvent as PointerEvent | MouseEvent
-      initialPointerRef.current = { x: ev.clientX, y: ev.clientY }
+      pointerRef.current = { x: ev.clientX, y: ev.clientY }
     },
     [folderMap, setActive],
   )
@@ -178,44 +166,37 @@ export default function Sidebar() {
   const handleDragMove = useCallback(
     (event: DragMoveEvent) => {
       const over = event.over
-      const overId = over ? String(over.id) : null
-
-      console.log('[DEBUG-dnd] onDragMove', {
-        activeId: String(event.active.id),
-        overId,
-        delta: event.delta,
-      })
-
-      if (!over || !overId) {
-        console.warn('[DEBUG-dnd] onDragMove NO OVER - clearing indicator')
+      if (!over) {
         setOver(null, null, null)
         return
       }
 
+      const overId = String(over.id)
+      if (overId === activeId) {
+        setOver(null, null, null)
+        return
+      }
+
+      // Find the DOM element for the droppable
       const el =
         document.querySelector(`[data-drop-id="${overId}"]`) ||
         document.querySelector(`[data-id="${overId}"]`)
       if (!el) {
-        console.warn('[DEBUG-dnd] onDragMove NO DOM ELEMENT for', overId)
+        setOver(null, null, null)
         return
       }
 
       const rect = el.getBoundingClientRect()
-      const { y: startY } = initialPointerRef.current
-      const currentY = startY + event.delta.y
-      const position = calcDropPosition(rect, currentY)
-
-      console.log('[DEBUG-dnd] onDragMove indicator', {
-        overId,
-        position,
-        rect: { top: rect.top, bottom: rect.bottom, height: rect.height },
-        pointerY: currentY,
-        ratio: ((currentY - rect.top) / rect.height).toFixed(2),
-      })
+      // Use tracked pointer position instead of delta math
+      const position = calcDropPosition(rect, pointerRef.current.y)
 
       if (position === 'inside') {
         if (overId === 'all-bookmarks') {
-          setOver(overId, 'inside', { top: rect.top, left: rect.left, width: rect.width })
+          setOver(overId, 'inside', {
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+          })
         } else {
           setOver(overId, 'inside', null)
         }
@@ -233,19 +214,11 @@ export default function Sidebar() {
         })
       }
     },
-    [setOver],
+    [activeId, setOver],
   )
 
   const handleDragEnd = useCallback(
     async (_event: DragEndEvent) => {
-      const debugState = useDndStore.getState()
-
-      console.log('[DEBUG-dnd] DndContext onDragEnd', {
-        activeId: debugState.activeId,
-        overId: debugState.overId,
-        dropPosition: debugState.dropPosition,
-      })
-
       const state = useDndStore.getState()
       const { activeId: dragId, activeFolder: dragFolder, overId, dropPosition } = state
 
@@ -309,26 +282,23 @@ export default function Sidebar() {
   )
 
   const handleDragCancel = useCallback(() => {
-    console.log('[DEBUG-dnd] DndContext onDragCancel')
     clearDrag()
   }, [clearDrag])
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
       <div className="w-[280px] min-w-[280px] border-r border-[#e8e8e8] flex flex-col bg-white h-full">
-        {/* Title */}
         <div className="pt-5 px-5 pb-3 text-lg font-semibold text-[#1a1a1a]">
           收藏夹
         </div>
 
-        {/* Search */}
         <div className="px-4 pb-2">
           <div className="flex items-center h-8 border border-[#d1d1d1] rounded px-2 gap-1.5">
             <Search size={14} stroke="#888" />
@@ -339,7 +309,6 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* "所有书签" (also a droppable root target) */}
         <AllBookmarksDroppable
           isSelected={selectedId === null}
           onSelect={() => select(null)}
@@ -378,7 +347,6 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Drag overlay preview */}
       <DragOverlay dropAnimation={null}>
         {activeFolder && (
           <div
@@ -409,7 +377,6 @@ export default function Sidebar() {
         )}
       </DragOverlay>
 
-      {/* Drop indicator line */}
       <DropIndicator />
     </DndContext>
   )
