@@ -316,9 +316,15 @@ export default function MainLayout() {
     let targetId = overId
     if (targetId.startsWith('droppable:sidebar:')) targetId = targetId.slice('droppable:sidebar:'.length)
     else if (targetId.startsWith('droppable:')) targetId = targetId.slice('droppable:'.length)
-    const targetItem = items.find(i =>
+
+    // Look up target: try items (right panel), then folderMap (sidebar), then bookmarks
+    const targetItem: ListItem | undefined = items.find(i =>
       i.kind === 'folder' ? i.folder.id === targetId : i.bookmark.id === targetId
-    )
+    ) ?? (useFolderStore.getState().folderMap.has(targetId)
+      ? { kind: 'folder' as const, folder: useFolderStore.getState().folderMap.get(targetId)! }
+      : (useBookmarkStore.getState().bookmarks.some(b => b.id === targetId)
+        ? { kind: 'bookmark' as const, bookmark: useBookmarkStore.getState().bookmarks.find(b => b.id === targetId)! }
+        : undefined))
 
     try {
       const folderStore = useFolderStore.getState()
