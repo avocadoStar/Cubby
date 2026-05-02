@@ -487,13 +487,13 @@ export default function MainLayout() {
           if (isBM) {
             const b = useBookmarkStore.getState().bookmarks.find(bk => bk.id === strippedId)
             if (b) {
-              await bookmarkStore.move(strippedId, destParentId ?? selectedId, anchorId, null, b.version)
+              await useBookmarkStore.getState().move(strippedId, destParentId ?? selectedId, anchorId, null, b.version)
               anchorId = selId
             }
           } else {
             const f = useFolderStore.getState().folderMap.get(strippedId)
             if (f) {
-              await folderStore.moveFolder(strippedId, destParentId ?? selectedId, anchorId, null, f.version)
+              await useFolderStore.getState().moveFolder(strippedId, destParentId ?? selectedId, anchorId, null, f.version)
               anchorId = strippedId
             }
           }
