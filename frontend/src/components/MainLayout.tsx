@@ -364,7 +364,7 @@ export default function MainLayout() {
           ;({ prevId, nextId } = placement(siblings, siblings.length))
         } else if (targetItem.kind === 'bookmark') {
           // Folder relative to a bookmark — compute sort key for interleaved order
-          newParentId = targetItem.bookmark.folder_id ?? selectedId
+          newParentId = targetItem.bookmark.folder_id
           const refKey = targetItem.bookmark.sort_key
           sortKey = dropPosition === 'before' ? sortBefore(refKey) : sortAfter(refKey)
           prevId = null
@@ -398,7 +398,7 @@ export default function MainLayout() {
             ;({ prevId, nextId } = placement(siblings, siblings.length))
           } else {
             // before/after folder: build interleaved list to find correct prev/next
-            newFolderId = targetItem.folder.parent_id ?? selectedId
+            newFolderId = targetItem.folder.parent_id
             const nodes = [
               ...(currentChildrenMap.get(newFolderId) ?? [])
                 .filter(id => id !== itemDragId && folderStore.folderMap.has(id))
@@ -424,7 +424,7 @@ export default function MainLayout() {
           }
         } else {
           // Bookmark relative to another bookmark: normal before/after ordering
-          newFolderId = targetItem.bookmark.folder_id ?? selectedId
+          newFolderId = targetItem.bookmark.folder_id
           const siblings = siblingsOf(newFolderId)
           const targetIdx = siblings.indexOf(targetItem.bookmark.id)
           const insertIdx = dropPosition === 'before'
@@ -433,7 +433,6 @@ export default function MainLayout() {
           ;({ prevId, nextId } = placement(siblings, insertIdx))
         }
 
-        console.warn('[BM-FIX]', { id: itemDragId, newFolderId, prevId, nextId, sortKey, dropPosition })
         await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version, sortKey)
       }
     } catch (e) {
