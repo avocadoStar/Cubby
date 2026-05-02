@@ -2,34 +2,83 @@ import type { CollisionDetection } from '@dnd-kit/core'
 
 export const POINTER_SENSOR_CONFIG = { activationConstraint: { distance: 5 } } as const
 
-// Simple LexoRank helpers for computing sort keys client-side.
-// Used when a bookmark is dropped relative to a folder (separate sort-key spaces).
+const MIN_SORT_BYTE = '!'.charCodeAt(0)
+const MAX_SORT_BYTE = '~'.charCodeAt(0)
+
+function isValidSortKey(key: string): boolean {
+  for (let i = 0; i < key.length; i++) {
+    const charCode = key.charCodeAt(i)
+    if (charCode < MIN_SORT_BYTE || charCode > MAX_SORT_BYTE) {
+      return false
+    }
+  }
+  return true
+}
+
+// Mirrors backend/internal/service/lexorank.go so cross-type drag keys remain backend-compatible.
+function between(prev: string, next: string): string {
+  if (!isValidSortKey(prev) || (next !== '' && !isValidSortKey(next))) {
+    return ''
+  }
+  if (next !== '' && prev >= next) {
+    return ''
+  }
+
+  let left = prev
+  let right = next
+  let prefix = ''
+
+  for (let i = 0; ; i++) {
+    let prevByte = MIN_SORT_BYTE - 1
+    if (i < left.length) {
+      prevByte = left.charCodeAt(i)
+    }
+
+    let nextByte = MAX_SORT_BYTE + 1
+    if (right !== '' && i < right.length) {
+      nextByte = right.charCodeAt(i)
+    }
+
+    if (prevByte === nextByte) {
+      prefix += String.fromCharCode(prevByte)
+      continue
+    }
+
+    if (nextByte - prevByte > 1) {
+      const mid = prevByte + Math.floor((nextByte - prevByte) / 2)
+      return prefix + String.fromCharCode(mid)
+    }
+
+    if (i < left.length) {
+      prefix += String.fromCharCode(prevByte)
+      left = left.slice(i + 1)
+      right = ''
+      i = -1
+      continue
+    }
+
+    if (right !== '' && i + 1 < right.length) {
+      return right.slice(0, i + 1)
+    }
+
+    return ''
+  }
+}
 
 export function sortAfter(key: string): string {
   if (!key) return 'n'
-  return key + 'n'
+  return between(key, '')
 }
 
 export function sortBefore(key: string): string {
   if (!key) return 'a'
-  const last = key.charCodeAt(key.length - 1)
-  if (last > 97 /* 'a' */) {
-    return key.slice(0, -1) + String.fromCharCode(last - 1) + 'n'
-  }
-  return key + 'a'
+  return between('', key)
 }
 
 export function sortBetween(prev: string, next: string): string {
   if (!prev) return sortBefore(next)
   if (!next) return sortAfter(prev)
-  const minLen = Math.min(prev.length, next.length)
-  let i = 0
-  for (; i < minLen && prev[i] === next[i]; i++) { /* find first diff */ }
-  if (i === minLen) return prev + 'a'
-  const pc = prev.charCodeAt(i)
-  const nc = next.charCodeAt(i)
-  if (nc - pc > 1) return prev.slice(0, i) + String.fromCharCode(pc + Math.floor((nc - pc) / 2))
-  return prev.slice(0, i) + String.fromCharCode(pc) + 'n'
+  return between(prev, next)
 }
 
 /** Collision detection: finds the droppable whose center is closest to the pointer. */
