@@ -572,6 +572,7 @@ export default function MainLayout() {
 
       <DragOverlay dropAnimation={null}>
         {activeFolder && (
+          <div style={{ paddingTop: 16, paddingLeft: 16 }}>
           <div
             className="flex items-center rounded select-none bg-white"
             style={{
@@ -581,8 +582,7 @@ export default function MainLayout() {
               paddingRight: 8,
               opacity: 0.85,
               boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              transform: 'translate(4px, 4px) scale(1.02)',
-              transformOrigin: 'top left',
+              transform: 'scale(1.02)',
             }}
           >
             {useDndStore.getState().activeKind === 'bookmark' ? (
@@ -604,6 +604,7 @@ export default function MainLayout() {
                 {multiDragRef.current.length}
               </span>
             )}
+          </div>
           </div>
         )}
       </DragOverlay>
