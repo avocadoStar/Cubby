@@ -263,6 +263,7 @@ export default function MainLayout() {
     }
     const overId = String(over.id)
     const el = document.querySelector(`[data-drop-id="${overId}"]`)
+    console.warn('[MOVE]', { overId, found: !!el, sidebarCount: document.querySelectorAll('[data-drop-id^="droppable:sidebar:"]').length })
     if (!el) {
       setOver(null, null, null)
       return
