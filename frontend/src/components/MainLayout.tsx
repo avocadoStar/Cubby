@@ -248,13 +248,10 @@ export default function MainLayout() {
       i.kind === 'folder' ? i.folder.id === id : i.bookmark.id === id
     )
     if (item) {
-      console.warn('[MAIN-DS]', { id, kind: item.kind })
       setActive(id, item.kind === 'folder' ? (item.folder as unknown as Folder & { parent_id?: string | null }) : ({
         ...item.bookmark,
         parent_id: item.bookmark.folder_id,
       } as unknown as Folder & { parent_id?: string | null }), 'main', item.kind)
-    } else {
-      console.warn('[MAIN-DS] item not found for', rawId, id)
     }
   }, [items, setActive])
 
@@ -265,7 +262,8 @@ export default function MainLayout() {
       return
     }
     const overId = String(over.id)
-    const el = document.querySelector(`[data-drop-id="${overId}"]`)
+    // Scope to right panel — same folder IDs exist in left sidebar too
+    const el = scrollRef.current?.querySelector(`[data-drop-id="${overId}"]`)
     if (!el) {
       setOver(null, null, null)
       return
@@ -276,8 +274,6 @@ export default function MainLayout() {
     // For bookmarks as drop targets, never allow "inside"
     const isFolderDropTarget = overId.startsWith('droppable:') && items.some(i => i.kind === 'folder' && `droppable:${i.folder.id}` === overId)
     const finalPosition = (position === 'inside' && !isFolderDropTarget) ? 'after' : position
-
-    console.warn('[BM-DRAG]', { overId, position, finalPosition, isFolderDropTarget })
 
     if (finalPosition === 'inside') {
       setOver(overId, 'inside', null)
@@ -412,7 +408,6 @@ export default function MainLayout() {
           ;({ prevId, nextId } = placement(siblings, insertIdx))
         }
 
-        console.warn('[BM-MOVE]', { id: itemDragId, newFolderId, prevId, nextId, sortKey, version: draggedBookmark.version })
         await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version, sortKey)
       }
     } catch (e) {

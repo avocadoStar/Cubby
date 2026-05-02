@@ -161,10 +161,10 @@ export default function Sidebar() {
 
       const overId = String(over.id)
 
-      // Find the DOM element for the droppable
+      // Scope to sidebar — same folder IDs may exist in right panel too
       const el =
-        document.querySelector(`[data-drop-id="${overId}"]`) ||
-        document.querySelector(`[data-id="${overId}"]`)
+        scrollRef.current?.querySelector(`[data-drop-id="${overId}"]`) ||
+        scrollRef.current?.querySelector(`[data-id="${overId}"]`)
       if (!el) {
         setOver(null, null, null)
         return
