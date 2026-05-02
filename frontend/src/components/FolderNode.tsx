@@ -28,21 +28,24 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
     data: { node, depth },
   })
 
-  // Hover expand: when hovering over a collapsed folder with 'inside', expand after 500ms
+  // Hover expand: start 500ms timer when pointer enters 'inside', cancel when it leaves.
   const expandTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (isOver && dropPosition === 'inside' && !isExpanded && hasChildren) {
-      expandTimerRef.current = window.setTimeout(() => {
-        toggleExpand(node.id)
-      }, 500)
-    }
-    return () => {
+      if (expandTimerRef.current === null) {
+        expandTimerRef.current = window.setTimeout(() => {
+          toggleExpand(node.id)
+          expandTimerRef.current = null
+        }, 500)
+      }
+    } else {
       if (expandTimerRef.current !== null) {
         clearTimeout(expandTimerRef.current)
         expandTimerRef.current = null
       }
     }
+    // No cleanup needed — timer persists across re-renders via the ref
   }, [isOver, dropPosition, isExpanded, hasChildren, node.id, toggleExpand])
 
   return (
