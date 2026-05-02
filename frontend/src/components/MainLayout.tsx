@@ -391,22 +391,23 @@ export default function MainLayout() {
             const siblings = siblingsOf(newFolderId)
             ;({ prevId, nextId } = placement(siblings, siblings.length))
           } else {
-            // before/after a folder: insert in bookmark list relative to folder position
+            // before/after a folder: use folder ID as cross-type prev/next
             newFolderId = targetItem.folder.parent_id ?? selectedId
+            const siblings = siblingsOf(newFolderId)
             const folderKey = targetItem.folder.sort_key
-            const allSiblings = siblingsOf(newFolderId)
-            // Find the split point: first bookmark whose sort_key > folder's sort_key
-            const splitIdx = allSiblings.findIndex(id => {
+            // Find first bookmark sorting after the folder
+            const splitIdx = siblings.findIndex(id => {
               const b = currentBookmarks.find(bk => bk.id === id)
               return b ? b.sort_key > folderKey : false
             })
-            const effectiveSplit = splitIdx === -1 ? allSiblings.length : splitIdx
             if (dropPosition === 'before') {
-              // Insert at split point (before the first post-folder bookmark)
-              ;({ prevId, nextId } = placement(allSiblings, effectiveSplit))
+              // prev=last pre-folder bookmark, next=folder(cross-type)
+              prevId = splitIdx > 0 ? siblings[splitIdx - 1] : null
+              nextId = targetItem.folder.id  // cross-type: folder ID
             } else {
-              // Insert at split point (after the last pre-folder bookmark)
-              ;({ prevId, nextId } = placement(allSiblings, effectiveSplit))
+              // prev=folder(cross-type), next=first post-folder bookmark
+              prevId = targetItem.folder.id  // cross-type: folder ID
+              nextId = splitIdx === -1 ? null : siblings[splitIdx]
             }
             sortKey = undefined
           }
@@ -421,7 +422,6 @@ export default function MainLayout() {
           ;({ prevId, nextId } = placement(siblings, insertIdx))
         }
 
-        console.warn('[BM-CROSS]', { itemDragId, newFolderId, prevId, nextId, sortKey, overId, dropPosition })
         await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version, sortKey)
       }
     } catch (e) {
