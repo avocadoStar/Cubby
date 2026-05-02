@@ -576,11 +576,13 @@ export default function MainLayout() {
             className="flex items-center rounded select-none bg-white"
             style={{
               height: 32,
+              maxWidth: 200,
               paddingLeft: 8,
               paddingRight: 8,
               opacity: 0.85,
               boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              transform: 'scale(1.02)',
+              transform: 'translate(4px, 4px) scale(1.02)',
+              transformOrigin: 'top left',
             }}
           >
             {useDndStore.getState().activeKind === 'bookmark' ? (
