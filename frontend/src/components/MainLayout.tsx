@@ -591,10 +591,10 @@ export default function MainLayout() {
               transform: 'scale(1.02)',
             }}
           >
-            {useDndStore.getState().activeKind === 'bookmark' ? (
+            {(useDndStore.getState().activeId ?? '').startsWith('bookmark:') ? (
               <div className="flex-shrink-0 rounded-sm flex items-center justify-center text-[9px] text-[#666]"
                 style={{ width: 16, height: 16, background: '#e8e8e8' }}>
-                {(activeFolder.name ?? '').charAt(0)}
+                {((activeFolder as unknown as Record<string, string>).title as string ?? activeFolder.name ?? '').charAt(0)}
               </div>
             ) : (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6">
@@ -602,7 +602,7 @@ export default function MainLayout() {
               </svg>
             )}
             <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">
-              {activeFolder.name ?? ''}
+              {(activeFolder as unknown as Record<string, string>).title as string ?? activeFolder.name ?? ''}
             </span>
             {multiDragRef.current.length > 1 && (
               <span className="ml-2 flex-shrink-0 rounded-full bg-[#0078D4] text-white text-[10px] px-1.5 py-0.5 leading-none"
