@@ -422,6 +422,7 @@ export default function MainLayout() {
           ;({ prevId, nextId } = placement(siblings, insertIdx))
         }
 
+        console.warn('[BM-FIX]', { id: itemDragId, newFolderId, prevId, nextId, sortKey, dropPosition })
         await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version, sortKey)
       }
     } catch (e) {
