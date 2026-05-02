@@ -5,6 +5,7 @@ export default function DropIndicator({ source }: { source: DndSource }) {
   const indicatorRect = useDndStore((s) => s.indicatorRect)
   const activeSource = useDndStore((s) => s.source)
 
+  console.warn('[INDICATOR]', { source, activeSource, hasRect: !!indicatorRect })
   if (!indicatorRect || activeSource !== source) return null
 
   return createPortal(

@@ -248,10 +248,13 @@ export default function MainLayout() {
       i.kind === 'folder' ? i.folder.id === id : i.bookmark.id === id
     )
     if (item) {
+      console.warn('[MAIN-DS]', { id, kind: item.kind })
       setActive(id, item.kind === 'folder' ? (item.folder as unknown as Folder & { parent_id?: string | null }) : ({
         ...item.bookmark,
         parent_id: item.bookmark.folder_id,
       } as unknown as Folder & { parent_id?: string | null }), 'main', item.kind)
+    } else {
+      console.warn('[MAIN-DS] item not found for', rawId, id)
     }
   }, [items, setActive])
 
