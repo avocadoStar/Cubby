@@ -241,8 +241,12 @@ export default function MainLayout() {
     const ev = event.activatorEvent as PointerEvent | MouseEvent
     livePointerRef.current = { x: ev.clientX, y: ev.clientY }
 
-    // Strip prefix: folder draggables use bare id, bookmarks use "bookmark:"
-    const id = rawId.startsWith('bookmark:') ? rawId.slice('bookmark:'.length) : rawId
+    // Normalize per-surface draggable IDs back to store-level entity IDs.
+    const id = rawId.startsWith('bookmark:')
+      ? rawId.slice('bookmark:'.length)
+      : rawId.startsWith('sidebar:')
+        ? rawId.slice('sidebar:'.length)
+        : rawId
     const dragData = event.active.data.current
 
     if (dragData && 'node' in dragData) {

@@ -24,7 +24,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
     setNodeRef,
     isDragging,
   } = useDraggable({
-    id: node.id,
+    id: `sidebar:${node.id}`,
     data: { node, depth },
   })
 
