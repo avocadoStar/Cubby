@@ -469,32 +469,27 @@ export default function MainLayout() {
       console.error('Move failed', e)
     }
 
-    // Multi-select: move remaining selected items after the first one
+    // Multi-select: move remaining selected items to the same destination
     if (multiDragRef.current.length > 1) {
-      const primaryId = itemDragId
-      // Determine destination parent from the target
       const destParentId = isDraggedFolder
         ? (targetItem?.kind === 'folder' && dropPosition === 'inside' ? targetItem.folder.id : targetItem?.kind === 'folder' ? targetItem.folder.parent_id : targetItem?.kind === 'bookmark' ? targetItem.bookmark.folder_id : null)
         : (targetItem?.kind === 'folder' ? (dropPosition === 'inside' ? targetItem.folder.id : targetItem.folder.parent_id) : targetItem?.kind === 'bookmark' ? targetItem.bookmark.folder_id : null)
-      let anchorId: string | undefined = itemDragId
 
       for (const selId of multiDragRef.current) {
         const strippedId = selId.startsWith('bookmark:') ? selId.slice('bookmark:'.length) : selId
-        if (strippedId === primaryId) continue
+        if (strippedId === itemDragId) continue
 
         const isBM = selId.startsWith('bookmark:')
         try {
           if (isBM) {
             const b = useBookmarkStore.getState().bookmarks.find(bk => bk.id === strippedId)
             if (b) {
-              await useBookmarkStore.getState().move(strippedId, destParentId ?? selectedId, anchorId, null, b.version)
-              anchorId = selId
+              await useBookmarkStore.getState().move(strippedId, destParentId ?? selectedId, null, null, b.version)
             }
           } else {
             const f = useFolderStore.getState().folderMap.get(strippedId)
             if (f) {
-              await useFolderStore.getState().moveFolder(strippedId, destParentId ?? selectedId, anchorId, null, f.version)
-              anchorId = strippedId
+              await useFolderStore.getState().moveFolder(strippedId, destParentId ?? selectedId, null, null, f.version)
             }
           }
         } catch (e) { console.error('Multi-move failed for', strippedId, e) }
