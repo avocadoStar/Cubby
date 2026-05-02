@@ -263,7 +263,6 @@ export default function MainLayout() {
     }
     const overId = String(over.id)
     const el = document.querySelector(`[data-drop-id="${overId}"]`)
-    console.warn('[MOVE]', { overId, found: !!el, sidebarCount: document.querySelectorAll('[data-drop-id^="droppable:sidebar:"]').length })
     if (!el) {
       setOver(null, null, null)
       return
@@ -349,7 +348,6 @@ export default function MainLayout() {
 
       if (isDraggedFolder) {
         // Moving a folder
-      console.warn("[END-FOLDER]", { id: itemDragId, targetId, dp: dropPosition, ti: !!targetItem })
         const draggedFolder = draggedItem.folder
         let newParentId: string | null = null
         let prevId: string | null = null
@@ -373,7 +371,7 @@ export default function MainLayout() {
           nextId = null
         } else {
           // Folder relative to another folder: normal sibling ordering
-          newParentId = targetItem.folder.parent_id ?? selectedId
+          newParentId = targetItem.folder.parent_id
           const siblings = siblingsOf(newParentId)
           const targetIdx = siblings.indexOf(targetItem.folder.id)
           const insertIdx = dropPosition === 'before' ? Math.max(0, targetIdx) : Math.min(siblings.length, targetIdx + 1)
