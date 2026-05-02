@@ -236,7 +236,6 @@ export default function MainLayout() {
   // --- Drag handlers ---
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    console.warn('[START]', String(event.active.id))
     const rawId = String(event.active.id)
     const ev = event.activatorEvent as PointerEvent | MouseEvent
     livePointerRef.current = { x: ev.clientX, y: ev.clientY }
@@ -250,7 +249,6 @@ export default function MainLayout() {
     const dragData = event.active.data.current
 
     if (dragData && 'node' in dragData) {
-      console.warn('[START-SB]', { id, source: 'sidebar' })
       setActive(id, dragData.node as Folder, 'sidebar', 'folder')
       return
     }
@@ -459,12 +457,10 @@ export default function MainLayout() {
       console.error('Move failed', e)
     }
 
-    console.warn('[END] clearing drag', { activeId: useDndStore.getState().activeId })
     clearDrag()
   }, [items, clearDrag])
 
   const handleDragCancel = useCallback(() => {
-    console.warn('[CANCEL]')
     clearDrag()
   }, [clearDrag])
 
