@@ -262,8 +262,7 @@ export default function MainLayout() {
       return
     }
     const overId = String(over.id)
-    // Scope to right panel — same folder IDs exist in left sidebar too
-    const el = scrollRef.current?.querySelector(`[data-drop-id="${overId}"]`)
+    const el = document.querySelector(`[data-drop-id="${overId}"]`)
     if (!el) {
       setOver(null, null, null)
       return
