@@ -441,18 +441,18 @@ export default function MainLayout() {
   }, [clearDrag])
 
   return (
-    <div className="flex h-screen bg-white relative">
-      <ContextMenu />
-      <Sidebar />
-      <DndContext
-        sensors={sensors}
-        collisionDetection={pointerClosestCenter}
-        measuring={{ droppable: { measure: getClientRect } }}
-        onDragStart={handleDragStart}
-        onDragMove={handleDragMove}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
+    <DndContext
+      sensors={sensors}
+      collisionDetection={pointerClosestCenter}
+      measuring={{ droppable: { measure: getClientRect } }}
+      onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="flex h-screen bg-white relative">
+        <ContextMenu />
+        <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Toolbar />
           <BatchActionBar />
@@ -502,41 +502,41 @@ export default function MainLayout() {
             </div>
           </div>
         </div>
+      </div>
 
-        <DragOverlay dropAnimation={null}>
-          {activeFolder && (
-            <div
-              className="flex items-center rounded select-none bg-white"
-              style={{
-                height: 32,
-                paddingLeft: 8,
-                paddingRight: 8,
-                opacity: 0.85,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                transform: 'scale(1.02)',
-              }}
-            >
-              {useDndStore.getState().activeKind === 'bookmark' ? (
-                <div
-                  className="flex-shrink-0 rounded-sm flex items-center justify-center text-[9px] text-[#666]"
-                  style={{ width: 16, height: 16, background: '#e8e8e8' }}
-                >
-                  {(activeFolder.name ?? '').charAt(0)}
-                </div>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6">
-                  <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                </svg>
-              )}
-              <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">
-                {activeFolder.name ?? ''}
-              </span>
-            </div>
-          )}
-        </DragOverlay>
+      <DragOverlay dropAnimation={null}>
+        {activeFolder && (
+          <div
+            className="flex items-center rounded select-none bg-white"
+            style={{
+              height: 32,
+              paddingLeft: 8,
+              paddingRight: 8,
+              opacity: 0.85,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              transform: 'scale(1.02)',
+            }}
+          >
+            {useDndStore.getState().activeKind === 'bookmark' ? (
+              <div
+                className="flex-shrink-0 rounded-sm flex items-center justify-center text-[9px] text-[#666]"
+                style={{ width: 16, height: 16, background: '#e8e8e8' }}
+              >
+                {(activeFolder.name ?? '').charAt(0)}
+              </div>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6">
+                <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+              </svg>
+            )}
+            <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">
+              {activeFolder.name ?? ''}
+            </span>
+          </div>
+        )}
+      </DragOverlay>
 
-        <DropIndicator source="main" />
-      </DndContext>
-    </div>
+      <DropIndicator source="main" />
+    </DndContext>
   )
 }

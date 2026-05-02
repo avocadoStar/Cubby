@@ -330,20 +330,7 @@ export default function Sidebar() {
   }, [clearDrag])
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={pointerClosestCenter}
-      measuring={{
-        droppable: {
-          measure: getClientRect,
-        },
-      }}
-      onDragStart={handleDragStart}
-      onDragMove={handleDragMove}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <div className="w-[280px] min-w-[280px] border-r border-[#e8e8e8] flex flex-col bg-white h-full">
+    <div className="w-[280px] min-w-[280px] border-r border-[#e8e8e8] flex flex-col bg-white h-full">
         <div className="pt-5 px-5 pb-3 text-lg font-semibold text-[#1a1a1a]">
           收藏夹
         </div>
@@ -394,39 +381,6 @@ export default function Sidebar() {
             })}
           </div>
         </div>
-      </div>
-
-      <DragOverlay dropAnimation={null}>
-        {activeFolder && (
-          <div
-            className="flex items-center rounded select-none bg-white"
-            style={{
-              height: 32,
-              paddingLeft: 8,
-              paddingRight: 8,
-              opacity: 0.85,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              transform: 'scale(1.02)',
-            }}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="#F0C54F"
-              stroke="#D4A830"
-              strokeWidth="0.6"
-            >
-              <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-            </svg>
-            <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">
-              {activeFolder.name}
-            </span>
-          </div>
-        )}
-      </DragOverlay>
-
-      <DropIndicator source="sidebar" />
-    </DndContext>
+    </div>
   )
 }
