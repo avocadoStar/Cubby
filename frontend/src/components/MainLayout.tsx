@@ -457,6 +457,12 @@ export default function MainLayout() {
                 ? targetIdx
                 : targetIdx + 1
             ;({ prevId, nextId } = placement(nodeIds, insertIdx))
+            // If prev and next have the same sortKey, between() fails — use after(prev) instead
+            if (prevId && nextId) {
+              const pk = folderStore.folderMap.get(prevId)?.sort_key ?? currentBookmarks.find(b => b.id === prevId)?.sort_key ?? ''
+              const nk = folderStore.folderMap.get(nextId)?.sort_key ?? currentBookmarks.find(b => b.id === nextId)?.sort_key ?? ''
+              if (pk === nk) nextId = null
+            }
           }
         } else {
           // Bookmark relative to another bookmark: normal before/after ordering
