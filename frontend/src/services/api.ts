@@ -1,4 +1,4 @@
-import type { Folder, Bookmark, MoveRequest, BatchMoveRequest } from '../types'
+import type { Folder, Bookmark, MoveRequest } from '../types'
 
 const BASE = '/api'
 
@@ -94,12 +94,6 @@ export const api = {
 
   moveBookmark: (req: MoveRequest) =>
     request<Bookmark>('/bookmarks/move', {
-      method: 'POST',
-      body: JSON.stringify(req),
-    }),
-
-  batchMoveBookmarks: (req: BatchMoveRequest) =>
-    request<void>('/bookmarks/batch-move', {
       method: 'POST',
       body: JSON.stringify(req),
     }),

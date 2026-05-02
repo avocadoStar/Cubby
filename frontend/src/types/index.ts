@@ -29,9 +29,3 @@ export interface MoveRequest {
   version: number
 }
 
-export interface BatchMoveRequest {
-  ids: string[]
-  target_folder_id: string
-  anchor_id: string
-  position: 'before' | 'after'
-}

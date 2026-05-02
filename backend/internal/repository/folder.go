@@ -7,9 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type FolderRepo struct{ DB *sql.DB }
+type folderRepo struct{ DB *sql.DB }
 
-func (r *FolderRepo) List(parentID *string) ([]model.Folder, error) {
+func NewFolderRepo(db *sql.DB) FolderRepo {
+	return &folderRepo{DB: db}
+}
+
+func (r *folderRepo) List(parentID *string) ([]model.Folder, error) {
 	var rows *sql.Rows
 	var err error
 	if parentID == nil {
@@ -34,7 +38,7 @@ func (r *FolderRepo) List(parentID *string) ([]model.Folder, error) {
 	return folders, nil
 }
 
-func (r *FolderRepo) Get(id string) (*model.Folder, error) {
+func (r *folderRepo) Get(id string) (*model.Folder, error) {
 	var f model.Folder
 	err := r.DB.QueryRow(`SELECT id,name,parent_id,sort_key,version,created_at,updated_at
 		FROM folder WHERE id=? AND deleted_at IS NULL`, id).
@@ -45,7 +49,7 @@ func (r *FolderRepo) Get(id string) (*model.Folder, error) {
 	return &f, nil
 }
 
-func (r *FolderRepo) Create(name string, parentID *string, sortKey string) (*model.Folder, error) {
+func (r *folderRepo) Create(name string, parentID *string, sortKey string) (*model.Folder, error) {
 	id := uuid.New().String()
 	_, err := r.DB.Exec(`INSERT INTO folder (id,name,parent_id,sort_key) VALUES (?,?,?,?)`,
 		id, name, parentID, sortKey)
@@ -55,7 +59,7 @@ func (r *FolderRepo) Create(name string, parentID *string, sortKey string) (*mod
 	return r.Get(id)
 }
 
-func (r *FolderRepo) Update(id, name string, version int) (*model.Folder, error) {
+func (r *folderRepo) Update(id, name string, version int) (*model.Folder, error) {
 	res, err := r.DB.Exec(`UPDATE folder SET name=?, version=version+1, updated_at=datetime('now')
 		WHERE id=? AND version=? AND deleted_at IS NULL`,
 		name, id, version)
@@ -72,13 +76,12 @@ func (r *FolderRepo) Update(id, name string, version int) (*model.Folder, error)
 	return r.Get(id)
 }
 
-func (r *FolderRepo) SoftDelete(id string) error {
+func (r *folderRepo) SoftDelete(id string) error {
 	_, err := r.DB.Exec(`UPDATE folder SET deleted_at=datetime('now') WHERE id=?`, id)
 	return err
 }
 
-// Rebalance updates the sort_key for a batch of folders in a single transaction.
-func (r *FolderRepo) Rebalance(updates []struct{ ID, SortKey string }) error {
+func (r *folderRepo) Rebalance(updates []SortKeyUpdate) error {
 	tx, err := r.DB.Begin()
 	if err != nil {
 		return err
@@ -95,7 +98,7 @@ func (r *FolderRepo) Rebalance(updates []struct{ ID, SortKey string }) error {
 	return tx.Commit()
 }
 
-func (r *FolderRepo) Move(id string, parentID *string, sortKey string, version int) (*model.Folder, error) {
+func (r *folderRepo) Move(id string, parentID *string, sortKey string, version int) (*model.Folder, error) {
 	res, err := r.DB.Exec(`UPDATE folder SET parent_id=?, sort_key=?, version=version+1, updated_at=datetime('now')
 		WHERE id=? AND version=? AND deleted_at IS NULL`,
 		parentID, sortKey, id, version)

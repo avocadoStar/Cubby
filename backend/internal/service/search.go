@@ -6,10 +6,10 @@ import (
 )
 
 type SearchService struct {
-	repo *repository.BookmarkRepo
+	repo repository.BookmarkRepo
 }
 
-func NewSearchService(repo *repository.BookmarkRepo) *SearchService {
+func NewSearchService(repo repository.BookmarkRepo) *SearchService {
 	return &SearchService{repo: repo}
 }
 

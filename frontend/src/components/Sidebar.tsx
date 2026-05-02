@@ -1,23 +1,10 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  getClientRect,
-  useSensor,
-  useSensors,
-  useDroppable,
-  type DragStartEvent,
-  type DragMoveEvent,
-  type DragEndEvent,
-} from '@dnd-kit/core'
+import { useDroppable } from '@dnd-kit/core'
 import FolderNode from './FolderNode'
-import DropIndicator from './DropIndicator'
 import { Star, Search } from 'lucide-react'
-import { POINTER_SENSOR_CONFIG, pointerClosestCenter, calcDropPosition } from '../lib/dndUtils'
 
 /** "所有书签" row as a droppable (target for moving to root level). */
 function AllBookmarksDroppable({
@@ -105,12 +92,9 @@ export default function Sidebar() {
     loadChildren,
     folderMap,
   } = useFolderStore()
-  const { setActive, setOver, clearDrag, activeFolder, activeId } = useDndStore()
+  const { activeId } = useDndStore()
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  // Track live pointer position during drag. Capture phase ensures
-  // this fires BEFORE dnd-kit's own handlers, so the value is fresh.
-  const livePointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
   useEffect(() => {
     loadChildren(null)
@@ -122,212 +106,6 @@ export default function Sidebar() {
     estimateSize: () => 32,
     overscan: 10,
   })
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, POINTER_SENSOR_CONFIG),
-  )
-
-  // Track pointer position during drag using CAPTURE phase.
-  // Capture fires before dnd-kit's bubble-phase handlers, so
-  // livePointerRef is always current when handleDragMove runs.
-  useEffect(() => {
-    if (!activeId) return
-    const handler = (e: PointerEvent) => {
-      livePointerRef.current = { x: e.clientX, y: e.clientY }
-    }
-    window.addEventListener('pointermove', handler, true)
-    return () => window.removeEventListener('pointermove', handler, true)
-  }, [activeId])
-
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      const id = String(event.active.id)
-      const folder = folderMap.get(id)
-      if (!folder) return
-      setActive(id, folder, 'sidebar')
-      const ev = event.activatorEvent as PointerEvent | MouseEvent
-      livePointerRef.current = { x: ev.clientX, y: ev.clientY }
-    },
-    [folderMap, setActive],
-  )
-
-  const handleDragMove = useCallback(
-    (event: DragMoveEvent) => {
-      const over = event.over
-      if (!over) {
-        setOver(null, null, null)
-        return
-      }
-
-      const overId = String(over.id)
-
-      // Scope to sidebar — same folder IDs may exist in right panel too
-      const el =
-        scrollRef.current?.querySelector(`[data-drop-id="${overId}"]`) ||
-        scrollRef.current?.querySelector(`[data-id="${overId}"]`)
-      if (!el) {
-        setOver(null, null, null)
-        return
-      }
-
-      const rect = el.getBoundingClientRect()
-      // Use capture-phase tracked pointer position (always fresh)
-      const position = calcDropPosition(rect, livePointerRef.current.y)
-
-      if (position === 'inside') {
-        if (overId === 'all-bookmarks') {
-          setOver(overId, 'inside', {
-            top: rect.top,
-            left: rect.left,
-            width: rect.width,
-          })
-        } else {
-          setOver(overId, 'inside', null)
-        }
-      } else if (position === 'before') {
-        setOver(overId, 'before', {
-          top: rect.top - 1.5,
-          left: rect.left + 8,
-          width: Math.max(rect.width - 16, 0),
-        })
-      } else {
-        setOver(overId, 'after', {
-          top: rect.bottom - 1.5,
-          left: rect.left + 8,
-          width: Math.max(rect.width - 16, 0),
-        })
-      }
-    },
-    [activeId, setOver],
-  )
-
-  const handleDragEnd = useCallback(
-    async (_event: DragEndEvent) => {
-      const state = useDndStore.getState()
-      const folderState = useFolderStore.getState()
-      const currentFolderMap = folderState.folderMap
-      const currentChildrenMap = folderState.childrenMap
-      const currentMoveFolder = folderState.moveFolder
-      const { activeId: dragId, activeFolder: dragFolder, overId, dropPosition } = state
-
-      if (!dragId || !overId || !dropPosition || !dragFolder) {
-        clearDrag()
-        return
-      }
-
-      let newParentId: string | null = null
-      let prevId: string | null = null
-      let nextId: string | null = null
-      const sourceParentId = dragFolder.parent_id ?? null
-
-      // Use the latest store snapshot so back-to-back drags do not compute
-      // placement from a render-time childrenMap closure.
-      const getSiblingsExcludingDragged = (parentId: string | null) =>
-        (currentChildrenMap.get(parentId) ?? []).filter(id => id !== dragId)
-
-      const getHeadPlacement = (parentId: string | null) => {
-        const siblings = getSiblingsExcludingDragged(parentId)
-        return {
-          prevId: null as string | null,
-          nextId: siblings.length > 0 ? siblings[0] : null,
-        }
-      }
-
-      const getTailPlacement = (parentId: string | null) => {
-        const siblings = getSiblingsExcludingDragged(parentId)
-        return {
-          prevId: siblings.length > 0 ? siblings[siblings.length - 1] : null,
-          nextId: null as string | null,
-        }
-      }
-
-      const getPlacementAroundSibling = (
-        parentId: string | null,
-        siblingId: string,
-        position: 'before' | 'after',
-      ) => {
-        const siblings = getSiblingsExcludingDragged(parentId)
-        const siblingIdx = siblings.indexOf(siblingId)
-        if (siblingIdx === -1) {
-          return null
-        }
-
-        const insertIdx = position === 'before' ? siblingIdx : siblingIdx + 1
-        return {
-          prevId: insertIdx > 0 ? siblings[insertIdx - 1] : null,
-          nextId: insertIdx < siblings.length ? siblings[insertIdx] : null,
-        }
-      }
-
-      try {
-        if (overId === 'all-bookmarks') {
-          newParentId = null
-          // "所有书签" sits above all root folders. Both before and after
-          // it mean "at the very top". inside keeps current root position.
-          const rootSiblings = getSiblingsExcludingDragged(null)
-
-          if (dropPosition === 'inside') {
-            const idx = rootSiblings.indexOf(dragId)
-            if (idx >= 0) {
-              prevId = idx > 0 ? rootSiblings[idx - 1] : null
-              nextId = idx + 1 < rootSiblings.length ? rootSiblings[idx + 1] : null
-            } else {
-              ;({ prevId, nextId } = getTailPlacement(null))
-            }
-          } else {
-            // before or after — both go to head
-            ;({ prevId, nextId } = getHeadPlacement(null))
-          }
-        } else {
-          const folderId = overId.startsWith('droppable:')
-            ? overId.slice('droppable:'.length)
-            : overId
-          const targetFolder = currentFolderMap.get(folderId)
-          if (!targetFolder) {
-            clearDrag()
-            return
-          }
-
-          if (dropPosition === 'inside') {
-            newParentId = folderId
-            if (sourceParentId === folderId) {
-              ;({ prevId, nextId } = getHeadPlacement(folderId))
-            } else {
-              ;({ prevId, nextId } = getTailPlacement(folderId))
-            }
-          } else if (dropPosition === 'before') {
-            newParentId = targetFolder.parent_id
-            const placement = getPlacementAroundSibling(newParentId, folderId, 'before')
-            if (!placement) {
-              clearDrag()
-              return
-            }
-            ;({ prevId, nextId } = placement)
-          } else {
-            newParentId = targetFolder.parent_id
-            const placement = getPlacementAroundSibling(newParentId, folderId, 'after')
-            if (!placement) {
-              clearDrag()
-              return
-            }
-            ;({ prevId, nextId } = placement)
-          }
-        }
-
-        // console.warn('[DND-END]', { dragId, newParentId, prevId, nextId, overId, dropPosition, srcParent: dragFolder.parent_id })
-        await currentMoveFolder(dragId, newParentId, prevId, nextId, dragFolder.version)
-      } catch (e) {
-        console.error('Folder move failed', e)
-      }
-
-      clearDrag()
-    },
-    [clearDrag],
-  )
-
-  const handleDragCancel = useCallback(() => {
-    clearDrag()
-  }, [clearDrag])
 
   return (
     <div className="w-[280px] min-w-[280px] border-r border-[#e8e8e8] flex flex-col bg-white h-full">

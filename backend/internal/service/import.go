@@ -9,11 +9,11 @@ import (
 )
 
 type ImportService struct {
-	folderRepo   *repository.FolderRepo
-	bookmarkRepo *repository.BookmarkRepo
+	folderRepo   repository.FolderRepo
+	bookmarkRepo repository.BookmarkRepo
 }
 
-func NewImportService(fr *repository.FolderRepo, br *repository.BookmarkRepo) *ImportService {
+func NewImportService(fr repository.FolderRepo, br repository.BookmarkRepo) *ImportService {
 	return &ImportService{folderRepo: fr, bookmarkRepo: br}
 }
 
@@ -35,17 +35,26 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 
 	var folderStack []string // stack of folder IDs, top = current folder
 
+	// Track last sort key per parent scope to generate sequential LexoRank keys
+	nextFolderSortKey := make(map[string]string)
+	nextBookmarkSortKey := make(map[string]string)
+	scopeKey := func(parentID *string) string {
+		if parentID == nil {
+			return "__root__"
+		}
+		return *parentID
+	}
+
 	h3Re := regexp.MustCompile(`(?i)<H3[^>]*>(.*?)</H3>`)
 	aRe := regexp.MustCompile(`(?i)<A[^>]*HREF="([^"]*)"[^>]*>(.*?)</A>`)
 	dlEndRe := regexp.MustCompile(`(?i)</DL>`)
 
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
-		// Check for folder name <H3>Name</H3>
 		if h3Match := h3Re.FindStringSubmatch(line); h3Match != nil {
 			name := stripTags(strings.TrimSpace(h3Match[1]))
 			if name == "" || name == "Bookmarks" {
-				continue // skip root level title
+				continue
 			}
 
 			var parentID *string
@@ -53,8 +62,10 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 				parentID = &folderStack[len(folderStack)-1]
 			}
 
-			// Generate a stable sort key based on folder position
-			sortKey := "n" + name[:min(len(name), 8)]
+			sk := scopeKey(parentID)
+			lastKey := nextFolderSortKey[sk]
+			sortKey := after(lastKey)
+			nextFolderSortKey[sk] = sortKey
 
 			folder, err := s.folderRepo.Create(name, parentID, sortKey)
 			if err == nil {
@@ -64,7 +75,6 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 			continue
 		}
 
-		// Check for bookmark <A HREF="url">Title</A>
 		if aMatch := aRe.FindStringSubmatch(line); aMatch != nil {
 			href := strings.TrimSpace(aMatch[1])
 			title := stripTags(strings.TrimSpace(aMatch[2]))
@@ -80,17 +90,16 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 				folderID = &folderStack[len(folderStack)-1]
 			}
 
-			sortKey := "n" + href[min(len(href), 4):min(len(href), 12)]
-			if len(sortKey) < 3 {
-				sortKey = "nimport"
-			}
+			sk := scopeKey(folderID)
+			lastKey := nextBookmarkSortKey[sk]
+			sortKey := after(lastKey)
+			nextBookmarkSortKey[sk] = sortKey
 
 			s.bookmarkRepo.Create(title, href, folderID, sortKey)
 			result.Bookmarks++
 			continue
 		}
 
-		// Check for folder close </DL> → pop stack
 		if dlEndRe.MatchString(line) && len(folderStack) > 0 {
 			folderStack = folderStack[:len(folderStack)-1]
 		}

@@ -152,6 +152,13 @@ export function pointerClosestCenter(args: Parameters<CollisionDetection>[0]) {
   return closestId ? [{ id: closestId }] : []
 }
 
+/** Normalize a dnd-kit overId by stripping droppable: and droppable:sidebar: prefixes. */
+export function normalizeOverId(overId: string): string {
+  if (overId.startsWith('droppable:sidebar:')) return overId.slice('droppable:sidebar:'.length)
+  if (overId.startsWith('droppable:')) return overId.slice('droppable:'.length)
+  return overId
+}
+
 /** Determine drop position based on pointer Y relative to element rect. */
 export function calcDropPosition(
   rect: DOMRect,

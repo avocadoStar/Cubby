@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Bookmark } from '../types'
 import { api, ConflictError } from '../services/api'
+import { useFolderStore } from './folderStore'
 
 interface BookmarkState {
   bookmarks: Bookmark[]
@@ -67,7 +68,6 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     }
 
     set({ selectedIds: new Set(), selectedFolderIds: new Set() })
-    const { useFolderStore } = await import('./folderStore')
     const folderStore = useFolderStore.getState()
     const currentFolderId = folderStore.selectedId
     await get().load(currentFolderId)
@@ -82,7 +82,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   move: async (id, folderId, prevId, nextId, version, sortKey) => {
     const doMove = async (ver: number) => {
       await api.moveBookmark({ id, folder_id: folderId, prev_id: prevId, next_id: nextId, sort_key: sortKey ?? null, version: ver })
-      const { selectedId } = (await import('./folderStore')).useFolderStore.getState()
+      const { selectedId } = useFolderStore.getState()
       await get().load(selectedId)
     }
 
@@ -93,7 +93,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
         const current = get().bookmarks.find(b => b.id === id)
         const sourceFolderId = current?.folder_id ?? null
 
-        const { selectedId } = (await import('./folderStore')).useFolderStore.getState()
+        const { selectedId } = useFolderStore.getState()
         const reloadOrder: Array<string | null> = []
         const pushFolder = (fid: string | null) => {
           const existingIdx = reloadOrder.findIndex((existing) => existing === fid)

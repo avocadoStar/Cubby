@@ -7,9 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type BookmarkRepo struct{ DB *sql.DB }
+type bookmarkRepo struct{ DB *sql.DB }
 
-func (r *BookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
+func NewBookmarkRepo(db *sql.DB) BookmarkRepo {
+	return &bookmarkRepo{DB: db}
+}
+
+func (r *bookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 	var rows *sql.Rows
 	var err error
 	if folderID == nil {
@@ -34,7 +38,7 @@ func (r *BookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 	return bookmarks, nil
 }
 
-func (r *BookmarkRepo) GetByID(id string) (*model.Bookmark, error) {
+func (r *bookmarkRepo) GetByID(id string) (*model.Bookmark, error) {
 	var b model.Bookmark
 	err := r.DB.QueryRow(`SELECT id,title,url,folder_id,sort_key,version,created_at,updated_at
 		FROM bookmark WHERE id=? AND deleted_at IS NULL`, id).
@@ -45,7 +49,7 @@ func (r *BookmarkRepo) GetByID(id string) (*model.Bookmark, error) {
 	return &b, nil
 }
 
-func (r *BookmarkRepo) Create(title, url string, folderID *string, sortKey string) (*model.Bookmark, error) {
+func (r *bookmarkRepo) Create(title, url string, folderID *string, sortKey string) (*model.Bookmark, error) {
 	id := uuid.New().String()
 	_, err := r.DB.Exec(`INSERT INTO bookmark (id,title,url,folder_id,sort_key) VALUES (?,?,?,?,?)`,
 		id, title, url, folderID, sortKey)
@@ -55,7 +59,7 @@ func (r *BookmarkRepo) Create(title, url string, folderID *string, sortKey strin
 	return r.GetByID(id)
 }
 
-func (r *BookmarkRepo) Update(id, title, url string, version int) (*model.Bookmark, error) {
+func (r *bookmarkRepo) Update(id, title, url string, version int) (*model.Bookmark, error) {
 	res, err := r.DB.Exec(`UPDATE bookmark SET title=?, url=?, version=version+1, updated_at=datetime('now')
 		WHERE id=? AND version=? AND deleted_at IS NULL`,
 		title, url, id, version)
@@ -72,12 +76,12 @@ func (r *BookmarkRepo) Update(id, title, url string, version int) (*model.Bookma
 	return r.GetByID(id)
 }
 
-func (r *BookmarkRepo) SoftDelete(id string) error {
+func (r *bookmarkRepo) SoftDelete(id string) error {
 	_, err := r.DB.Exec(`UPDATE bookmark SET deleted_at=datetime('now') WHERE id=?`, id)
 	return err
 }
 
-func (r *BookmarkRepo) BatchSoftDelete(ids []string) error {
+func (r *bookmarkRepo) BatchSoftDelete(ids []string) error {
 	tx, err := r.DB.Begin()
 	if err != nil {
 		return err
@@ -91,7 +95,7 @@ func (r *BookmarkRepo) BatchSoftDelete(ids []string) error {
 	return tx.Commit()
 }
 
-func (r *BookmarkRepo) Move(id string, folderID *string, sortKey string, version int) (*model.Bookmark, error) {
+func (r *bookmarkRepo) Move(id string, folderID *string, sortKey string, version int) (*model.Bookmark, error) {
 	res, err := r.DB.Exec(`UPDATE bookmark SET folder_id=?, sort_key=?, version=version+1, updated_at=datetime('now')
 		WHERE id=? AND version=? AND deleted_at IS NULL`,
 		folderID, sortKey, id, version)
@@ -108,7 +112,24 @@ func (r *BookmarkRepo) Move(id string, folderID *string, sortKey string, version
 	return r.GetByID(id)
 }
 
-func (r *BookmarkRepo) Search(query string) ([]model.Bookmark, error) {
+func (r *bookmarkRepo) Rebalance(updates []SortKeyUpdate) error {
+	tx, err := r.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, u := range updates {
+		_, err := tx.Exec(`UPDATE bookmark SET sort_key=?, version=version+1, updated_at=datetime('now') WHERE id=? AND deleted_at IS NULL`,
+			u.SortKey, u.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (r *bookmarkRepo) Search(query string) ([]model.Bookmark, error) {
 	q := "%" + query + "%"
 	rows, err := r.DB.Query(`SELECT id,title,url,folder_id,sort_key,version,created_at,updated_at
 		FROM bookmark WHERE (title LIKE ? OR url LIKE ?) AND deleted_at IS NULL ORDER BY sort_key`, q, q)

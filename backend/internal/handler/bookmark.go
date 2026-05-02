@@ -103,24 +103,6 @@ func (h *BookmarkHandler) Move(c *gin.Context) {
 	c.JSON(http.StatusOK, b)
 }
 
-func (h *BookmarkHandler) BatchMove(c *gin.Context) {
-	var req struct {
-		IDs            []string `json:"ids"`
-		TargetFolderID string   `json:"target_folder_id"`
-		AnchorID       string   `json:"anchor_id"`
-		Position       string   `json:"position"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
-		return
-	}
-	if err := h.svc.BatchMove(req.IDs, req.TargetFolderID, req.AnchorID, req.Position); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.Status(http.StatusNoContent)
-}
-
 func (h *BookmarkHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids"`
@@ -136,44 +118,3 @@ func (h *BookmarkHandler) BatchDelete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// -- stubs for router compatibility --
-
-func (h *BookmarkHandler) GetByID(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
-}
-
-func (h *BookmarkHandler) ToggleFavorite(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
-}
-
-func (h *BookmarkHandler) Reorder(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
-}
-
-func (h *BookmarkHandler) MoveToFolder(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
-}
-
-func (h *BookmarkHandler) BatchSetFavorite(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
-}
-
-func (h *BookmarkHandler) FetchMetadata(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
-}
-
-func (h *BookmarkHandler) StartImport(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
-}
-
-func (h *BookmarkHandler) StreamImport(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
-}
-
-func (h *BookmarkHandler) FetchTitle(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
-}
-
-func (h *BookmarkHandler) FetchMetadataPreview(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
-}

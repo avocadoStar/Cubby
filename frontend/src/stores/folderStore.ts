@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Folder } from '../types'
-import { api } from '../services/api'
+import { api, ConflictError } from '../services/api'
 
 interface FolderState {
   folderMap: Map<string, Folder>
@@ -120,8 +120,6 @@ export const useFolderStore = create<FolderState>((set, get) => ({
   },
 
   moveFolder: async (id, newParentId, prevId, nextId, version, sortKey) => {
-    const { ConflictError } = await import('../services/api')
-
     const doMove = async (ver: number) => {
       await api.moveFolder({ id, parent_id: newParentId, prev_id: prevId, next_id: nextId, sort_key: sortKey ?? null, version: ver })
 

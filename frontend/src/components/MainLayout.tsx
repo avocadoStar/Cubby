@@ -23,7 +23,7 @@ import {
   type DragMoveEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { POINTER_SENSOR_CONFIG, pointerClosestCenter, calcDropPosition, computePlacement, getUnifiedSiblings, type UnifiedSortableItem } from '../lib/dndUtils'
+import { POINTER_SENSOR_CONFIG, pointerClosestCenter, calcDropPosition, computePlacement, getUnifiedSiblings, normalizeOverId, type UnifiedSortableItem } from '../lib/dndUtils'
 import type { Folder, Bookmark } from '../types'
 import { ChevronRight } from 'lucide-react'
 
@@ -176,7 +176,7 @@ function DraggableFolderRow({
 export default function MainLayout() {
   const { bookmarks, load, selectAll, selectedIds, selectedFolderIds, toggleFolderSelect } = useBookmarkStore()
   const { selectedId, childrenMap, folderMap, select } = useFolderStore()
-  const { setActive, setOver, clearDrag, activeFolder, activeId } = useDndStore()
+  const { setActive, setOver, clearDrag, activeItem, activeId } = useDndStore()
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const livePointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -259,7 +259,14 @@ export default function MainLayout() {
     const dragData = event.active.data.current
 
     if (dragData && 'node' in dragData) {
-      setActive(id, dragData.node as Folder, 'sidebar', 'folder')
+      const node = dragData.node as Folder
+      setActive(id, {
+        id: node.id,
+        title: node.name,
+        kind: 'folder',
+        parentId: node.parent_id,
+        version: node.version,
+      }, 'sidebar')
       return
     }
 
@@ -275,16 +282,34 @@ export default function MainLayout() {
       if (isSelected) {
         const fIds = Array.from(selectedFolderIds)
         const bIds = Array.from(selectedIds).map(bid => `bookmark:${bid}`)
-        multiDragRef.current = [...fIds, ...bIds]
+        const visualOrder = new Map(renderedItems.map((renderedItem, index) => [renderedItem.id, index]))
+        multiDragRef.current = [...fIds, ...bIds].sort((a, b) => {
+          const aIndex = visualOrder.get(a.startsWith('bookmark:') ? a.slice('bookmark:'.length) : a) ?? Number.MAX_SAFE_INTEGER
+          const bIndex = visualOrder.get(b.startsWith('bookmark:') ? b.slice('bookmark:'.length) : b) ?? Number.MAX_SAFE_INTEGER
+          return aIndex - bIndex
+        })
       } else {
         multiDragRef.current = [rawId]
       }
-      setActive(id, item.kind === 'folder' ? (item.folder as unknown as Folder & { parent_id?: string | null }) : ({
-        ...item.bookmark,
-        parent_id: item.bookmark.folder_id,
-      } as unknown as Folder & { parent_id?: string | null }), 'main', item.kind)
+      if (item.kind === 'folder') {
+        setActive(id, {
+          id: item.folder.id,
+          title: item.folder.name,
+          kind: 'folder',
+          parentId: item.folder.parent_id,
+          version: item.folder.version,
+        }, 'main')
+      } else {
+        setActive(id, {
+          id: item.bookmark.id,
+          title: item.bookmark.title,
+          kind: 'bookmark',
+          parentId: item.bookmark.folder_id,
+          version: item.bookmark.version,
+        }, 'main')
+      }
     }
-  }, [items, setActive, selectedIds, selectedFolderIds])
+  }, [items, renderedItems, setActive, selectedIds, selectedFolderIds])
 
   const handleDragMove = useCallback((event: DragMoveEvent) => {
     const over = event.over
@@ -326,7 +351,7 @@ export default function MainLayout() {
 
   const handleDragEnd = useCallback(async (_event: DragEndEvent) => {
     const dndState = useDndStore.getState()
-    const { activeId: dragId, activeFolder: dragItem, overId, dropPosition } = dndState
+    const { activeId: dragId, activeItem: dragItem, overId, dropPosition } = dndState
 
     if (!dragId || !overId || !dropPosition || !dragItem) {
       clearDrag()
@@ -350,12 +375,8 @@ export default function MainLayout() {
 
     const isDraggedFolder = draggedItem.kind === 'folder'
 
-    // Extract target folder ID from overId
-    let targetId = overId
-    if (targetId.startsWith('droppable:sidebar:')) targetId = targetId.slice('droppable:sidebar:'.length)
-    else if (targetId.startsWith('droppable:')) targetId = targetId.slice('droppable:'.length)
+    const targetId = normalizeOverId(overId)
 
-    // Look up target: try items (right panel), then folderMap (sidebar), then bookmarks
     const targetItem: ListItem | undefined = items.find(i =>
       i.kind === 'folder' ? i.folder.id === targetId : i.bookmark.id === targetId
     ) ?? (useFolderStore.getState().folderMap.has(targetId)
@@ -369,6 +390,7 @@ export default function MainLayout() {
       const bookmarkStore = useBookmarkStore.getState()
       const currentChildrenMap = folderStore.childrenMap
       const currentBookmarks = bookmarkStore.bookmarks
+      const multiDragIds = multiDragRef.current.length > 1 ? [...multiDragRef.current] : null
 
       const fallbackItemsForParent = (pid: string | null): UnifiedSortableItem[] => [
         ...((currentChildrenMap.get(pid) ?? [])
@@ -383,7 +405,64 @@ export default function MainLayout() {
       const unifiedSiblingsOf = (pid: string | null) =>
         getUnifiedSiblings(renderedItems, fallbackItemsForParent(pid), pid, itemDragId)
 
-      if (isDraggedFolder) {
+      const unifiedSiblingsExcluding = (pid: string | null, excludeIds: Set<string>) =>
+        getUnifiedSiblings(renderedItems, fallbackItemsForParent(pid), pid, '')
+          .filter((siblingId) => !excludeIds.has(siblingId))
+
+      const getSortKeyForId = (id: string) =>
+        folderStore.folderMap.get(id)?.sort_key
+        ?? currentBookmarks.find((bookmark) => bookmark.id === id)?.sort_key
+        ?? ''
+
+      const resolveDestinationParentId = () => {
+        if (!targetItem) return selectedId
+        if (targetItem.kind === 'folder') {
+          return dropPosition === 'inside' ? targetItem.folder.id : targetItem.folder.parent_id
+        }
+        return targetItem.bookmark.folder_id
+      }
+
+      if (multiDragIds) {
+        const destParentId = resolveDestinationParentId()
+        const draggedIds = new Set(
+          multiDragIds.map((selId) => (
+            selId.startsWith('bookmark:') ? selId.slice('bookmark:'.length) : selId
+          )),
+        )
+        const siblings = unifiedSiblingsExcluding(destParentId, draggedIds)
+
+        let insertIdx = siblings.length
+        if (targetItem && !(targetItem.kind === 'folder' && dropPosition === 'inside')) {
+          const targetNodeId = targetItem.kind === 'folder' ? targetItem.folder.id : targetItem.bookmark.id
+          const targetIdx = siblings.indexOf(targetNodeId)
+          insertIdx = targetIdx === -1
+            ? siblings.length
+            : dropPosition === 'before'
+              ? targetIdx
+              : targetIdx + 1
+        }
+
+        let { prevId, nextId } = computePlacement(siblings, insertIdx)
+        if (prevId && nextId && getSortKeyForId(prevId) === getSortKeyForId(nextId)) {
+          nextId = null
+        }
+
+        for (const selId of multiDragIds) {
+          const strippedId = selId.startsWith('bookmark:') ? selId.slice('bookmark:'.length) : selId
+          if (selId.startsWith('bookmark:')) {
+            const bookmark = useBookmarkStore.getState().bookmarks.find((bk) => bk.id === strippedId)
+            if (!bookmark) continue
+            await useBookmarkStore.getState().move(strippedId, destParentId, prevId, nextId, bookmark.version)
+          } else {
+            const folder = useFolderStore.getState().folderMap.get(strippedId)
+            if (!folder) continue
+            await useFolderStore.getState().moveFolder(strippedId, destParentId, prevId, nextId, folder.version)
+          }
+          prevId = strippedId
+        }
+
+        useBookmarkStore.getState().clearSelection()
+      } else if (isDraggedFolder) {
         // Moving a folder
         const draggedFolder = draggedItem.folder
         let newParentId: string | null = null
@@ -471,37 +550,10 @@ export default function MainLayout() {
     } catch (e) {
       console.error('Move failed', e)
     }
-
-    // Multi-select: move remaining selected items to the same destination
-    if (multiDragRef.current.length > 1) {
-      const destParentId = isDraggedFolder
-        ? (targetItem?.kind === 'folder' && dropPosition === 'inside' ? targetItem.folder.id : targetItem?.kind === 'folder' ? targetItem.folder.parent_id : targetItem?.kind === 'bookmark' ? targetItem.bookmark.folder_id : null)
-        : (targetItem?.kind === 'folder' ? (dropPosition === 'inside' ? targetItem.folder.id : targetItem.folder.parent_id) : targetItem?.kind === 'bookmark' ? targetItem.bookmark.folder_id : null)
-
-      for (const selId of multiDragRef.current) {
-        const strippedId = selId.startsWith('bookmark:') ? selId.slice('bookmark:'.length) : selId
-        if (strippedId === itemDragId) continue
-
-        const isBM = selId.startsWith('bookmark:')
-        try {
-          if (isBM) {
-            const b = useBookmarkStore.getState().bookmarks.find(bk => bk.id === strippedId)
-            if (b) {
-              await useBookmarkStore.getState().move(strippedId, destParentId, null, null, b.version)
-            }
-          } else {
-            const f = useFolderStore.getState().folderMap.get(strippedId)
-            if (f) {
-              await useFolderStore.getState().moveFolder(strippedId, destParentId, null, null, f.version)
-            }
-          }
-        } catch (e) { console.error('Multi-move failed for', strippedId, e) }
-      }
-    }
     multiDragRef.current = []
 
     clearDrag()
-  }, [items, renderedItems, clearDrag])
+  }, [items, renderedItems, clearDrag, selectedId])
 
   const handleDragCancel = useCallback(() => {
     clearDrag()
@@ -578,7 +630,7 @@ export default function MainLayout() {
       </div>
 
       <DragOverlay dropAnimation={null} modifiers={[dragOverlayTopLeftModifier]}>
-        {activeFolder && (
+        {activeItem && (
           <div
             className="flex items-center rounded select-none bg-white"
             style={{
@@ -591,10 +643,10 @@ export default function MainLayout() {
               transform: 'scale(1.02)',
             }}
           >
-            {(useDndStore.getState().activeKind === 'bookmark') ? (
+            {activeItem.kind === 'bookmark' ? (
               <div className="flex-shrink-0 rounded-sm flex items-center justify-center text-[9px] text-[#666]"
                 style={{ width: 16, height: 16, background: '#e8e8e8' }}>
-                {((activeFolder as unknown as Record<string, string>).title as string ?? activeFolder.name ?? '').charAt(0)}
+                {(activeItem.title).charAt(0)}
               </div>
             ) : (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6">
@@ -602,7 +654,7 @@ export default function MainLayout() {
               </svg>
             )}
             <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">
-              {(activeFolder as unknown as Record<string, string>).title as string ?? activeFolder.name ?? ''}
+              {activeItem.title}
             </span>
             {multiDragRef.current.length > 1 && (
               <span className="ml-2 flex-shrink-0 rounded-full bg-[#0078D4] text-white text-[10px] px-1.5 py-0.5 leading-none"
