@@ -313,7 +313,9 @@ export default function MainLayout() {
     const isDraggedFolder = draggedItem.kind === 'folder'
 
     // Extract target folder ID from overId
-    const targetId = overId.startsWith('droppable:') ? overId.slice('droppable:'.length) : overId
+    let targetId = overId
+    if (targetId.startsWith('droppable:sidebar:')) targetId = targetId.slice('droppable:sidebar:'.length)
+    else if (targetId.startsWith('droppable:')) targetId = targetId.slice('droppable:'.length)
     const targetItem = items.find(i =>
       i.kind === 'folder' ? i.folder.id === targetId : i.bookmark.id === targetId
     )

@@ -16,7 +16,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
   const children = childrenMap.get(node.id)
   const hasChildren = children === undefined || children.length > 0
 
-  const isOver = overId === `droppable:${node.id}`
+  const isOver = overId === `droppable:sidebar:${node.id}`
   const isInside = isOver && dropPosition === 'inside' && dndSource === 'sidebar'
 
   const {

@@ -81,7 +81,7 @@ function DroppableWrapper({
   }, [activeId, nodeId, folderMap])
 
   const { setNodeRef } = useDroppable({
-    id: `droppable:${nodeId}`,
+    id: `droppable:sidebar:${nodeId}`,
     data: { nodeId },
     disabled: invalidDrop,
   })
@@ -89,7 +89,7 @@ function DroppableWrapper({
   return (
     <div
       ref={setNodeRef}
-      data-drop-id={`droppable:${nodeId}`}
+      data-drop-id={`droppable:sidebar:${nodeId}`}
       style={{ ...style, touchAction: 'none' }}
     >
       {children}
