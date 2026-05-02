@@ -2,6 +2,12 @@ import type { CollisionDetection } from '@dnd-kit/core'
 
 export const POINTER_SENSOR_CONFIG = { activationConstraint: { distance: 5 } } as const
 
+export interface UnifiedSortableItem {
+  id: string
+  parentId: string | null
+  sortKey: string
+}
+
 const MIN_SORT_BYTE = '!'.charCodeAt(0)
 const MAX_SORT_BYTE = '~'.charCodeAt(0)
 
@@ -79,6 +85,35 @@ export function sortBetween(prev: string, next: string): string {
   if (!prev) return sortBefore(next)
   if (!next) return sortAfter(prev)
   return between(prev, next)
+}
+
+export function getUnifiedSiblings(
+  renderedItems: UnifiedSortableItem[],
+  fallbackItems: UnifiedSortableItem[],
+  parentId: string | null,
+  excludeId: string,
+): string[] {
+  const renderedSiblings = renderedItems.filter((item) => item.parentId === parentId)
+  const source = renderedSiblings.length > 0
+    ? renderedSiblings
+    : fallbackItems.filter((item) => item.parentId === parentId)
+
+  return source
+    .filter((item) => item.id !== excludeId)
+    .sort((a, b) => {
+      if (a.sortKey < b.sortKey) return -1
+      if (a.sortKey > b.sortKey) return 1
+      return a.id.localeCompare(b.id)
+    })
+    .map((item) => item.id)
+}
+
+export function computePlacement(list: string[], insertAt: number) {
+  const index = Math.max(0, Math.min(insertAt, list.length))
+  return {
+    prevId: index > 0 ? list[index - 1] : null,
+    nextId: index < list.length ? list[index] : null,
+  }
 }
 
 /** Collision detection: finds the droppable whose center is closest to the pointer. */

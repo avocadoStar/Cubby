@@ -22,7 +22,7 @@ import {
   type DragMoveEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { POINTER_SENSOR_CONFIG, pointerClosestCenter, calcDropPosition, sortBefore, sortAfter } from '../lib/dndUtils'
+import { POINTER_SENSOR_CONFIG, pointerClosestCenter, calcDropPosition, computePlacement, getUnifiedSiblings, type UnifiedSortableItem } from '../lib/dndUtils'
 import type { Folder, Bookmark } from '../types'
 import { ChevronRight } from 'lucide-react'
 
@@ -214,6 +214,14 @@ export default function MainLayout() {
     return result
   }, [subFolderIds, folderMap, bookmarks])
 
+  const renderedItems: UnifiedSortableItem[] = useMemo(() => {
+    return items.map((item) => (
+      item.kind === 'folder'
+        ? { id: item.folder.id, parentId: item.folder.parent_id, sortKey: item.folder.sort_key }
+        : { id: item.bookmark.id, parentId: item.bookmark.folder_id, sortKey: item.bookmark.sort_key }
+    ))
+  }, [items])
+
   const rowVirtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollRef.current,
@@ -361,20 +369,18 @@ export default function MainLayout() {
       const currentChildrenMap = folderStore.childrenMap
       const currentBookmarks = bookmarkStore.bookmarks
 
-      // Helper: siblings excluding dragged item
-      const siblingsOf = (pid: string | null) => {
-        if (isDraggedFolder) {
-          return (currentChildrenMap.get(pid) ?? []).filter(id => id !== itemDragId)
-        }
-        return currentBookmarks
-          .filter(b => b.folder_id === pid && b.id !== itemDragId)
-          .map(b => b.id)
-      }
+      const fallbackItemsForParent = (pid: string | null): UnifiedSortableItem[] => [
+        ...((currentChildrenMap.get(pid) ?? [])
+          .map((id) => folderStore.folderMap.get(id))
+          .filter((folder): folder is Folder => Boolean(folder))
+          .map((folder) => ({ id: folder.id, parentId: folder.parent_id, sortKey: folder.sort_key }))),
+        ...currentBookmarks
+          .filter((bookmark) => bookmark.folder_id === pid)
+          .map((bookmark) => ({ id: bookmark.id, parentId: bookmark.folder_id, sortKey: bookmark.sort_key })),
+      ]
 
-      const placement = (list: string[], insertAt: number) => ({
-        prevId: insertAt > 0 ? list[insertAt - 1] : null,
-        nextId: insertAt < list.length ? list[insertAt] : null,
-      })
+      const unifiedSiblingsOf = (pid: string | null) =>
+        getUnifiedSiblings(renderedItems, fallbackItemsForParent(pid), pid, itemDragId)
 
       if (isDraggedFolder) {
         // Moving a folder
@@ -382,81 +388,65 @@ export default function MainLayout() {
         let newParentId: string | null = null
         let prevId: string | null = null
         let nextId: string | null = null
-        let sortKey: string | undefined
-
         if (!targetItem) {
           newParentId = selectedId
-          const siblings = siblingsOf(selectedId)
-          ;({ prevId, nextId } = placement(siblings, siblings.length))
+          const siblings = unifiedSiblingsOf(selectedId)
+          ;({ prevId, nextId } = computePlacement(siblings, siblings.length))
         } else if (targetItem.kind === 'folder' && dropPosition === 'inside') {
           newParentId = targetItem.folder.id
-          const siblings = siblingsOf(targetItem.folder.id)
-          ;({ prevId, nextId } = placement(siblings, siblings.length))
+          const siblings = unifiedSiblingsOf(targetItem.folder.id)
+          ;({ prevId, nextId } = computePlacement(siblings, siblings.length))
         } else if (targetItem.kind === 'bookmark') {
           // Folder relative to a bookmark — compute sort key for interleaved order
           newParentId = targetItem.bookmark.folder_id
-          const refKey = targetItem.bookmark.sort_key
-          sortKey = dropPosition === 'before' ? sortBefore(refKey) : sortAfter(refKey)
-          prevId = null
-          nextId = null
+          const siblings = unifiedSiblingsOf(newParentId)
+          const targetIdx = siblings.indexOf(targetItem.bookmark.id)
+          const insertIdx = targetIdx === -1
+            ? siblings.length
+            : dropPosition === 'before'
+              ? targetIdx
+              : targetIdx + 1
+          ;({ prevId, nextId } = computePlacement(siblings, insertIdx))
         } else {
-          // Folder relative to another folder: normal sibling ordering
+          // Folder relative to another item in the unified panel order
           newParentId = targetItem.folder.parent_id
-          const siblings = siblingsOf(newParentId)
+          const siblings = unifiedSiblingsOf(newParentId)
           const targetIdx = siblings.indexOf(targetItem.folder.id)
-          const insertIdx = dropPosition === 'before' ? Math.max(0, targetIdx) : Math.min(siblings.length, targetIdx + 1)
-          ;({ prevId, nextId } = placement(siblings, insertIdx))
+          const insertIdx = targetIdx === -1
+            ? siblings.length
+            : dropPosition === 'before'
+              ? targetIdx
+              : targetIdx + 1
+          ;({ prevId, nextId } = computePlacement(siblings, insertIdx))
         }
 
-        await folderStore.moveFolder(itemDragId, newParentId, prevId, nextId, draggedFolder.version, sortKey)
+        await folderStore.moveFolder(itemDragId, newParentId, prevId, nextId, draggedFolder.version)
       } else {
         // Moving a bookmark
         const draggedBookmark = currentBookmarks.find((b) => b.id === itemDragId) ?? draggedItem.bookmark
         let newFolderId: string | null = selectedId
         let prevId: string | null = null
         let nextId: string | null = null
-        let sortKey: string | undefined
 
         if (!targetItem) {
           // Dropped in empty space → append to current folder's bookmarks
-          const siblings = siblingsOf(selectedId)
-          ;({ prevId, nextId } = placement(siblings, siblings.length))
+          const siblings = unifiedSiblingsOf(selectedId)
+          ;({ prevId, nextId } = computePlacement(siblings, siblings.length))
         } else if (targetItem.kind === 'folder') {
           if (dropPosition === 'inside') {
             newFolderId = targetItem.folder.id
-            const siblings = siblingsOf(newFolderId)
-            ;({ prevId, nextId } = placement(siblings, siblings.length))
+            const siblings = unifiedSiblingsOf(newFolderId)
+            ;({ prevId, nextId } = computePlacement(siblings, siblings.length))
           } else {
-            // before/after folder: use the rendered interleaved panel order first,
-            // then fall back to a store-derived list if the target folder is not visible there.
             newFolderId = targetItem.folder.parent_id
-            const panelNodeIds = items
-              .filter((item) =>
-                item.kind === 'folder'
-                  ? item.folder.parent_id === newFolderId
-                  : item.bookmark.folder_id === newFolderId,
-              )
-              .filter((item) => item.kind === 'folder' || item.bookmark.id !== itemDragId)
-              .map((item) => item.kind === 'folder' ? item.folder.id : item.bookmark.id)
-            const nodeIds = panelNodeIds.includes(targetItem.folder.id)
-              ? panelNodeIds
-              : [
-                  ...(currentChildrenMap.get(newFolderId) ?? [])
-                    .filter(id => id !== itemDragId && folderStore.folderMap.has(id))
-                    .map(id => ({ id, key: folderStore.folderMap.get(id)!.sort_key })),
-                  ...currentBookmarks
-                    .filter(b => b.folder_id === newFolderId && b.id !== itemDragId)
-                    .map(b => ({ id: b.id, key: b.sort_key })),
-                ]
-                  .sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
-                  .map((node) => node.id)
+            const nodeIds = unifiedSiblingsOf(newFolderId)
             const targetIdx = nodeIds.indexOf(targetItem.folder.id)
             const insertIdx = targetIdx === -1
               ? nodeIds.length
               : dropPosition === 'before'
                 ? targetIdx
                 : targetIdx + 1
-            ;({ prevId, nextId } = placement(nodeIds, insertIdx))
+            ;({ prevId, nextId } = computePlacement(nodeIds, insertIdx))
             // If prev and next have the same sortKey, between() fails — use after(prev) instead
             if (prevId && nextId) {
               const pk = folderStore.folderMap.get(prevId)?.sort_key ?? currentBookmarks.find(b => b.id === prevId)?.sort_key ?? ''
@@ -467,15 +457,15 @@ export default function MainLayout() {
         } else {
           // Bookmark relative to another bookmark: normal before/after ordering
           newFolderId = targetItem.bookmark.folder_id
-          const siblings = siblingsOf(newFolderId)
+          const siblings = unifiedSiblingsOf(newFolderId)
           const targetIdx = siblings.indexOf(targetItem.bookmark.id)
           const insertIdx = dropPosition === 'before'
-            ? Math.max(0, targetIdx)
-            : Math.min(siblings.length, targetIdx + 1)
-          ;({ prevId, nextId } = placement(siblings, insertIdx))
+            ? (targetIdx === -1 ? siblings.length : targetIdx)
+            : (targetIdx === -1 ? siblings.length : targetIdx + 1)
+          ;({ prevId, nextId } = computePlacement(siblings, insertIdx))
         }
 
-        await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version, sortKey)
+        await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version)
       }
     } catch (e) {
       console.error('Move failed', e)
@@ -510,7 +500,7 @@ export default function MainLayout() {
     multiDragRef.current = []
 
     clearDrag()
-  }, [items, clearDrag])
+  }, [items, renderedItems, clearDrag])
 
   const handleDragCancel = useCallback(() => {
     clearDrag()
