@@ -451,7 +451,7 @@ export default function MainLayout() {
               nextId = ti + 1 < nodes.length ? nodes[ti + 1].id : null
             }
             sortKey = undefined
-t		console.warn("[BM-ORDER]", { ti, newFolderId, prevId, nextId })
+			console.warn("[BM-ORDER]", { ti, newFolderId, prevId, nextId })
           }
         } else {
           // Bookmark relative to another bookmark: normal before/after ordering
