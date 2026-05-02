@@ -355,10 +355,6 @@ export default function MainLayout() {
         ? { kind: 'bookmark' as const, bookmark: useBookmarkStore.getState().bookmarks.find(b => b.id === targetId)! }
         : undefined))
 
-    let sharedNewParentId: string | null = null
-    let sharedPrevId: string | null = null
-    let sharedNextId: string | null = null
-
     try {
       const folderStore = useFolderStore.getState()
       const bookmarkStore = useBookmarkStore.getState()
