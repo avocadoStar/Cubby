@@ -399,7 +399,7 @@ export default function MainLayout() {
               ...currentBookmarks
                 .filter(b => b.folder_id === newFolderId && b.id !== itemDragId)
                 .map(b => ({ id: b.id, key: b.sort_key })),
-            ].sort((a, b) => a.key.localeCompare(b.key))
+            ].sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
             const ti = nodes.findIndex(n => n.id === targetItem.folder.id)
             if (ti === -1) {
               prevId = nodes.length > 0 ? nodes[nodes.length - 1].id : null
