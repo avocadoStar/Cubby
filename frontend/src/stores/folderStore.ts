@@ -19,6 +19,7 @@ interface FolderState {
     prevId: string | null,
     nextId: string | null,
     version: number,
+    sortKey?: string,
   ) => Promise<void>
 }
 
@@ -118,11 +119,11 @@ export const useFolderStore = create<FolderState>((set, get) => ({
     await get().loadChildren(parentId)
   },
 
-  moveFolder: async (id, newParentId, prevId, nextId, version) => {
+  moveFolder: async (id, newParentId, prevId, nextId, version, sortKey) => {
     const { ConflictError } = await import('../services/api')
 
     const doMove = async (ver: number) => {
-      await api.moveFolder({ id, parent_id: newParentId, prev_id: prevId, next_id: nextId, version: ver })
+      await api.moveFolder({ id, parent_id: newParentId, prev_id: prevId, next_id: nextId, sort_key: sortKey ?? null, version: ver })
 
       const { folderMap } = get()
       const folder = folderMap.get(id)

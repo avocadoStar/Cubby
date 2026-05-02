@@ -345,31 +345,33 @@ export default function MainLayout() {
         let newParentId: string | null = null
         let prevId: string | null = null
         let nextId: string | null = null
+        let sortKey: string | undefined
 
         if (!targetItem) {
-          // Dropped at the very end or on nothing specific
           newParentId = selectedId
           const siblings = siblingsOf(selectedId)
           ;({ prevId, nextId } = placement(siblings, siblings.length))
         } else if (targetItem.kind === 'folder' && dropPosition === 'inside') {
-          // Drop inside a folder → make it a child
           newParentId = targetItem.folder.id
           const siblings = siblingsOf(targetItem.folder.id)
           ;({ prevId, nextId } = placement(siblings, siblings.length))
+        } else if (targetItem.kind === 'bookmark') {
+          // Folder relative to a bookmark — compute sort key for interleaved order
+          newParentId = targetItem.bookmark.folder_id ?? selectedId
+          const refKey = targetItem.bookmark.sort_key
+          sortKey = dropPosition === 'before' ? sortBefore(refKey) : sortAfter(refKey)
+          prevId = null
+          nextId = null
         } else {
-          // before or after a target
-          const targetFolder = targetItem.kind === 'folder'
-            ? targetItem.folder
-            : folderStore.folderMap.get(targetItem.bookmark.folder_id ?? '')
-          newParentId = targetFolder?.parent_id ?? selectedId
+          // Folder relative to another folder: normal sibling ordering
+          newParentId = targetItem.folder.parent_id ?? selectedId
           const siblings = siblingsOf(newParentId)
-          const folderTargetId = targetItem.kind === 'folder' ? targetItem.folder.id : null
-          const targetIdx = folderTargetId ? siblings.indexOf(folderTargetId) : siblings.length
+          const targetIdx = siblings.indexOf(targetItem.folder.id)
           const insertIdx = dropPosition === 'before' ? Math.max(0, targetIdx) : Math.min(siblings.length, targetIdx + 1)
           ;({ prevId, nextId } = placement(siblings, insertIdx))
         }
 
-        await folderStore.moveFolder(itemDragId, newParentId, prevId, nextId, draggedFolder.version)
+        await folderStore.moveFolder(itemDragId, newParentId, prevId, nextId, draggedFolder.version, sortKey)
       } else {
         // Moving a bookmark
         const draggedBookmark = currentBookmarks.find((b) => b.id === itemDragId) ?? draggedItem.bookmark
