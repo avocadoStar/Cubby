@@ -558,7 +558,7 @@ export default function MainLayout() {
         )}
       </DragOverlay>
 
-      <DropIndicator source="main" />
+      <DropIndicator />
     </DndContext>
   )
 }

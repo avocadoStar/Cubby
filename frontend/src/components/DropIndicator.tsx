@@ -1,11 +1,9 @@
 import { createPortal } from 'react-dom'
-import { useDndStore, type DndSource } from '../stores/dndStore'
+import { useDndStore } from '../stores/dndStore'
 
-export default function DropIndicator({ source }: { source: DndSource }) {
+export default function DropIndicator() {
   const indicatorRect = useDndStore((s) => s.indicatorRect)
-  const activeSource = useDndStore((s) => s.source)
-
-  if (!indicatorRect || activeSource !== source) return null
+  if (!indicatorRect) return null
 
   return createPortal(
     <div
