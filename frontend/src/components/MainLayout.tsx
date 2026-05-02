@@ -349,6 +349,7 @@ export default function MainLayout() {
 
       if (isDraggedFolder) {
         // Moving a folder
+      console.warn("[END-FOLDER]", { id: itemDragId, targetId, dp: dropPosition, ti: !!targetItem })
         const draggedFolder = draggedItem.folder
         let newParentId: string | null = null
         let prevId: string | null = null
