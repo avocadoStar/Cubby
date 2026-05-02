@@ -470,7 +470,6 @@ export default function MainLayout() {
     }
 
     // Multi-select: move remaining selected items to the same destination
-    console.warn('[MULTI]', { count: multiDragRef.current.length, items: multiDragRef.current, destParentId: isDraggedFolder ? (targetItem?.kind === 'folder' && dropPosition === 'inside' ? targetItem.folder.id : targetItem?.kind === 'folder' ? targetItem.folder.parent_id : targetItem?.kind === 'bookmark' ? targetItem.bookmark.folder_id : null) : (targetItem?.kind === 'folder' ? (dropPosition === 'inside' ? targetItem.folder.id : targetItem.folder.parent_id) : targetItem?.kind === 'bookmark' ? targetItem.bookmark.folder_id : null) })
     if (multiDragRef.current.length > 1) {
       const destParentId = isDraggedFolder
         ? (targetItem?.kind === 'folder' && dropPosition === 'inside' ? targetItem.folder.id : targetItem?.kind === 'folder' ? targetItem.folder.parent_id : targetItem?.kind === 'bookmark' ? targetItem.bookmark.folder_id : null)
@@ -480,18 +479,17 @@ export default function MainLayout() {
         const strippedId = selId.startsWith('bookmark:') ? selId.slice('bookmark:'.length) : selId
         if (strippedId === itemDragId) continue
 
-        console.warn('[MULTI-MOVE]', { selId, strippedId, dest: destParentId ?? selectedId })
         const isBM = selId.startsWith('bookmark:')
         try {
           if (isBM) {
             const b = useBookmarkStore.getState().bookmarks.find(bk => bk.id === strippedId)
             if (b) {
-              await useBookmarkStore.getState().move(strippedId, destParentId ?? selectedId, null, null, b.version)
+              await useBookmarkStore.getState().move(strippedId, destParentId, null, null, b.version)
             }
           } else {
             const f = useFolderStore.getState().folderMap.get(strippedId)
             if (f) {
-              await useFolderStore.getState().moveFolder(strippedId, destParentId ?? selectedId, null, null, f.version)
+              await useFolderStore.getState().moveFolder(strippedId, destParentId, null, null, f.version)
             }
           }
         } catch (e) { console.error('Multi-move failed for', strippedId, e) }
