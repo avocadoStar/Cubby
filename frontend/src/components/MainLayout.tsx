@@ -18,6 +18,7 @@ import {
   useSensors,
   useDroppable,
   useDraggable,
+  type Modifier,
   type DragStartEvent,
   type DragMoveEvent,
   type DragEndEvent,
@@ -506,6 +507,12 @@ export default function MainLayout() {
     clearDrag()
   }, [clearDrag])
 
+  const dragOverlayTopLeftModifier: Modifier = ({ transform, overlayNodeRect }) => ({
+    ...transform,
+    x: transform.x - ((overlayNodeRect?.width ?? 0) / 2) + 10,
+    y: transform.y - ((overlayNodeRect?.height ?? 0) / 2) + 10,
+  })
+
   return (
     <DndContext
       sensors={sensors}
@@ -570,9 +577,8 @@ export default function MainLayout() {
         </div>
       </div>
 
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null} modifiers={[dragOverlayTopLeftModifier]}>
         {activeFolder && (
-          <div style={{ paddingTop: 16, paddingLeft: 16 }}>
           <div
             className="flex items-center rounded select-none bg-white"
             style={{
@@ -604,7 +610,6 @@ export default function MainLayout() {
                 {multiDragRef.current.length}
               </span>
             )}
-          </div>
           </div>
         )}
       </DragOverlay>
