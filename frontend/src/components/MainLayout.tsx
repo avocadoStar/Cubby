@@ -236,6 +236,7 @@ export default function MainLayout() {
   // --- Drag handlers ---
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
+    console.warn('[START]', String(event.active.id))
     const rawId = String(event.active.id)
     const ev = event.activatorEvent as PointerEvent | MouseEvent
     livePointerRef.current = { x: ev.clientX, y: ev.clientY }
