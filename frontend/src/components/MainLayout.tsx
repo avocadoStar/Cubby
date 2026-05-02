@@ -386,28 +386,32 @@ export default function MainLayout() {
           ;({ prevId, nextId } = placement(siblings, siblings.length))
         } else if (targetItem.kind === 'folder') {
           if (dropPosition === 'inside') {
-            // Move bookmark into folder → append to that folder's bookmarks
             newFolderId = targetItem.folder.id
             const siblings = siblingsOf(newFolderId)
             ;({ prevId, nextId } = placement(siblings, siblings.length))
           } else {
-            // before/after a folder: use folder ID as cross-type prev/next
+            // before/after folder: build interleaved list to find correct prev/next
             newFolderId = targetItem.folder.parent_id ?? selectedId
-            const siblings = siblingsOf(newFolderId)
-            const folderKey = targetItem.folder.sort_key
-            // Find first bookmark sorting after the folder
-            const splitIdx = siblings.findIndex(id => {
-              const b = currentBookmarks.find(bk => bk.id === id)
-              return b ? b.sort_key > folderKey : false
-            })
-            if (dropPosition === 'before') {
-              // prev=last pre-folder bookmark, next=folder(cross-type)
-              prevId = splitIdx > 0 ? siblings[splitIdx - 1] : null
-              nextId = targetItem.folder.id  // cross-type: folder ID
+            const nodes = [
+              ...(currentChildrenMap.get(newFolderId) ?? [])
+                .filter(id => id !== itemDragId && folderStore.folderMap.has(id))
+                .map(id => ({ id, key: folderStore.folderMap.get(id)!.sort_key })),
+              ...currentBookmarks
+                .filter(b => b.folder_id === newFolderId && b.id !== itemDragId)
+                .map(b => ({ id: b.id, key: b.sort_key })),
+            ].sort((a, b) => a.key.localeCompare(b.key))
+            const ti = nodes.findIndex(n => n.id === targetItem.folder.id)
+            if (ti === -1) {
+              prevId = nodes.length > 0 ? nodes[nodes.length - 1].id : null
+              nextId = null
+            } else if (dropPosition === 'before') {
+              // prev = node just before target, next = target itself
+              prevId = ti > 0 ? nodes[ti - 1].id : null
+              nextId = nodes[ti].id
             } else {
-              // prev=folder(cross-type), next=first post-folder bookmark
-              prevId = targetItem.folder.id  // cross-type: folder ID
-              nextId = splitIdx === -1 ? null : siblings[splitIdx]
+              // prev = target itself, next = node just after target
+              prevId = nodes[ti].id
+              nextId = ti + 1 < nodes.length ? nodes[ti + 1].id : null
             }
             sortKey = undefined
           }
