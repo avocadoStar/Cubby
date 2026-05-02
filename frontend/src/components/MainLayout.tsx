@@ -317,10 +317,16 @@ export default function MainLayout() {
     // Strip bookmark: prefix to match items list
     const itemDragId = dragId.startsWith('bookmark:') ? dragId.slice('bookmark:'.length) : dragId
 
-    // Determine what was dragged
+    // Determine what was dragged: try right-panel items first, then folderMap (sidebar)
     const draggedItem = items.find(i =>
       i.kind === 'folder' ? i.folder.id === itemDragId : i.bookmark.id === itemDragId
-    )
+    ) ?? (() => {
+      const sf = useFolderStore.getState().folderMap.get(itemDragId)
+      if (sf) return { kind: 'folder' as const, folder: sf }
+      const sb = useBookmarkStore.getState().bookmarks.find(b => b.id === itemDragId)
+      if (sb) return { kind: 'bookmark' as const, bookmark: sb }
+      return undefined
+    })()
     if (!draggedItem) { clearDrag(); return }
 
     const isDraggedFolder = draggedItem.kind === 'folder'
