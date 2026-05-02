@@ -591,7 +591,7 @@ export default function MainLayout() {
               transform: 'scale(1.02)',
             }}
           >
-            {(useDndStore.getState().activeId ?? '').startsWith('bookmark:') ? (
+            {(useDndStore.getState().activeKind === 'bookmark') ? (
               <div className="flex-shrink-0 rounded-sm flex items-center justify-center text-[9px] text-[#666]"
                 style={{ width: 16, height: 16, background: '#e8e8e8' }}>
                 {((activeFolder as unknown as Record<string, string>).title as string ?? activeFolder.name ?? '').charAt(0)}
