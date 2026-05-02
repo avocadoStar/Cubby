@@ -509,8 +509,8 @@ export default function MainLayout() {
 
   const dragOverlayTopLeftModifier: Modifier = ({ transform, overlayNodeRect }) => ({
     ...transform,
-    x: transform.x - ((overlayNodeRect?.width ?? 0) / 2) + 10,
-    y: transform.y - ((overlayNodeRect?.height ?? 0) / 2) + 10,
+    x: transform.x + ((overlayNodeRect?.width ?? 0) / 2) - 10,
+    y: transform.y + ((overlayNodeRect?.height ?? 0) / 2) - 10,
   })
 
   return (
