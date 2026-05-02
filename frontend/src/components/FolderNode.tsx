@@ -45,8 +45,14 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
         expandTimerRef.current = null
       }
     }
-    // No cleanup needed — timer persists across re-renders via the ref
   }, [isOver, dropPosition, isExpanded, hasChildren, node.id, toggleExpand])
+
+  useEffect(() => () => {
+    if (expandTimerRef.current !== null) {
+      clearTimeout(expandTimerRef.current)
+      expandTimerRef.current = null
+    }
+  }, [])
 
   return (
     <div

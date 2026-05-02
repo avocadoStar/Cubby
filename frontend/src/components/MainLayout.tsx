@@ -242,6 +242,12 @@ export default function MainLayout() {
 
     // Strip prefix: folder draggables use bare id, bookmarks use "bookmark:"
     const id = rawId.startsWith('bookmark:') ? rawId.slice('bookmark:'.length) : rawId
+    const dragData = event.active.data.current
+
+    if (dragData && 'node' in dragData) {
+      setActive(id, dragData.node as Folder, 'sidebar', 'folder')
+      return
+    }
 
     // Find the item in our list
     const item = items.find(i =>
@@ -271,7 +277,9 @@ export default function MainLayout() {
     const position = calcDropPosition(rect, livePointerRef.current.y)
 
     // For bookmarks as drop targets, never allow "inside"
-    const isFolderDropTarget = overId.startsWith('droppable:') && items.some(i => i.kind === 'folder' && `droppable:${i.folder.id}` === overId)
+    const isFolderDropTarget =
+      overId.startsWith('droppable:sidebar:') ||
+      (overId.startsWith('droppable:') && items.some(i => i.kind === 'folder' && `droppable:${i.folder.id}` === overId))
     const finalPosition = (position === 'inside' && !isFolderDropTarget) ? 'after' : position
 
     if (finalPosition === 'inside') {
