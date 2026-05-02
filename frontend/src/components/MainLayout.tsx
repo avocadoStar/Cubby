@@ -427,31 +427,36 @@ export default function MainLayout() {
             const siblings = siblingsOf(newFolderId)
             ;({ prevId, nextId } = placement(siblings, siblings.length))
           } else {
-            // before/after folder: build interleaved list to find correct prev/next
+            // before/after folder: use the rendered interleaved panel order first,
+            // then fall back to a store-derived list if the target folder is not visible there.
             newFolderId = targetItem.folder.parent_id
-            const nodes = [
-              ...(currentChildrenMap.get(newFolderId) ?? [])
-                .filter(id => id !== itemDragId && folderStore.folderMap.has(id))
-                .map(id => ({ id, key: folderStore.folderMap.get(id)!.sort_key })),
-              ...currentBookmarks
-                .filter(b => b.folder_id === newFolderId && b.id !== itemDragId)
-                .map(b => ({ id: b.id, key: b.sort_key })),
-            ].sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
-            const ti = nodes.findIndex(n => n.id === targetItem.folder.id)
-            if (ti === -1) {
-              prevId = nodes.length > 0 ? nodes[nodes.length - 1].id : null
-              nextId = null
-            } else if (dropPosition === 'before') {
-              // prev = node just before target, next = target itself
-              prevId = ti > 0 ? nodes[ti - 1].id : null
-              nextId = nodes[ti].id
-            } else {
-              // prev = target itself, next = node just after target
-              prevId = nodes[ti].id
-              nextId = ti + 1 < nodes.length ? nodes[ti + 1].id : null
-            }
-            sortKey = undefined
-			console.warn("[BM-ORDER]", { ti, newFolderId, prevId, nextId })
+            const panelNodeIds = items
+              .filter((item) =>
+                item.kind === 'folder'
+                  ? item.folder.parent_id === newFolderId
+                  : item.bookmark.folder_id === newFolderId,
+              )
+              .filter((item) => item.kind === 'folder' || item.bookmark.id !== itemDragId)
+              .map((item) => item.kind === 'folder' ? item.folder.id : item.bookmark.id)
+            const nodeIds = panelNodeIds.includes(targetItem.folder.id)
+              ? panelNodeIds
+              : [
+                  ...(currentChildrenMap.get(newFolderId) ?? [])
+                    .filter(id => id !== itemDragId && folderStore.folderMap.has(id))
+                    .map(id => ({ id, key: folderStore.folderMap.get(id)!.sort_key })),
+                  ...currentBookmarks
+                    .filter(b => b.folder_id === newFolderId && b.id !== itemDragId)
+                    .map(b => ({ id: b.id, key: b.sort_key })),
+                ]
+                  .sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+                  .map((node) => node.id)
+            const targetIdx = nodeIds.indexOf(targetItem.folder.id)
+            const insertIdx = targetIdx === -1
+              ? nodeIds.length
+              : dropPosition === 'before'
+                ? targetIdx
+                : targetIdx + 1
+            ;({ prevId, nextId } = placement(nodeIds, insertIdx))
           }
         } else {
           // Bookmark relative to another bookmark: normal before/after ordering
