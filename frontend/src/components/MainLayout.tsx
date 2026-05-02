@@ -449,10 +449,12 @@ export default function MainLayout() {
       console.error('Move failed', e)
     }
 
+    console.warn('[END] clearing drag', { activeId: useDndStore.getState().activeId })
     clearDrag()
   }, [items, clearDrag])
 
   const handleDragCancel = useCallback(() => {
+    console.warn('[CANCEL]')
     clearDrag()
   }, [clearDrag])
 
