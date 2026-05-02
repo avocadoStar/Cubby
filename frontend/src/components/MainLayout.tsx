@@ -173,12 +173,13 @@ function DraggableFolderRow({
 }
 
 export default function MainLayout() {
-  const { bookmarks, load, selectAll, selectedFolderIds, toggleFolderSelect } = useBookmarkStore()
+  const { bookmarks, load, selectAll, selectedIds, selectedFolderIds, toggleFolderSelect } = useBookmarkStore()
   const { selectedId, childrenMap, folderMap, select } = useFolderStore()
   const { setActive, setOver, clearDrag, activeFolder, activeId } = useDndStore()
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const livePointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const multiDragRef = useRef<string[]>([])  // IDs being dragged in multi-select
 
   useEffect(() => { load(null) }, [])
   useEffect(() => { load(selectedId) }, [selectedId])
@@ -258,12 +259,23 @@ export default function MainLayout() {
       i.kind === 'folder' ? i.folder.id === id : i.bookmark.id === id
     )
     if (item) {
+      // Multi-select: if dragged item is selected, drag all selected items
+      const isSelected = item.kind === 'folder'
+        ? selectedFolderIds.has(item.folder.id)
+        : selectedIds.has(item.bookmark.id)
+      if (isSelected) {
+        const fIds = Array.from(selectedFolderIds)
+        const bIds = Array.from(selectedIds).map(bid => `bookmark:${bid}`)
+        multiDragRef.current = [...fIds, ...bIds]
+      } else {
+        multiDragRef.current = [rawId]
+      }
       setActive(id, item.kind === 'folder' ? (item.folder as unknown as Folder & { parent_id?: string | null }) : ({
         ...item.bookmark,
         parent_id: item.bookmark.folder_id,
       } as unknown as Folder & { parent_id?: string | null }), 'main', item.kind)
     }
-  }, [items, setActive])
+  }, [items, setActive, selectedIds, selectedFolderIds])
 
   const handleDragMove = useCallback((event: DragMoveEvent) => {
     const over = event.over
@@ -457,6 +469,37 @@ export default function MainLayout() {
       console.error('Move failed', e)
     }
 
+    // Multi-select: move remaining selected items after the first one
+    if (multiDragRef.current.length > 1) {
+      const primaryId = itemDragId
+      let anchorId = isBookmark
+        ? (prevId ?? nextId ?? undefined)
+        : (prevId ?? nextId ?? undefined)
+
+      for (const selId of multiDragRef.current) {
+        const strippedId = selId.startsWith('bookmark:') ? selId.slice('bookmark:'.length) : selId
+        if (strippedId === primaryId) continue  // skip the primary (already moved)
+
+        const isBM = selId.startsWith('bookmark:')
+        try {
+          if (isBM) {
+            const b = useBookmarkStore.getState().bookmarks.find(bk => bk.id === strippedId)
+            if (b) {
+              await bookmarkStore.move(strippedId, newFolderId ?? selectedId, anchorId ?? null, null, b.version)
+              anchorId = selId
+            }
+          } else {
+            const f = useFolderStore.getState().folderMap.get(strippedId)
+            if (f) {
+              await folderStore.moveFolder(strippedId, newParentId ?? selectedId, anchorId ?? null, null, f.version)
+              anchorId = strippedId
+            }
+          }
+        } catch (e) { console.error('Multi-move failed for', strippedId, e) }
+      }
+    }
+    multiDragRef.current = []
+
     clearDrag()
   }, [items, clearDrag])
 
@@ -542,10 +585,8 @@ export default function MainLayout() {
             }}
           >
             {useDndStore.getState().activeKind === 'bookmark' ? (
-              <div
-                className="flex-shrink-0 rounded-sm flex items-center justify-center text-[9px] text-[#666]"
-                style={{ width: 16, height: 16, background: '#e8e8e8' }}
-              >
+              <div className="flex-shrink-0 rounded-sm flex items-center justify-center text-[9px] text-[#666]"
+                style={{ width: 16, height: 16, background: '#e8e8e8' }}>
                 {(activeFolder.name ?? '').charAt(0)}
               </div>
             ) : (
@@ -556,6 +597,12 @@ export default function MainLayout() {
             <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">
               {activeFolder.name ?? ''}
             </span>
+            {multiDragRef.current.length > 1 && (
+              <span className="ml-2 flex-shrink-0 rounded-full bg-[#0078D4] text-white text-[10px] px-1.5 py-0.5 leading-none"
+                style={{ minWidth: 18, textAlign: 'center' }}>
+                {multiDragRef.current.length}
+              </span>
+            )}
           </div>
         )}
       </DragOverlay>
