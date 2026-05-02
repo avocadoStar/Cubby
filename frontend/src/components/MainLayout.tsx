@@ -391,13 +391,24 @@ export default function MainLayout() {
             const siblings = siblingsOf(newFolderId)
             ;({ prevId, nextId } = placement(siblings, siblings.length))
           } else {
-            // before/after a folder → compute sort key relative to the folder
-            // so the bookmark appears before/after it in the interleaved list
+            // before/after a folder: insert in bookmark list relative to folder position
             newFolderId = targetItem.folder.parent_id ?? selectedId
-            const refKey = targetItem.folder.sort_key
-            sortKey = dropPosition === 'before' ? sortBefore(refKey) : sortAfter(refKey)
-            prevId = null
-            nextId = null
+            const folderKey = targetItem.folder.sort_key
+            const allSiblings = siblingsOf(newFolderId)
+            // Find the split point: first bookmark whose sort_key > folder's sort_key
+            const splitIdx = allSiblings.findIndex(id => {
+              const b = currentBookmarks.find(bk => bk.id === id)
+              return b ? b.sort_key > folderKey : false
+            })
+            const effectiveSplit = splitIdx === -1 ? allSiblings.length : splitIdx
+            if (dropPosition === 'before') {
+              // Insert at split point (before the first post-folder bookmark)
+              ;({ prevId, nextId } = placement(allSiblings, effectiveSplit))
+            } else {
+              // Insert at split point (after the last pre-folder bookmark)
+              ;({ prevId, nextId } = placement(allSiblings, effectiveSplit))
+            }
+            sortKey = undefined
           }
         } else {
           // Bookmark relative to another bookmark: normal before/after ordering

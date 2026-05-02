@@ -3,14 +3,34 @@ package service
 import (
 	"cubby/internal/model"
 	"cubby/internal/repository"
+	"fmt"
 )
 
 type BookmarkService struct {
-	repo *repository.BookmarkRepo
+	repo       *repository.BookmarkRepo
+	folderRepo *repository.FolderRepo
 }
 
 func NewBookmarkService(repo *repository.BookmarkRepo) *BookmarkService {
 	return &BookmarkService{repo: repo}
+}
+
+func (s *BookmarkService) SetFolderRepo(fr *repository.FolderRepo) {
+	s.folderRepo = fr
+}
+
+func (s *BookmarkService) GetSortKey(id string) (string, error) {
+	b, err := s.repo.GetByID(id)
+	if err == nil {
+		return b.SortKey, nil
+	}
+	if s.folderRepo != nil {
+		f, err2 := s.folderRepo.Get(id)
+		if err2 == nil {
+			return f.SortKey, nil
+		}
+	}
+	return "", fmt.Errorf("sort key not found for id: %s", id)
 }
 
 func (s *BookmarkService) List(folderID *string) ([]model.Bookmark, error) {
@@ -69,18 +89,16 @@ func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID, sort
 	var prevKey, nextKey string
 
 	if prevID != nil {
-		prev, err := s.repo.GetByID(*prevID)
+		prevKey, err = s.GetSortKey(*prevID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("prev node not found: %w", err)
 		}
-		prevKey = prev.SortKey
 	}
 	if nextID != nil {
-		next, err := s.repo.GetByID(*nextID)
+		nextKey, err = s.GetSortKey(*nextID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("next node not found: %w", err)
 		}
-		nextKey = next.SortKey
 	}
 
 	var sortKey string

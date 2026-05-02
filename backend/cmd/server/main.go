@@ -27,6 +27,7 @@ func main() {
 	importSvc := service.NewImportService(folderRepo, bookmarkRepo)
 	metadataSvc := service.NewMetadataService()
 	folderSvc.SetBookmarkRepo(bookmarkRepo)
+	bookmarkSvc.SetFolderRepo(folderRepo)
 
 	r := gin.Default()
 	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, metadataSvc, cfg)
