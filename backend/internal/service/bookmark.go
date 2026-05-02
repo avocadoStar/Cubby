@@ -87,18 +87,27 @@ func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID, sort
 	}
 
 	var prevKey, nextKey string
-
-	if prevID != nil {
-		prevKey, err = s.GetSortKey(*prevID)
-		if err != nil {
-			return nil, fmt.Errorf("prev node not found: %w", err)
+	loadBoundaryKeys := func() error {
+		if prevID != nil {
+			prevKey, err = s.GetSortKey(*prevID)
+			if err != nil {
+				return fmt.Errorf("prev node not found: %w", err)
+			}
+		} else {
+			prevKey = ""
 		}
+		if nextID != nil {
+			nextKey, err = s.GetSortKey(*nextID)
+			if err != nil {
+				return fmt.Errorf("next node not found: %w", err)
+			}
+		} else {
+			nextKey = ""
+		}
+		return nil
 	}
-	if nextID != nil {
-		nextKey, err = s.GetSortKey(*nextID)
-		if err != nil {
-			return nil, fmt.Errorf("next node not found: %w", err)
-		}
+	if err := loadBoundaryKeys(); err != nil {
+		return nil, err
 	}
 
 	var sortKey string
@@ -113,21 +122,97 @@ func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID, sort
 		} else {
 			sortKey = after(siblings[len(siblings)-1].SortKey)
 		}
+		if sortKey == "" {
+			if err := s.rebalanceChildren(folderID, current.ID); err != nil {
+				return nil, err
+			}
+			siblings, err = loadSiblings()
+			if err != nil {
+				return nil, err
+			}
+			if len(siblings) == 0 {
+				sortKey = after("")
+			} else {
+				sortKey = after(siblings[len(siblings)-1].SortKey)
+			}
+		}
 	case prevID == nil:
 		sortKey = before(nextKey)
+		if sortKey == "" || sortKey >= nextKey {
+			if err := s.rebalanceChildren(folderID, current.ID); err != nil {
+				return nil, err
+			}
+			if err := loadBoundaryKeys(); err != nil {
+				return nil, err
+			}
+			sortKey = before(nextKey)
+		}
 	case nextID == nil:
 		sortKey = after(prevKey)
+		if sortKey == "" || sortKey <= prevKey {
+			if err := s.rebalanceChildren(folderID, current.ID); err != nil {
+				return nil, err
+			}
+			if err := loadBoundaryKeys(); err != nil {
+				return nil, err
+			}
+			sortKey = after(prevKey)
+		}
 	default:
 		if needsRebalance(prevKey, nextKey) {
-			return nil, ErrConflict
+			if err := s.rebalanceChildren(folderID, current.ID); err != nil {
+				return nil, err
+			}
+			if err := loadBoundaryKeys(); err != nil {
+				return nil, err
+			}
 		}
 		sortKey = between(prevKey, nextKey)
+		if sortKey == "" || sortKey <= prevKey || sortKey >= nextKey {
+			return nil, ErrConflict
+		}
 	}
 	if sortKey == "" {
 		return nil, ErrConflict
 	}
 
 	return s.repo.Move(id, folderID, sortKey, version)
+}
+
+func (s *BookmarkService) rebalanceChildren(folderID *string, excludeID string) error {
+	children, err := s.repo.List(folderID)
+	if err != nil {
+		return err
+	}
+	if len(children) == 0 {
+		return nil
+	}
+
+	filtered := make([]model.Bookmark, 0, len(children))
+	for _, child := range children {
+		if child.ID != excludeID {
+			filtered = append(filtered, child)
+		}
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+
+	keys := rebalanceKeys(len(filtered))
+	tx, err := s.repo.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for i, child := range filtered {
+		_, err := tx.Exec(`UPDATE bookmark SET sort_key=?, version=version+1, updated_at=datetime('now') WHERE id=? AND deleted_at IS NULL`,
+			keys[i], child.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (s *BookmarkService) BatchMove(ids []string, targetFolderID, anchorID, position string) error {
