@@ -9,7 +9,6 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
   const { expandedIds, selectedId, childrenMap, toggleExpand, select } = useFolderStore()
   const overId = useDndStore((s) => s.overId)
   const dropPosition = useDndStore((s) => s.dropPosition)
-  const dndSource = useDndStore((s) => s.source)
 
   const isExpanded = expandedIds.has(node.id)
   const isSelected = selectedId === node.id
@@ -17,7 +16,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
   const hasChildren = children === undefined || children.length > 0
 
   const isOver = overId === `droppable:sidebar:${node.id}`
-  const isInside = isOver && dropPosition === 'inside' && dndSource === 'sidebar'
+  const isInside = isOver && dropPosition === 'inside'
 
   const {
     attributes,
