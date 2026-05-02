@@ -93,7 +93,8 @@
       "Bash(node C:/Users/15638/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs task --write --effort high '<task> *)",
       "Bash(node \"C:/Users/15638/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs\" status task-moo7wm8s-c1er6s --json)",
       "Bash(node \"C:/Users/15638/.claude/plugins/cache/openai-codex/codex/1.0.4/scripts/codex-companion.mjs\" result task-moo7wm8s-c1er6s --json)",
-      "Bash(git -C \"e:/project/Cubby\" diff -- \"frontend/src/components/MainLayout.tsx\")"
+      "Bash(git -C \"e:/project/Cubby\" diff -- \"frontend/src/components/MainLayout.tsx\")",
+      "Bash(items)"
     ],
     "additionalDirectories": [
       "e:\\project\\Cubby\\backend\\internal\\handler",

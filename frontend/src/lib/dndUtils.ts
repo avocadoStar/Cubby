@@ -122,10 +122,18 @@ export function pointerClosestCenter(args: Parameters<CollisionDetection>[0]) {
 
   if (!pointerCoordinates) return []
 
+  // Prefer droppables whose rect actually contains the pointer
+  const within = droppableContainers.filter(c => {
+    const r = c.rect.current
+    return r && pointerCoordinates.x >= r.left && pointerCoordinates.x <= r.left + r.width
+      && pointerCoordinates.y >= r.top && pointerCoordinates.y <= r.top + r.height
+  })
+  const candidates = within.length > 0 ? within : droppableContainers
+
   let closestDistance = Infinity
   let closestId: string | null = null
 
-  for (const container of droppableContainers) {
+  for (const container of candidates) {
     const rect = container.rect.current
     if (!rect) continue
 
