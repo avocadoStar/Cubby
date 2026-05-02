@@ -246,6 +246,7 @@ export default function MainLayout() {
     const dragData = event.active.data.current
 
     if (dragData && 'node' in dragData) {
+      console.warn('[START-SB]', { id, source: 'sidebar' })
       setActive(id, dragData.node as Folder, 'sidebar', 'folder')
       return
     }
