@@ -169,11 +169,11 @@ func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID, sort
 		}
 		sortKey = between(prevKey, nextKey)
 		if sortKey == "" || sortKey <= prevKey || sortKey >= nextKey {
-			return nil, ErrConflict
+			return nil, fmt.Errorf("between(%q,%q) produced invalid key %q", prevKey, nextKey, sortKey)
 		}
 	}
 	if sortKey == "" {
-		return nil, ErrConflict
+		return nil, fmt.Errorf("empty sortKey with prev=%q next=%q", prevKey, nextKey)
 	}
 
 	return s.repo.Move(id, folderID, sortKey, version)
