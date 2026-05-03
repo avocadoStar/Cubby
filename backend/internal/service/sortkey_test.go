@@ -54,7 +54,6 @@ func (r *stubBookmarkRepo) BatchSoftDelete(ids []string) error    { return nil }
 func (r *stubBookmarkRepo) Move(id string, folderID *string, sortKey string, version int) (*model.Bookmark, error) {
 	return nil, nil
 }
-func (r *stubBookmarkRepo) Search(query string) ([]model.Bookmark, error)       { return nil, nil }
 func (r *stubBookmarkRepo) SearchBoth(query string) ([]model.SearchResult, error) { return nil, nil }
 func (r *stubBookmarkRepo) UpdateNotes(id, notes string) error                     { return nil }
 func (r *stubBookmarkRepo) Rebalance(updates []repository.SortKeyUpdate) error {

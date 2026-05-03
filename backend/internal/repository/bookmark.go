@@ -141,24 +141,6 @@ func (r *bookmarkRepo) Rebalance(updates []SortKeyUpdate) error {
 	return tx.Commit()
 }
 
-func (r *bookmarkRepo) Search(query string) ([]model.Bookmark, error) {
-	q := "%" + query + "%"
-	rows, err := r.DB.Query(`SELECT id,title,url,folder_id,sort_key,version,notes,created_at,updated_at
-		FROM bookmark WHERE (title LIKE ? OR url LIKE ?) AND deleted_at IS NULL ORDER BY sort_key`, q, q)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var bookmarks []model.Bookmark
-	for rows.Next() {
-		var b model.Bookmark
-		if err := rows.Scan(&b.ID, &b.Title, &b.URL, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt); err != nil {
-			return nil, err
-		}
-		bookmarks = append(bookmarks, b)
-	}
-	return bookmarks, nil
-}
 
 func (r *bookmarkRepo) SearchBoth(query string) ([]model.SearchResult, error) {
 	q := "%" + query + "%"

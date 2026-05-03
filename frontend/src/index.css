@@ -26,19 +26,5 @@ body {
   margin: 0;
 }
 
-/* Card row styling */
-.card-row {
-  display: flex; align-items: center; height: 38px;
-  padding: 0 12px; border-radius: 8px;
-  border: 1px solid var(--app-border);
-  background: var(--app-card);
-  margin: 0 4px 8px 4px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.card-row:hover {
-  border-color: #CCC;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-}
-
 .text-body { font-size: var(--fs-body); }
 .text-small { font-size: var(--fs-small); }

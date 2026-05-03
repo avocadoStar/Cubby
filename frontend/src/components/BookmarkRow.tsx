@@ -59,8 +59,6 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         const el = document.querySelector(`[data-id="${bookmark.id}"]`) as HTMLElement | null
         if (el && !isOverInside && !isSelected) { el.style.borderColor = 'var(--app-border, #E0E0E0)'; el.style.boxShadow = 'none' }
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       onClick={() => window.open(bookmark.url, '_blank')}
       {...listeners}
       {...attributes}
