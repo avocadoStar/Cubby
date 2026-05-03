@@ -38,7 +38,7 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
 
   return (
     <div style={{ width: open ? 300 : 0, overflow: 'hidden', background: 'var(--app-card)', borderLeft: open ? '1px solid var(--app-border)' : '1px solid transparent', transition: 'width 0.2s ease-out, border-color 0.2s', flexShrink: 0 }}>
-      <div style={{ width: 300, padding: open ? 20 : 0, opacity: open ? 1 : 0, transition: 'opacity 0.15s' }}>
+      <div style={{ width: 300, padding: open ? '20px 20px 12px' : 0, opacity: open ? 1 : 0, transition: 'opacity 0.15s', display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', overflow: 'hidden' }}>
         {bookmark && (
           <>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -58,7 +58,7 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
               <div style={{ fontSize: 10, color: notes.length > 900 ? '#E4A000' : 'var(--app-text3)' }}>{notes.length} / 1000</div>
             </div>
             <textarea value={notes} onChange={(e) => { setNotes(e.target.value); save(e.target.value) }}
-              placeholder="输入备注..." style={{ width: '100%', minHeight: 180, maxHeight: 340, padding: 12, borderRadius: 8, border: '1px solid var(--app-border)', fontSize: 13, lineHeight: 1.6, fontFamily: 'inherit', color: 'var(--app-text)', background: 'var(--app-note-bg)', resize: 'none', outline: 'none' }}
+              placeholder="输入备注..." style={{ width: '100%', flex: 1, minHeight: 120, padding: 12, borderRadius: 8, border: '1px solid var(--app-border)', fontSize: 13, lineHeight: 1.6, fontFamily: 'inherit', color: 'var(--app-text)', background: 'var(--app-note-bg)', resize: 'none', outline: 'none' }}
               onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--app-accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,120,212,.1)' }}
               onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--app-border)'; e.currentTarget.style.boxShadow = 'none' }}
             />
@@ -66,6 +66,10 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
               <span style={{ fontSize: 11, color: 'var(--app-text3)', opacity: saved ? 1 : 0, transition: 'opacity .3s' }}>已自动保存</span>
               <button onClick={() => { setNotes(''); save('') }} style={{ fontSize: 11, color: 'var(--app-text3)', border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px 8px', borderRadius: 4 }}>清空备注</button>
             </div>
+            <svg style={{ position: 'absolute', bottom: -10, right: -10, width: 140, height: 200, opacity: 0.04, pointerEvents: 'none' }} viewBox="0 0 100 160">
+              <path d="M50 10 C30 30 10 60 8 90 C6 120 15 145 25 150 C35 155 42 150 48 140 C38 130 28 110 30 90 C32 70 40 50 50 35 C55 28 58 22 56 15 Z" fill="var(--app-accent)"/>
+              <path d="M50 10 L52 5 L48 6 Z" fill="var(--app-accent)"/>
+            </svg>
           </>
         )}
       </div>

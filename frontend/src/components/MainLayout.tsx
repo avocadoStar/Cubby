@@ -493,7 +493,7 @@ export default function MainLayout() {
                     folderMap={folderMap}
                     style={wrapperStyle}
                   >
-                    <BookmarkRow bookmark={item.bookmark} onOpenNotes={() => setNotesBookmarkId(item.bookmark.id)} />
+                    <BookmarkRow bookmark={item.bookmark} onOpenNotes={() => setNotesBookmarkId(prev => prev === item.bookmark.id ? null : item.bookmark.id)} />
                   </ItemDroppable>
                 )
               })}
