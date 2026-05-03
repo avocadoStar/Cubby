@@ -4,6 +4,7 @@ export interface Folder {
   parent_id: string | null
   sort_key: string
   version: number
+  has_children: boolean
   created_at: string
   updated_at: string
 }

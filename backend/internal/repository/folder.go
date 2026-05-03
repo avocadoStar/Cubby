@@ -17,10 +17,14 @@ func (r *folderRepo) List(parentID *string) ([]model.Folder, error) {
 	var rows *sql.Rows
 	var err error
 	if parentID == nil {
-		rows, err = r.DB.Query(`SELECT id,name,parent_id,sort_key,version,created_at,updated_at
+		rows, err = r.DB.Query(`SELECT id,name,parent_id,sort_key,version,
+			EXISTS(SELECT 1 FROM folder c WHERE c.parent_id=folder.id AND c.deleted_at IS NULL) as has_children,
+			created_at,updated_at
 			FROM folder WHERE parent_id IS NULL AND deleted_at IS NULL ORDER BY sort_key`)
 	} else {
-		rows, err = r.DB.Query(`SELECT id,name,parent_id,sort_key,version,created_at,updated_at
+		rows, err = r.DB.Query(`SELECT id,name,parent_id,sort_key,version,
+			EXISTS(SELECT 1 FROM folder c WHERE c.parent_id=folder.id AND c.deleted_at IS NULL) as has_children,
+			created_at,updated_at
 			FROM folder WHERE parent_id=? AND deleted_at IS NULL ORDER BY sort_key`, *parentID)
 	}
 	if err != nil {
@@ -30,7 +34,7 @@ func (r *folderRepo) List(parentID *string) ([]model.Folder, error) {
 	var folders []model.Folder
 	for rows.Next() {
 		var f model.Folder
-		if err := rows.Scan(&f.ID, &f.Name, &f.ParentID, &f.SortKey, &f.Version, &f.CreatedAt, &f.UpdatedAt); err != nil {
+		if err := rows.Scan(&f.ID, &f.Name, &f.ParentID, &f.SortKey, &f.Version, &f.HasChildren, &f.CreatedAt, &f.UpdatedAt); err != nil {
 			return nil, err
 		}
 		folders = append(folders, f)

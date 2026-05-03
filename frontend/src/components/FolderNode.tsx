@@ -6,14 +6,13 @@ import { useDraggable } from '@dnd-kit/core'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 
 const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
-  const { expandedIds, selectedId, childrenMap, toggleExpand, select } = useFolderStore()
+  const { expandedIds, selectedId, toggleExpand, select } = useFolderStore()
   const overId = useDndStore((s) => s.overId)
   const dropPosition = useDndStore((s) => s.dropPosition)
 
   const isExpanded = expandedIds.has(node.id)
   const isSelected = selectedId === node.id
-  const children = childrenMap.get(node.id)
-  const hasChildren = children === undefined || children.length > 0
+  const hasChildren = node.has_children
 
   const isOver = overId === `droppable:sidebar:${node.id}`
   const isInside = isOver && dropPosition === 'inside'

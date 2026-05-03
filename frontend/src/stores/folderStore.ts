@@ -43,6 +43,13 @@ export const useFolderStore = create<FolderState>((set, get) => ({
         ids.push(f.id)
       }
       childrenMap.set(parentId, ids)
+      // Update parent's has_children flag
+      if (parentId !== null) {
+        const parent = folderMap.get(parentId)
+        if (parent) {
+          folderMap.set(parentId, { ...parent, has_children: ids.length > 0 })
+        }
+      }
       return { folderMap, childrenMap }
     })
     get().rebuildVisible()

@@ -1,14 +1,15 @@
 package model
 
 type Folder struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	ParentID  *string `json:"parent_id"`
-	SortKey   string  `json:"sort_key"`
-	Version   int     `json:"version"`
-	DeletedAt *string `json:"-"`
-	CreatedAt string  `json:"created_at"`
-	UpdatedAt string  `json:"updated_at"`
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	ParentID    *string `json:"parent_id"`
+	SortKey     string  `json:"sort_key"`
+	Version     int     `json:"version"`
+	HasChildren bool    `json:"has_children"`
+	DeletedAt   *string `json:"-"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
 }
 
 type Bookmark struct {
