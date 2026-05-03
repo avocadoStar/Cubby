@@ -36,7 +36,7 @@ function AllBookmarksDroppable({
         stroke={isSelected ? '#0078D4' : '#1a1a1a'}
         strokeWidth={1.6}
       />
-      <span className="ml-2.5 text-[13px] text-[#1a1a1a]">所有书签</span>
+      <span className="ml-2.5 text-body text-[#1a1a1a]">所有书签</span>
     </div>
   )
 }
@@ -133,7 +133,7 @@ export default function Sidebar() {
           <div className="flex items-center h-8 border border-[#d1d1d1] rounded px-2 gap-1.5">
             <Search size={14} stroke="#888" />
             <input
-              className="flex-1 border-none outline-none text-[13px] bg-transparent"
+              className="flex-1 border-none outline-none text-body bg-transparent"
               placeholder="搜索收藏夹"
               value={query}
               onChange={(e) => setQuery(e.target.value)}

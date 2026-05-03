@@ -75,16 +75,16 @@ const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
         )}
       </div>
       <div
-        className="flex-shrink-0 mr-2 rounded-sm flex items-center justify-center text-[9px] text-[#666]"
+        className="flex-shrink-0 mr-2 rounded-sm flex items-center justify-center text-small text-[#666]"
         style={{ width: 16, height: 16, background: '#e8e8e8' }}
       >
         {bookmark.title.charAt(0)}
       </div>
-      <span className="flex-1 truncate text-[13px] text-[#1a1a1a]">{bookmark.title}</span>
-      <span className="flex-shrink-0 truncate text-xs text-[#888] mr-8" style={{ width: 320 }}>
+      <span className="flex-1 truncate text-body text-[#1a1a1a]">{bookmark.title}</span>
+      <span className="flex-shrink-0 truncate text-xs-scalable text-[#888] mr-8" style={{ width: 320 }}>
         {bookmark.url}
       </span>
-      <span className="flex-shrink-0 text-xs text-[#888]" style={{ width: 100, minWidth: 100 }}>
+      <span className="flex-shrink-0 text-xs-scalable text-[#888]" style={{ width: 100, minWidth: 100 }}>
         {bookmark.created_at.slice(0, 10)}
       </span>
       <div

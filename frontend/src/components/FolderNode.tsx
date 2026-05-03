@@ -105,7 +105,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       >
         <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
       </svg>
-      <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">{node.name}</span>
+      <span className="ml-2 truncate text-body text-[#1a1a1a]">{node.name}</span>
     </div>
   )
 })

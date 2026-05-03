@@ -137,9 +137,9 @@ function FolderRowComponent({
       <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6" className="flex-shrink-0 mr-2">
         <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
       </svg>
-      <span className="flex-1 truncate text-[13px] text-[#1a1a1a]">{folder.name}</span>
-      <span className="flex-shrink-0 text-xs text-[#888] mr-8" style={{ width: 320 }}>文件夹</span>
-      <span className="flex-shrink-0 text-xs text-[#888]" style={{ width: 100, minWidth: 100 }} />
+      <span className="flex-1 truncate text-body text-[#1a1a1a]">{folder.name}</span>
+      <span className="flex-shrink-0 text-xs-scalable text-[#888] mr-8" style={{ width: 320 }}>文件夹</span>
+      <span className="flex-shrink-0 text-xs-scalable text-[#888]" style={{ width: 100, minWidth: 100 }} />
       <div
         className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default mr-2"
         style={{ opacity: hovered ? 1 : 0.35, color: hovered ? '#cc3333' : '#999' }}
@@ -610,7 +610,7 @@ export default function MainLayout() {
           <Toolbar />
           <BatchActionBar />
           {isSearching && (
-            <div className="px-4 py-2 text-[13px] text-[#666] border-b border-[#e8e8e8]">
+            <div className="px-4 py-2 text-body text-[#666] border-b border-[#e8e8e8]">
               找到了与"<span className="text-[#1a1a1a] font-medium">{searchQuery}</span>"相符的 {searchResults.length} 结果
             </div>
           )}
@@ -638,11 +638,11 @@ export default function MainLayout() {
                         <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
                       </svg>
                     ) : (
-                      <div className="flex-shrink-0 mr-2 rounded-sm flex items-center justify-center text-[9px] text-[#666]" style={{ width: 16, height: 16, background: '#e8e8e8' }}>
+                      <div className="flex-shrink-0 mr-2 rounded-sm flex items-center justify-center text-small text-[#666]" style={{ width: 16, height: 16, background: '#e8e8e8' }}>
                         {r.title.charAt(0)}
                       </div>
                     )}
-                    <span className="flex-1 truncate text-[13px] text-[#1a1a1a]">
+                    <span className="flex-1 truncate text-body text-[#1a1a1a]">
                       {highlightMatches(r.title, searchQuery).map((seg, i) => (
                         <span key={i} style={seg.highlight ? { background: '#FFF2A8', borderRadius: 2, padding: '0 1px' } : undefined}>
                           {seg.text}
@@ -650,7 +650,7 @@ export default function MainLayout() {
                       ))}
                     </span>
                     {r.kind === 'bookmark' && r.url && (
-                      <span className="flex-shrink-0 truncate text-xs text-[#888] ml-4" style={{ maxWidth: 320 }}>
+                      <span className="flex-shrink-0 truncate text-xs-scalable text-[#888] ml-4" style={{ maxWidth: 320 }}>
                         {highlightMatches(r.url, searchQuery).map((seg, i) => (
                           <span key={i} style={seg.highlight ? { background: '#FFF2A8', borderRadius: 2, padding: '0 1px' } : undefined}>
                             {seg.text}
@@ -659,12 +659,12 @@ export default function MainLayout() {
                       </span>
                     )}
                     {r.kind === 'folder' && (
-                      <span className="flex-shrink-0 text-xs text-[#888] ml-4">文件夹</span>
+                      <span className="flex-shrink-0 text-xs-scalable text-[#888] ml-4">文件夹</span>
                     )}
                   </div>
                 ))}
                 {searchResults.length === 0 && searchQuery && (
-                  <div className="text-center text-[13px] text-[#999] py-12">没有找到相关结果</div>
+                  <div className="text-center text-body text-[#999] py-12">没有找到相关结果</div>
                 )}
               </div>
             ) : (
@@ -732,7 +732,7 @@ export default function MainLayout() {
             }}
           >
             {activeItem.kind === 'bookmark' ? (
-              <div className="flex-shrink-0 rounded-sm flex items-center justify-center text-[9px] text-[#666]"
+              <div className="flex-shrink-0 rounded-sm flex items-center justify-center text-small text-[#666]"
                 style={{ width: 16, height: 16, background: '#e8e8e8' }}>
                 {(activeItem.title).charAt(0)}
               </div>
@@ -741,7 +741,7 @@ export default function MainLayout() {
                 <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
               </svg>
             )}
-            <span className="ml-2 truncate text-[13px] text-[#1a1a1a]">
+            <span className="ml-2 truncate text-body text-[#1a1a1a]">
               {activeItem.title}
             </span>
             {multiDragRef.current.length > 1 && (

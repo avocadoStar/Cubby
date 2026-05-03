@@ -13,7 +13,7 @@ export default function Breadcrumb() {
   }
 
   return (
-    <div className="flex items-center text-[13px]">
+    <div className="flex items-center text-body">
       {path.map((p, i) => (
         <span key={p.id ?? 'root'} className="flex items-center">
           {i > 0 && <span className="text-[#999] mx-0.5">/</span>}

@@ -14,7 +14,7 @@ export default function ToastContainer() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-lg shadow-lg text-[13px] text-white"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg shadow-lg text-body text-white"
           style={{
             background: '#323130',
             animation: 'toast-in 0.2s ease-out',
@@ -23,7 +23,7 @@ export default function ToastContainer() {
           <span>{toast.message}</span>
           {toast.onUndo && (
             <button
-              className="px-2 py-0.5 rounded text-[13px] font-medium cursor-pointer border-none"
+              className="px-2 py-0.5 rounded text-body font-medium cursor-pointer border-none"
               style={{ background: 'rgba(255,255,255,0.2)', color: '#69C3FF' }}
               onClick={() => {
                 toast.onUndo?.()

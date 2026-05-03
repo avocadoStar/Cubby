@@ -129,25 +129,25 @@ export default function ContextMenu() {
         >
           {isBookmark && (
             <>
-              <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
                 onClick={() => { closeMenu(); if (targetId) setEditingBookmark(targetId) }}>
                 编辑
               </button>
-              <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
                 onClick={handleCopyLink}>
                 复制链接
               </button>
               <div className="border-t border-[#e8e8e8] my-0.5" />
-              <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
                 onClick={() => openUrl('_blank')}>
                 在新标签页中打开
               </button>
-              <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
                 onClick={() => openUrl('_blank', 'popup')}>
                 在新窗口中打开
               </button>
               <div className="border-t border-[#e8e8e8] my-0.5" />
-              <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-red-500 hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body text-red-500 hover:bg-[#f5f5f5] cursor-default"
                 onClick={handleDelete}>
                 删除
               </button>
@@ -156,12 +156,12 @@ export default function ContextMenu() {
 
           {!isBookmark && (
             <>
-              <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
                 onClick={handleRename}>
                 重命名
               </button>
               <div className="border-t border-[#e8e8e8] my-0.5" />
-              <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-red-500 hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body text-red-500 hover:bg-[#f5f5f5] cursor-default"
                 onClick={handleDelete}>
                 删除
               </button>
@@ -198,8 +198,8 @@ export default function ContextMenu() {
               className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-4"
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setRenamingFolder(null)} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-[13px] cursor-default">取消</button>
-              <button onClick={submitRename} disabled={!folderName.trim()} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-[13px] font-medium cursor-default disabled:opacity-50">保存</button>
+              <button onClick={() => setRenamingFolder(null)} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-body cursor-default">取消</button>
+              <button onClick={submitRename} disabled={!folderName.trim()} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-body font-medium cursor-default disabled:opacity-50">保存</button>
             </div>
           </div>
         </div>

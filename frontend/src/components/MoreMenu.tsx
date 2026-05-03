@@ -29,7 +29,7 @@ export default function MoreMenu() {
         {open && (
           <div className="absolute right-0 top-9 w-[180px] bg-white border border-[#e0e0e0] rounded-lg shadow-lg p-1 z-50">
             <button
-              className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
               onClick={() => { setShowImport(true); setOpen(false) }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -37,7 +37,7 @@ export default function MoreMenu() {
             </button>
             <a
               href="/api/export"
-              className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default no-underline"
+              className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default no-underline"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span>导出收藏夹</span>

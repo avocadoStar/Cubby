@@ -26,9 +26,9 @@ export default function EditBookmarkModal({ bookmark, onClose, onSaved }: {
         <input value={url} onChange={(e) => setUrl(e.target.value)}
           placeholder="URL" className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-4" />
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-[13px] cursor-default">取消</button>
+          <button onClick={onClose} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-body cursor-default">取消</button>
           <button onClick={handleSave} disabled={!title.trim() || !url.trim()}
-            className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-[13px] font-medium cursor-default disabled:opacity-50">保存</button>
+            className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-body font-medium cursor-default disabled:opacity-50">保存</button>
         </div>
       </div>
     </div>

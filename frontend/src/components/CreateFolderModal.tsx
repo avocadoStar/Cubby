@@ -24,8 +24,8 @@ export default function CreateFolderModal({ parentId, onClose }: { parentId: str
           className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-4"
         />
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-[13px] text-[#1a1a1a] cursor-default">取消</button>
-          <button onClick={handleSubmit} disabled={!name.trim()} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-[13px] font-medium cursor-default disabled:opacity-50">创建</button>
+          <button onClick={onClose} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-body text-[#1a1a1a] cursor-default">取消</button>
+          <button onClick={handleSubmit} disabled={!name.trim()} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-body font-medium cursor-default disabled:opacity-50">创建</button>
         </div>
       </div>
     </div>

@@ -1,9 +1,18 @@
 @import "tailwindcss";
 
+:root {
+  --fs-body: 13px;
+  --fs-small: 9px;
+}
+
 body {
   font-family: 'Segoe UI', -apple-system, sans-serif;
-  font-size: 13px;
+  font-size: var(--fs-body);
   background: #FFFFFF;
   color: #1a1a1a;
   margin: 0;
 }
+
+.text-body { font-size: var(--fs-body); }
+.text-small { font-size: var(--fs-small); }
+.text-xs-scalable { font-size: calc(var(--fs-body) - 1px); }

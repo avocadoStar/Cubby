@@ -5,11 +5,13 @@ import { useFolderStore } from '../stores/folderStore'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { api } from '../services/api'
 import CreateFolderModal from './CreateFolderModal'
+import FontSizePopover from './FontSizePopover'
 
 export default function Toolbar() {
   const { selectedId } = useFolderStore()
   const { load } = useBookmarkStore()
   const [showCreateFolder, setShowCreateFolder] = useState(false)
+  const [showFontSize, setShowFontSize] = useState(false)
   const [showAddBookmark, setShowAddBookmark] = useState(false)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
@@ -60,7 +62,7 @@ export default function Toolbar() {
         <Breadcrumb />
         <div className="flex-1" />
         <button
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
           onClick={() => setShowAddBookmark(true)}
         >
           <svg aria-hidden="true" fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
@@ -70,7 +72,7 @@ export default function Toolbar() {
           <span>添加收藏夹</span>
         </button>
         <button
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
           onClick={() => setShowCreateFolder(true)}
         >
           <svg fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
@@ -78,6 +80,18 @@ export default function Toolbar() {
           </svg>
           <span>添加文件夹</span>
         </button>
+        <div style={{ position: 'relative' }}>
+          <button
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+            onClick={() => setShowFontSize(!showFontSize)}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+              <text x="3" y="15" fontFamily="serif" fontSize="14" fontWeight="bold">A</text>
+              <text x="11" y="13" fontFamily="serif" fontSize="9">A</text>
+            </svg>
+          </button>
+          {showFontSize && <FontSizePopover onClose={() => setShowFontSize(false)} />}
+        </div>
         <MoreMenu />
       </div>
 
@@ -101,8 +115,8 @@ export default function Toolbar() {
               className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-4"
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowAddBookmark(false)} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-[13px] cursor-default">取消</button>
-              <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-[13px] font-medium cursor-default disabled:opacity-50">添加</button>
+              <button onClick={() => setShowAddBookmark(false)} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-body cursor-default">取消</button>
+              <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-body font-medium cursor-default disabled:opacity-50">添加</button>
             </div>
           </div>
         </div>
