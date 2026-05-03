@@ -4,7 +4,7 @@ import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useDndStore } from '../stores/dndStore'
 import { useDraggable } from '@dnd-kit/core'
 
-const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
+const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpenNotes?: () => void }) => {
   const { selectedIds, toggleSelect, deleteOne, deletingIds } = useBookmarkStore()
   const isSelected = selectedIds.has(bookmark.id)
   const isDeleting = deletingIds.has(bookmark.id)
@@ -31,26 +31,33 @@ const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
       ref={setNodeRef}
       data-context="bookmark"
       data-id={bookmark.id}
-      className="flex items-center mx-1 px-2 rounded select-none cursor-default"
+      className="flex items-center px-2 rounded select-none cursor-default"
       style={{
-        height: isDeleting ? 0 : 32,
+        height: isDeleting ? 0 : 38,
         opacity: isDeleting ? 0 : isDragging ? 0.3 : 1,
-        marginTop: isDeleting ? 0 : undefined,
-        marginBottom: isDeleting ? 0 : undefined,
-        paddingTop: isDeleting ? 0 : undefined,
-        paddingBottom: isDeleting ? 0 : undefined,
+        marginBottom: isDeleting ? 0 : 8,
+        marginLeft: 4, marginRight: 4,
         overflow: 'hidden',
-        transition: isDeleting ? 'opacity 0.2s ease-out, height 0.2s ease-out 0.05s, margin 0.2s ease-out 0.05s, padding 0.2s ease-out 0.05s' : 'none',
-        background: isOverInside
-          ? '#E5F0FF'
-          : isSelected
-            ? '#E5F0FF'
-            : hovered
-              ? '#F5F5F5'
-              : 'transparent',
-        outline: isOverInside ? '1px solid #0078D4' : undefined,
+        borderRadius: 8,
+        border: '1px solid var(--app-border)',
+        transition: isDeleting ? 'opacity 0.2s ease-out, height 0.2s ease-out, margin 0.2s ease-out' : 'border-color 0.15s, box-shadow 0.15s',
+        background: isOverInside ? 'var(--accent-light, #E5F0FF)'
+          : isSelected ? 'var(--accent-light, #E5F0FF)'
+          : hovered ? 'var(--app-hover, #F5F5F5)'
+          : 'var(--app-card, #FFFFFF)',
+        outline: isOverInside ? '1px solid var(--app-accent, #0078D4)' : undefined,
         outlineOffset: -1,
         touchAction: 'none',
+      }}
+      onMouseEnter={() => {
+        setHovered(true)
+        const el = document.querySelector(`[data-id="${bookmark.id}"]`) as HTMLElement | null
+        if (el && !isOverInside && !isSelected) { el.style.borderColor = '#CCC'; el.style.boxShadow = '0 1px 2px rgba(0,0,0,0.04)' }
+      }}
+      onMouseLeave={() => {
+        setHovered(false)
+        const el = document.querySelector(`[data-id="${bookmark.id}"]`) as HTMLElement | null
+        if (el && !isOverInside && !isSelected) { el.style.borderColor = 'var(--app-border, #E0E0E0)'; el.style.boxShadow = 'none' }
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -89,13 +96,27 @@ const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
       </span>
       <div
         className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default"
-        style={{ opacity: hovered ? 1 : 0.35, color: hovered ? '#cc3333' : '#999' }}
+        style={{ opacity: hovered ? 1 : 0.35, color: hovered ? 'var(--app-danger, #cc3333)' : '#999' }}
         onClick={(e) => { e.stopPropagation(); deleteOne(bookmark.id) }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </div>
+      {onOpenNotes && (
+        <>
+          <div className="flex-shrink-0" style={{ width: 1, alignSelf: 'stretch', background: hovered ? '#e0e0e0' : 'transparent', margin: '0 6px' }} />
+          <button
+            className="flex-shrink-0 flex items-center justify-center rounded cursor-default border-none"
+            style={{
+              width: 26, height: 26, opacity: hovered ? 1 : 0.35,
+              color: bookmark.notes ? 'var(--app-accent, #0078D4)' : 'var(--app-text3, #999)',
+              fontWeight: bookmark.notes ? 700 : 400, background: 'transparent', fontSize: 12,
+            }}
+            onClick={(e) => { e.stopPropagation(); onOpenNotes() }}
+          >N</button>
+        </>
+      )}
     </div>
   )
 })

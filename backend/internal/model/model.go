@@ -19,6 +19,7 @@ type Bookmark struct {
 	FolderID  *string `json:"folder_id"`
 	SortKey   string  `json:"sort_key"`
 	Version   int     `json:"version"`
+	Notes     string  `json:"notes"`
 	DeletedAt *string `json:"-"`
 	CreatedAt string  `json:"created_at"`
 	UpdatedAt string  `json:"updated_at"`

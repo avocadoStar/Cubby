@@ -17,6 +17,7 @@ type BookmarkRepo interface {
 	Move(id string, folderID *string, sortKey string, version int) (*model.Bookmark, error)
 	Search(query string) ([]model.Bookmark, error)
 	SearchBoth(query string) ([]model.SearchResult, error)
+	UpdateNotes(id, notes string) error
 	Rebalance(updates []SortKeyUpdate) error
 }
 

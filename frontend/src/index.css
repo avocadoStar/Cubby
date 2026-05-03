@@ -4,14 +4,40 @@
   --fs-body: 13px;
   --fs-small: 9px;
   --text-xs: var(--fs-small);
+
+  /* Fluent Card theme */
+  --app-bg: #FAFAFA;
+  --app-card: #FFFFFF;
+  --app-border: #E0E0E0;
+  --app-hover: #F5F5F5;
+  --app-accent: #0078D4;
+  --app-text: #1a1a1a;
+  --app-text2: #888;
+  --app-text3: #999;
+  --app-danger: #cc3333;
+  --app-note-bg: #F8F8F8;
 }
 
 body {
   font-family: 'Segoe UI', -apple-system, sans-serif;
   font-size: var(--fs-body);
-  background: #FFFFFF;
-  color: #1a1a1a;
+  background: var(--app-bg);
+  color: var(--app-text);
   margin: 0;
+}
+
+/* Card row styling */
+.card-row {
+  display: flex; align-items: center; height: 38px;
+  padding: 0 12px; border-radius: 8px;
+  border: 1px solid var(--app-border);
+  background: var(--app-card);
+  margin: 0 4px 8px 4px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.card-row:hover {
+  border-color: #CCC;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 .text-body { font-size: var(--fs-body); }

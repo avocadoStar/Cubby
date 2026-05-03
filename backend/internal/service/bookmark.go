@@ -57,6 +57,10 @@ func (s *BookmarkService) Restore(id string) (*model.Bookmark, error) {
 	return s.repo.Restore(id)
 }
 
+func (s *BookmarkService) UpdateNotes(id, notes string) error {
+	return s.repo.UpdateNotes(id, notes)
+}
+
 func (s *BookmarkService) BatchDelete(ids []string) error {
 	return s.repo.BatchSoftDelete(ids)
 }

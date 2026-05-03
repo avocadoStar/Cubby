@@ -91,6 +91,21 @@ func (h *BookmarkHandler) Restore(c *gin.Context) {
 	c.JSON(http.StatusOK, b)
 }
 
+func (h *BookmarkHandler) UpdateNotes(c *gin.Context) {
+	var req struct {
+		Notes string `json:"notes"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := h.svc.UpdateNotes(c.Param("id"), req.Notes); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 func (h *BookmarkHandler) Move(c *gin.Context) {
 	var req struct {
 		ID       string  `json:"id"`

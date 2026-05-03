@@ -17,10 +17,10 @@ func (r *bookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 	var rows *sql.Rows
 	var err error
 	if folderID == nil {
-		rows, err = r.DB.Query(`SELECT id,title,url,folder_id,sort_key,version,created_at,updated_at
+		rows, err = r.DB.Query(`SELECT id,title,url,folder_id,sort_key,version,notes,created_at,updated_at
 			FROM bookmark WHERE folder_id IS NULL AND deleted_at IS NULL ORDER BY sort_key`)
 	} else {
-		rows, err = r.DB.Query(`SELECT id,title,url,folder_id,sort_key,version,created_at,updated_at
+		rows, err = r.DB.Query(`SELECT id,title,url,folder_id,sort_key,version,notes,created_at,updated_at
 			FROM bookmark WHERE folder_id=? AND deleted_at IS NULL ORDER BY sort_key`, *folderID)
 	}
 	if err != nil {
@@ -30,7 +30,7 @@ func (r *bookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 	var bookmarks []model.Bookmark
 	for rows.Next() {
 		var b model.Bookmark
-		if err := rows.Scan(&b.ID, &b.Title, &b.URL, &b.FolderID, &b.SortKey, &b.Version, &b.CreatedAt, &b.UpdatedAt); err != nil {
+		if err := rows.Scan(&b.ID, &b.Title, &b.URL, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt); err != nil {
 			return nil, err
 		}
 		bookmarks = append(bookmarks, b)
@@ -40,9 +40,9 @@ func (r *bookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 
 func (r *bookmarkRepo) GetByID(id string) (*model.Bookmark, error) {
 	var b model.Bookmark
-	err := r.DB.QueryRow(`SELECT id,title,url,folder_id,sort_key,version,created_at,updated_at
+	err := r.DB.QueryRow(`SELECT id,title,url,folder_id,sort_key,version,notes,created_at,updated_at
 		FROM bookmark WHERE id=? AND deleted_at IS NULL`, id).
-		Scan(&b.ID, &b.Title, &b.URL, &b.FolderID, &b.SortKey, &b.Version, &b.CreatedAt, &b.UpdatedAt)
+		Scan(&b.ID, &b.Title, &b.URL, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +120,10 @@ func (r *bookmarkRepo) Move(id string, folderID *string, sortKey string, version
 	return r.GetByID(id)
 }
 
+func (r *bookmarkRepo) UpdateNotes(id, notes string) error {
+	_, err := r.DB.Exec(`UPDATE bookmark SET notes=?, updated_at=datetime('now') WHERE id=? AND deleted_at IS NULL`, notes, id)
+	return err
+}
 func (r *bookmarkRepo) Rebalance(updates []SortKeyUpdate) error {
 	tx, err := r.DB.Begin()
 	if err != nil {
@@ -139,7 +143,7 @@ func (r *bookmarkRepo) Rebalance(updates []SortKeyUpdate) error {
 
 func (r *bookmarkRepo) Search(query string) ([]model.Bookmark, error) {
 	q := "%" + query + "%"
-	rows, err := r.DB.Query(`SELECT id,title,url,folder_id,sort_key,version,created_at,updated_at
+	rows, err := r.DB.Query(`SELECT id,title,url,folder_id,sort_key,version,notes,created_at,updated_at
 		FROM bookmark WHERE (title LIKE ? OR url LIKE ?) AND deleted_at IS NULL ORDER BY sort_key`, q, q)
 	if err != nil {
 		return nil, err
@@ -148,7 +152,7 @@ func (r *bookmarkRepo) Search(query string) ([]model.Bookmark, error) {
 	var bookmarks []model.Bookmark
 	for rows.Next() {
 		var b model.Bookmark
-		if err := rows.Scan(&b.ID, &b.Title, &b.URL, &b.FolderID, &b.SortKey, &b.Version, &b.CreatedAt, &b.UpdatedAt); err != nil {
+		if err := rows.Scan(&b.ID, &b.Title, &b.URL, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt); err != nil {
 			return nil, err
 		}
 		bookmarks = append(bookmarks, b)

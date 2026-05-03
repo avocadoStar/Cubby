@@ -98,6 +98,9 @@ export const api = {
   restoreBookmark: (id: string) =>
     request<Bookmark>(`/bookmarks/${id}/restore`, { method: 'PUT' }),
 
+  updateNotes: (id: string, notes: string) =>
+    request<void>(`/bookmarks/${id}/notes`, { method: 'PATCH', body: JSON.stringify({ notes }) }),
+
   moveBookmark: (req: MoveRequest) =>
     request<Bookmark>('/bookmarks/move', {
       method: 'POST',

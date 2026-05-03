@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Cubby Detail Panel v4</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;font-size:13px;display:flex;flex-direction:column;height:100vh}
+.tab-bar{display:flex;gap:4px;padding:8px 16px;background:#1a1a1a;align-items:center}
+.tab-bar .logo{color:#fff;font-weight:700;font-size:14px;margin-right:16px}
+.tab-bar button{padding:6px 16px;border-radius:6px;border:none;font-size:13px;cursor:pointer;font-family:inherit;background:transparent;color:#888;transition:all .15s}
+.tab-bar button:hover{background:rgba(255,255,255,.1);color:#ccc}
+.tab-bar button.active{background:#0078D4;color:#fff;font-weight:600}
+.panel{display:none;flex:1;overflow:hidden}
+.panel.active{display:flex}
+
+/* ====== Fluent · Card ====== */
+.dir1{
+  --bg:#FAFAFA; --card:#fff; --border:#E0E0E0; --border-h:#CCC; --hover:#F5F5F5; --accent:#0078D4; --accent-light:#E5F0FF;
+  --text:#1a1a1a; --t2:#666; --t3:#999; --danger:#C63737; --note-bg:#F8F8F8; --shadow:0 1px 2px rgba(0,0,0,.04);
+  --radius:8px; --gap:8px; --select-bg:#fff; --input-bg:#FAFAFA; --sep-color:#E0E0E0;
+  background:var(--bg);color:var(--text);
+}
+/* ====== Neumorphism ====== */
+.dir2{
+  --bg:#E8ECF1; --card:#E8ECF1; --border:transparent; --border-h:transparent; --hover:#E8ECF1; --accent:#5B7FFF; --accent-light:rgba(91,127,255,.1);
+  --text:#2D3748; --t2:#718096; --t3:#A0AEC0; --danger:#E53E3E; --note-bg:#E8ECF1;
+  --shadow:3px 3px 7px rgba(0,0,0,.07),-3px -3px 7px rgba(255,255,255,.6);
+  --shadow-hover:4px 4px 10px rgba(0,0,0,.1),-4px -4px 10px rgba(255,255,255,.8);
+  --shadow-inset:inset 1px 1px 3px rgba(0,0,0,.05),inset -1px -1px 3px rgba(255,255,255,.5);
+  --radius:12px; --gap:8px; --select-bg:var(--card); --input-bg:var(--card); --sep-color:rgba(0,0,0,.06);
+  background:var(--bg);color:var(--text);
+}
+
+/* ====== Layout ====== */
+.shell{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;flex-shrink:0;padding:16px 12px;overflow-y:auto}
+.dir1 .sidebar{background:var(--card);border-right:1px solid var(--border)}
+.dir2 .sidebar{border-right:1px solid rgba(0,0,0,.05)}
+.sidebar-title{font-size:15px;font-weight:600;margin-bottom:10px}
+.tree-item{padding:5px 8px;border-radius:6px;cursor:default;display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:1px}
+.dir1 .tree-item:hover{background:var(--hover)}
+.dir2 .tree-item:hover{box-shadow:var(--shadow)}
+.tree-item.active{color:var(--accent);font-weight:500}
+
+.main{flex:1;display:flex;overflow:hidden}
+.list{flex:1;min-width:0;padding:12px;overflow-y:auto}
+
+/* ====== Card Rows ====== */
+.card-row{display:flex;align-items:center;height:38px;padding:0 12px;border-radius:var(--radius);cursor:pointer;margin-bottom:var(--gap);transition:all .15s}
+.dir1 .card-row{background:var(--card);border:1px solid var(--border)}
+.dir1 .card-row:hover{border-color:var(--border-h);box-shadow:var(--shadow)}
+.dir2 .card-row{border:none;box-shadow:var(--shadow)}
+.dir2 .card-row:hover{box-shadow:var(--shadow-hover)}
+.card-row.folder-active{border-color:var(--accent)!important;background:var(--accent-light);border-radius:8px 8px 0 0;margin-bottom:0}
+
+.row-check{width:18px;height:18px;border-radius:50%;border:2px solid var(--t3);flex-shrink:0;margin-right:10px}
+.row-icon{width:18px;height:18px;border-radius:4px;flex-shrink:0;margin-right:8px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--t2)}
+.dir1 .row-icon{background:var(--hover)}
+.dir2 .row-icon{background:var(--bg);box-shadow:var(--shadow-inset);border-radius:6px}
+.dir1 .folder-icon-bg{background:#F0C54F;color:#fff;font-weight:bold}
+
+.row-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-url{width:200px;flex-shrink:0;font-size:12px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:8px}
+.row-date{width:65px;flex-shrink:0;font-size:12px;color:var(--t2)}
+.row-n{width:26px;height:26px;flex-shrink:0;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;margin:0 4px;border:none;background:transparent;color:var(--t3);transition:all .15s;font-weight:600}
+.row-n:hover{background:var(--hover)}
+.row-n.has{color:var(--accent)}
+.row-del{width:26px;height:26px;flex-shrink:0;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);border:none;background:transparent;opacity:.35;transition:all .15s}
+.row-del:hover{opacity:1;color:var(--danger);background:rgba(198,55,55,.06)}
+.row-chev{width:20px;flex-shrink:0;color:var(--t3);margin-left:2px}
+.sep-line{width:1px;align-self:stretch;background:transparent;margin:0 6px}
+
+/* ====== Detail Panel ====== */
+.detail{width:0;overflow:hidden;flex-shrink:0;background:var(--card);border-left:1px solid transparent;transition:width .25s ease-out,border-color .25s;display:flex;flex-direction:column}
+.detail.open{width:310px;border-left-color:var(--border)}
+.detail-inner{width:310px;padding:20px;opacity:0;transform:translateX(8px);transition:opacity .2s ease-out .05s,transform .2s ease-out .05s;overflow-y:auto;flex:1}
+.detail.open .detail-inner{opacity:1;transform:translateX(0)}
+
+.detail-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.detail-title{font-size:16px;font-weight:600;line-height:1.35;word-break:break-word;padding-right:8px}
+.detail-close{width:28px;height:28px;flex-shrink:0;border-radius:6px;border:none;background:transparent;color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s}
+.detail-close:hover{background:var(--hover);color:var(--text)}
+
+/* URL (plain text, selectable for copy) */
+.detail-url{font-size:12px;color:var(--t2);line-height:1.4;word-break:break-all;user-select:all;cursor:text;margin-bottom:16px}
+
+/* Folder breadcrumb */
+.folder-row{margin-bottom:16px}
+.folder-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);font-weight:500;margin-bottom:6px}
+.folder-breadcrumb{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:13px}
+.folder-crumb{color:var(--accent);cursor:pointer;padding:2px 4px;border-radius:3px;transition:all .1s}
+.folder-crumb:hover{background:var(--accent-light)}
+.folder-crumb.current{color:var(--text);cursor:default;font-weight:500}
+.folder-crumb.current:hover{background:transparent}
+.folder-arrow{color:var(--t3);font-size:10px}
+
+/* Divider */
+.divider{border:none;border-top:1px solid var(--sep-color);margin:0 0 16px}
+
+/* Notes section */
+.notes-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.notes-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--t2)}
+.notes-count{font-size:10px;color:var(--t3);font-variant-numeric:tabular-nums;transition:color .15s}
+.notes-count.warn{color:#E4A000}
+.notes-textarea{width:100%;min-height:180px;max-height:340px;padding:12px;border-radius:8px;font-size:13px;line-height:1.6;font-family:inherit;color:var(--text);background:var(--input-bg);resize:none;outline:none;transition:all .15s;overflow-y:auto}
+.dir1 .notes-textarea{border:1px solid var(--border)}
+.dir1 .notes-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,120,212,.1)}
+.dir2 .notes-textarea{border:none;box-shadow:var(--shadow-inset)}
+.dir2 .notes-textarea:focus{box-shadow:var(--shadow-inset),0 0 0 2px rgba(91,127,255,.15)}
+.notes-textarea::placeholder{color:var(--t3)}
+.notes-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.notes-saved{font-size:11px;color:var(--t3);opacity:0;transition:opacity .3s}
+.notes-saved.show{opacity:1}
+.notes-clear{font-size:11px;color:var(--t3);border:none;background:transparent;cursor:pointer;padding:4px 8px;border-radius:4px;transition:all .15s}
+.notes-clear:hover{color:var(--danger);background:rgba(198,55,55,.06)}
+</style>
+</head>
+<body>
+
+<div class="tab-bar">
+<span class="logo">Cubby v4</span>
+<button class="active" onclick="switchTab(0)">Fluent · Card</button>
+<button onclick="switchTab(1)">Neumorphism</button>
+<span style="margin-left:auto;color:#666;font-size:11px">8px 行间距 | 文件夹: X + > | 书签: X | 面包屑路径</span>
+</div>
+
+<!-- ============ FLUENT ============ -->
+<div class="panel dir1 active" id="p0"><div class="shell"><div class="sidebar">
+<div class="sidebar-title">收藏夹</div>
+<div class="tree-item">⭐ 所有书签</div>
+<div class="tree-item" style="padding-left:16px">📁 收藏夹</div>
+<div class="tree-item active" style="padding-left:32px">📁 电影资源</div>
+<div class="tree-item" style="padding-left:32px">📁 工具网站</div>
+<div class="tree-item" style="padding-left:32px;padding-left:48px">📁 下载</div>
+</div>
+<div class="main"><div class="list" id="list1">
+
+<!-- FOLDER row: checkbox + folder icon + name + spacer + date + X + sep + > -->
+<div class="card-row" onclick="clickFolder(this)" id="rf1">
+  <div class="row-check"></div>
+  <div class="row-icon folder-icon-bg">📁</div>
+  <div class="row-title">电影资源</div>
+  <div class="row-url"></div>
+  <div class="row-date"></div>
+  <button class="row-n has" onclick="event.stopPropagation();openDetail('4K影视','https://www.4ksj.com/forum','收藏夹 &gt; 电影资源',true)" title="备注">N</button>
+  <button class="row-del" onclick="event.stopPropagation()" title="删除">✕</button>
+  <div class="sep-line"></div>
+  <div class="row-chev">›</div>
+</div>
+
+<!-- BOOKMARK row 1 -->
+<div class="card-row" id="r1-1" onclick="openDetail('4K影视','https://www.4ksj.com/forum-4kdianying-1.html','收藏夹 › 电影资源',true)">
+  <div class="row-check"></div><div class="row-icon">4</div>
+  <div class="row-title">4K影视</div><div class="row-url">https://www.4ksj.com/forum</div><div class="row-d row-date">04-20</div>
+  <button class="row-n has" onclick="event.stopPropagation();openDetail('4K影视','https://www.4ksj.com/forum','收藏夹 › 电影资源',true)">N</button>
+  <button class="row-del" onclick="event.stopPropagation()" title="删除">✕</button>
+</div>
+
+<!-- BOOKMARK row 2 -->
+<div class="card-row" id="r1-2" onclick="openDetail('百度百科-验证','https://baike.baidu.com/item/1/31661','收藏夹 › 工具网站',false)">
+  <div class="row-check"></div><div class="row-icon">百</div>
+  <div class="row-title">百度百科-验证</div><div class="row-url">https://baike.baidu.com</div><div class="row-d row-date">05-03</div>
+  <button class="row-n" onclick="event.stopPropagation();openDetail('百度百科-验证','https://baike.baidu.com/item/1/31661','收藏夹 › 工具网站',false)">N</button>
+  <button class="row-del" onclick="event.stopPropagation()" title="删除">✕</button>
+</div>
+
+<!-- BOOKMARK row 3: has notes -->
+<div class="card-row" id="r1-3" onclick="openDetail('GitHub','https://github.com','收藏夹 › 工具网站',true)">
+  <div class="row-check"></div><div class="row-icon">G</div>
+  <div class="row-title">GitHub</div><div class="row-url">https://github.com</div><div class="row-d row-date">03-15</div>
+  <button class="row-n has" onclick="event.stopPropagation();openDetail('GitHub','https://github.com','收藏夹 › 工具网站',true)">N</button>
+  <button class="row-del" onclick="event.stopPropagation()" title="删除">✕</button>
+</div>
+
+</div>
+
+<!-- DETAIL PANEL -->
+<div class="detail open" id="d1"><div class="detail-inner">
+<div class="detail-header">
+<div class="detail-title" id="t1">4K影视</div>
+<button class="detail-close" onclick="document.getElementById('d1').classList.remove('open')">✕</button>
+</div>
+<div class="detail-url" id="ut1">https://www.4ksj.com/forum-4kdianying-1.html</div>
+<div class="folder-row">
+<div class="folder-label">所在文件夹</div>
+<div class="folder-breadcrumb" id="fb1">
+<span class="folder-crumb" onclick="alert('导航到 收藏夹')">收藏夹</span><span class="folder-arrow">›</span>
+<span class="folder-crumb current">电影资源</span>
+</div>
+</div>
+<hr class="divider">
+<div class="notes-header">
+<div class="notes-label">⭐ 备注 Notes</div>
+<div class="notes-count" id="nc1">38 / 1000</div>
+</div>
+<textarea class="notes-textarea" id="nt1" placeholder="输入备注..." oninput="updateCount(1);autoResize(this)">4K电影资源站，更新频率高，免费下载高清资源。已收藏多个分类页面方便查找。</textarea>
+<div class="notes-footer">
+<span class="notes-saved" id="ns1">已自动保存</span>
+<button class="notes-clear" onclick="document.getElementById('nt1').value='';updateCount(1);autoResize(document.getElementById('nt1'))">清空备注</button>
+</div>
+</div></div>
+
+</div></div></div>
+
+<!-- ============ NEUMORPHISM ============ -->
+<div class="panel dir2" id="p1"><div class="shell"><div class="sidebar">
+<div class="sidebar-title">收藏夹</div>
+<div class="tree-item">⭐ 所有书签</div>
+<div class="tree-item" style="padding-left:16px">📁 收藏夹</div>
+<div class="tree-item active" style="padding-left:32px">📁 电影资源</div>
+<div class="tree-item" style="padding-left:32px">📁 工具网站</div>
+<div class="tree-item" style="padding-left:48px">📁 下载</div>
+</div>
+<div class="main"><div class="list" id="list2">
+
+<!-- FOLDER row -->
+<div class="card-row" onclick="clickFolder(this)" id="rf2">
+  <div class="row-check"></div>
+  <div class="row-icon" style="background:var(--bg);box-shadow:var(--shadow-inset);border-radius:6px;color:var(--accent);font-weight:bold">📁</div>
+  <div class="row-title">电影资源</div>
+  <div class="row-url"></div>
+  <div class="row-date"></div>
+  <button class="row-n has" onclick="event.stopPropagation();openDetail2('4K影视','https://www.4ksj.com/forum','收藏夹 › 电影资源',true)" title="备注">N</button>
+  <button class="row-del" onclick="event.stopPropagation()" title="删除">✕</button>
+  <div class="sep-line"></div>
+  <div class="row-chev">›</div>
+</div>
+
+<div class="card-row" id="r2-1" onclick="openDetail2('4K影视','https://www.4ksj.com/forum-4kdianying-1.html','收藏夹 › 电影资源',true)">
+  <div class="row-check"></div><div class="row-icon">4</div>
+  <div class="row-title">4K影视</div><div class="row-url">https://www.4ksj.com/forum</div><div class="row-d row-date">04-20</div>
+  <button class="row-n has" onclick="event.stopPropagation();openDetail2('4K影视','https://www.4ksj.com/forum','收藏夹 › 电影资源',true)">N</button>
+  <button class="row-del" onclick="event.stopPropagation()" title="删除">✕</button>
+</div>
+
+<div class="card-row" id="r2-2" onclick="openDetail2('百度百科-验证','https://baike.baidu.com/item/1/31661','收藏夹 › 工具网站',false)">
+  <div class="row-check"></div><div class="row-icon">百</div>
+  <div class="row-title">百度百科-验证</div><div class="row-url">https://baike.baidu.com</div><div class="row-d row-date">05-03</div>
+  <button class="row-n" onclick="event.stopPropagation();openDetail2('百度百科-验证','https://baike.baidu.com/item/1/31661','收藏夹 › 工具网站',false)">N</button>
+  <button class="row-del" onclick="event.stopPropagation()" title="删除">✕</button>
+</div>
+
+<div class="card-row" id="r2-3" onclick="openDetail2('GitHub','https://github.com','收藏夹 › 工具网站',true)">
+  <div class="row-check"></div><div class="row-icon">G</div>
+  <div class="row-title">GitHub</div><div class="row-url">https://github.com</div><div class="row-d row-date">03-15</div>
+  <button class="row-n has" onclick="event.stopPropagation();openDetail2('GitHub','https://github.com','收藏夹 › 工具网站',true)">N</button>
+  <button class="row-del" onclick="event.stopPropagation()" title="删除">✕</button>
+</div>
+
+</div>
+
+<div class="detail open" id="d2"><div class="detail-inner">
+<div class="detail-header">
+<div class="detail-title" id="t2">4K影视</div>
+<button class="detail-close" onclick="document.getElementById('d2').classList.remove('open')">✕</button>
+</div>
+<div class="detail-url" id="ut2">https://www.4ksj.com/forum-4kdianying-1.html</div>
+<div class="folder-row">
+<div class="folder-label">所在文件夹</div>
+<div class="folder-breadcrumb" id="fb2">
+<span class="folder-crumb" onclick="alert('导航到 收藏夹')">收藏夹</span><span class="folder-arrow">›</span>
+<span class="folder-crumb current">电影资源</span>
+</div>
+</div>
+<hr class="divider">
+<div class="notes-header">
+<div class="notes-label">⭐ 备注 Notes</div>
+<div class="notes-count" id="nc2">38 / 1000</div>
+</div>
+<textarea class="notes-textarea" id="nt2" placeholder="输入备注..." oninput="updateCount(2);autoResize(this)">4K电影资源站，更新频率高，免费下载高清资源。已收藏多个分类页面方便查找。</textarea>
+<div class="notes-footer">
+<span class="notes-saved" id="ns2">已自动保存</span>
+<button class="notes-clear" onclick="document.getElementById('nt2').value='';updateCount(2);autoResize(document.getElementById('nt2'))">清空备注</button>
+</div>
+</div></div>
+
+</div></div></div>
+
+<script>
+function switchTab(i){
+  document.querySelectorAll('.tab-bar button').forEach((b,j)=>b.classList.toggle('active',j===i));
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+}
+function clickFolder(row){ row.classList.toggle('folder-active'); }
+function openDetail(t,u,f,hasN){
+  document.querySelectorAll('#list1 .card-row').forEach(r=>r.classList.remove('folder-active'));
+  document.getElementById('t1').textContent=t;
+  document.getElementById('ut1').textContent=u;
+  document.getElementById('fb1').innerHTML=buildBreadcrumb(f);
+  document.getElementById('d1').classList.add('open');
+}
+function openDetail2(t,u,f,hasN){
+  document.querySelectorAll('#list2 .card-row').forEach(r=>r.classList.remove('folder-active'));
+  document.getElementById('t2').textContent=t;
+  document.getElementById('ut2').textContent=u;
+  document.getElementById('fb2').innerHTML=buildBreadcrumb(f);
+  document.getElementById('d2').classList.add('open');
+}
+function buildBreadcrumb(path){
+  const parts=path.split(' › ');
+  return parts.map((p,i)=>i===parts.length-1
+    ?`<span class="folder-crumb current">${p}</span>`
+    :`<span class="folder-crumb" onclick="alert('导航到 ${p}')">${p}</span><span class="folder-arrow">›</span>`
+  ).join('');
+}
+function updateCount(n){
+  const ta=document.getElementById('nt'+n),c=document.getElementById('nc'+n);
+  c.textContent=ta.value.length+' / 1000';
+  c.classList.toggle('warn',ta.value.length>900);
+  const s=document.getElementById('ns'+n);
+  s.classList.add('show');clearTimeout(s._t);s._t=setTimeout(()=>s.classList.remove('show'),1500);
+}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(Math.max(el.scrollHeight,180),340)+'px';}
+autoResize(document.getElementById('nt1'));autoResize(document.getElementById('nt2'));
+</script>
+</body>
+</html>

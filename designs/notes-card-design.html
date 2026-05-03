@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Cubby Notes — 右侧面板 + 卡片式行</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;font-size:13px;display:flex;height:100vh}
+.tab{position:fixed;top:0;left:0;right:0;z-index:10;background:#1a1a1a;display:flex;gap:4px;padding:8px 16px;align-items:center}
+.tab .logo{color:#fff;font-weight:700;font-size:14px;margin-right:16px}
+.tab button{padding:6px 16px;border-radius:6px;border:none;font-size:13px;cursor:pointer;font-family:inherit;background:transparent;color:#888;transition:all .15s}
+.tab button:hover{background:rgba(255,255,255,.1);color:#ccc}
+.tab button.active{background:#0078D4;color:#fff;font-weight:600}
+.panel{display:none;padding-top:48px;height:100vh;overflow:hidden;width:100%}
+.panel.active{display:flex}
+
+/* ====== Theme 1: Fluent · Card ====== */
+.dir1{
+  --bg:#FAFAFA; --card:#FFFFFF; --border:#E0E0E0; --border-h:#CCC; --hover:#F5F5F5; --accent:#0078D4; --accent-light:#E5F0FF;
+  --text:#1a1a1a; --text2:#888; --text3:#AAA; --note-bg:#F8F8F8; --shadow:0 1px 2px rgba(0,0,0,.04);
+  --radius:8px; --gap:3px;
+  background:var(--bg);color:var(--text);
+}
+
+/* ====== Theme 2: Neumorphism ====== */
+.dir2{
+  --bg:#E8ECF1; --card:#E8ECF1; --border:transparent; --border-h:transparent; --hover:#E8ECF1; --accent:#5B7FFF; --accent-light:rgba(91,127,255,.1);
+  --text:#2D3748; --text2:#718096; --text3:#A0AEC0; --note-bg:#E8ECF1;
+  --shadow:3px 3px 7px rgba(0,0,0,.08),-3px -3px 7px rgba(255,255,255,.7);
+  --shadow-hover:4px 4px 10px rgba(0,0,0,.1),-4px -4px 10px rgba(255,255,255,.8);
+  --radius:12px; --gap:8px;
+  background:var(--bg);color:var(--text);
+}
+
+/* ====== Layout ====== */
+.shell{display:flex;flex:1;overflow:hidden}
+.sidebar{width:230px;flex-shrink:0;border-right:1px solid;padding:16px 12px;overflow-y:auto}
+.dir1 .sidebar{border-color:var(--border);background:var(--card)}
+.dir2 .sidebar{border-color:rgba(0,0,0,.06);background:var(--bg)}
+.main{flex:1;display:flex;overflow:hidden}
+.bookmark-list{flex:1;min-width:0;padding:12px;overflow-y:auto}
+
+.sidebar-title{font-size:15px;font-weight:600;margin-bottom:10px}
+.tree-item{padding:5px 8px;border-radius:6px;cursor:default;display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:1px}
+.dir1 .tree-item:hover{background:var(--hover)}
+.dir2 .tree-item:hover{box-shadow:var(--shadow)}
+.tree-item.active{color:var(--accent);font-weight:500}
+
+/* ====== Card Rows ====== */
+.card-row{
+  display:flex;align-items:center;height:38px;padding:0 12px;
+  border-radius:var(--radius);cursor:default;margin-bottom:var(--gap);
+  border:1px solid var(--border);background:var(--card);
+  transition:all .15s;
+}
+.dir2 .card-row{border:none;box-shadow:var(--shadow)}
+.dir1 .card-row:hover{border-color:var(--border-h);box-shadow:var(--shadow)}
+.dir2 .card-row:hover{box-shadow:var(--shadow-hover)}
+.r-c{width:18px;height:18px;border-radius:50%;border:2px solid var(--text3);flex-shrink:0;margin-right:10px}
+.r-i{width:18px;height:18px;border-radius:4px;background:var(--hover);flex-shrink:0;margin-right:8px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text2)}
+.r-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r-u{width:200px;flex-shrink:0;font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:8px}
+.r-d{width:65px;flex-shrink:0;font-size:12px;color:var(--text2)}
+.r-n{width:26px;height:26px;flex-shrink:0;border-radius:5px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;margin:0 4px;border:none;background:transparent;color:var(--text3);transition:all .15s;font-weight:600}
+.r-n:hover{background:var(--hover)}
+.r-n.has{color:var(--accent)}
+
+/* ====== Right Notes Panel ====== */
+.notes-panel{
+  width:0;overflow:hidden;flex-shrink:0;
+  background:var(--note-bg);border-left:1px solid transparent;
+  transition:width .2s ease-out,border-color .2s;
+}
+.notes-panel.open{width:280px;border-left-color:var(--border)}
+.notes-content{width:280px;padding:16px;opacity:0;transition:opacity .15s}
+.notes-panel.open .notes-content{opacity:1}
+.notes-content .ntitle{font-size:14px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.notes-content .nurl{font-size:12px;color:var(--text2);margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notes-content .nlabel{font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.notes-content textarea{width:100%;height:160px;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;font-family:inherit;color:var(--text);background:var(--card);resize:none;outline:none}
+.notes-content textarea:focus{border-color:var(--accent)}
+.dir2 .notes-content textarea{box-shadow:inset 1px 1px 3px rgba(0,0,0,.04),inset -1px -1px 3px rgba(255,255,255,.5);border:none}
+.notes-content .nsaved{font-size:10px;color:var(--text2);margin-top:6px;text-align:right;opacity:0;transition:opacity .3s}
+.notes-content .nsaved.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="tab">
+<span class="logo">Cubby Notes</span>
+<button class="active" onclick="switchTab(0)">1. Fluent · Card</button>
+<button onclick="switchTab(1)">2. Neumorphism</button>
+<span style="margin-left:auto;color:#666;font-size:11px">右侧面板备注 + 卡片式行 | 点击行 N 按钮展开备注</span>
+</div>
+
+<!-- Theme 1 -->
+<div class="panel dir1 active">
+<div class="shell">
+<div class="sidebar">
+<div class="sidebar-title">收藏夹</div>
+<div class="tree-item">⭐ 所有书签</div>
+<div class="tree-item" style="padding-left:16px">📁 收藏夹</div>
+<div class="tree-item active" style="padding-left:32px">📁 电影资源</div>
+<div class="tree-item" style="padding-left:32px">📁 工具网站</div>
+</div>
+<div class="main">
+<div class="bookmark-list">
+
+<div class="card-row">
+<div class="r-c"></div><div class="r-i">4</div>
+<div class="r-t">4K影视</div><div class="r-u">https://www.4ksj.com/forum</div><div class="r-d">04-20</div>
+<button class="r-n has" onclick="openNotes(this,'4K影视','https://www.4ksj.com','4K电影资源站，更新频率高，免费下载高清资源。已收藏多个分类页面。')">N</button>
+</div>
+
+<div class="card-row">
+<div class="r-c"></div><div class="r-i">百</div>
+<div class="r-t">百度百科-验证</div><div class="r-u">https://baike.baidu.com</div><div class="r-d">05-03</div>
+<button class="r-n" onclick="openNotes(this,'百度百科-验证','https://baike.baidu.com','')">N</button>
+</div>
+
+<div class="card-row">
+<div class="r-c"></div><div class="r-i">G</div>
+<div class="r-t">GitHub</div><div class="r-u">https://github.com</div><div class="r-d">03-15</div>
+<button class="r-n has" onclick="openNotes(this,'GitHub','https://github.com','代码托管平台，存放所有个人项目。')">N</button>
+</div>
+
+<div class="card-row">
+<div class="r-c"></div><div class="r-i">布</div>
+<div class="r-t">布谷TV | 4K电影下载</div><div class="r-u">https://www.bugutv.org</div><div class="r-d">02-10</div>
+<button class="r-n" onclick="openNotes(this,'布谷TV','https://www.bugutv.org','')">N</button>
+</div>
+
+</div>
+<div class="notes-panel" id="panel1">
+<div class="notes-content">
+<div class="ntitle" id="nt1">4K影视</div>
+<div class="nurl" id="nu1">https://www.4ksj.com</div>
+<div class="nlabel">备注</div>
+<textarea placeholder="添加备注..." id="nta1" oninput="let s=document.getElementById('ns1');s.classList.add('show');clearTimeout(this._t);this._t=setTimeout(()=>s.classList.remove('show'),1500)">4K电影资源站，更新频率高，免费下载高清资源。已收藏多个分类页面。</textarea>
+<div class="nsaved show" id="ns1">已自动保存</div>
+</div>
+</div>
+</div></div></div>
+
+<!-- Theme 2 -->
+<div class="panel dir2">
+<div class="shell">
+<div class="sidebar">
+<div class="sidebar-title">收藏夹</div>
+<div class="tree-item">⭐ 所有书签</div>
+<div class="tree-item" style="padding-left:16px">📁 收藏夹</div>
+<div class="tree-item active" style="padding-left:32px">📁 电影资源</div>
+<div class="tree-item" style="padding-left:32px">📁 工具网站</div>
+</div>
+<div class="main">
+<div class="bookmark-list">
+
+<div class="card-row">
+<div class="r-c"></div><div class="r-i">4</div>
+<div class="r-t">4K影视</div><div class="r-u">https://www.4ksj.com/forum</div><div class="r-d">04-20</div>
+<button class="r-n has" onclick="openNotes2(this,'4K影视','https://www.4ksj.com','4K电影资源站，更新频率高，免费下载高清资源。已收藏多个分类页面。')">N</button>
+</div>
+
+<div class="card-row">
+<div class="r-c"></div><div class="r-i">百</div>
+<div class="r-t">百度百科-验证</div><div class="r-u">https://baike.baidu.com</div><div class="r-d">05-03</div>
+<button class="r-n" onclick="openNotes2(this,'百度百科-验证','https://baike.baidu.com','')">N</button>
+</div>
+
+<div class="card-row">
+<div class="r-c"></div><div class="r-i">G</div>
+<div class="r-t">GitHub</div><div class="r-u">https://github.com</div><div class="r-d">03-15</div>
+<button class="r-n has" onclick="openNotes2(this,'GitHub','https://github.com','代码托管平台，存放所有个人项目。')">N</button>
+</div>
+
+<div class="card-row">
+<div class="r-c"></div><div class="r-i">布</div>
+<div class="r-t">布谷TV | 4K电影下载</div><div class="r-u">https://www.bugutv.org</div><div class="r-d">02-10</div>
+<button class="r-n" onclick="openNotes2(this,'布谷TV','https://www.bugutv.org','')">N</button>
+</div>
+
+</div>
+<div class="notes-panel" id="panel2">
+<div class="notes-content">
+<div class="ntitle" id="nt2">4K影视</div>
+<div class="nurl" id="nu2">https://www.4ksj.com</div>
+<div class="nlabel">备注</div>
+<textarea placeholder="添加备注..." id="nta2" oninput="let s=document.getElementById('ns2');s.classList.add('show');clearTimeout(this._t);this._t=setTimeout(()=>s.classList.remove('show'),1500)">4K电影资源站，更新频率高，免费下载高清资源。已收藏多个分类页面。</textarea>
+<div class="nsaved show" id="ns2">已自动保存</div>
+</div>
+</div>
+</div></div></div>
+
+<script>
+function switchTab(i){
+  document.querySelectorAll('.tab button').forEach((b,j)=>b.classList.toggle('active',j===i));
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('active',j===i));
+}
+
+function openNotes(btn,title,url,notes){
+  const p=document.getElementById('panel1');
+  p.classList.toggle('open');
+  document.getElementById('nt1').textContent=title;
+  document.getElementById('nu1').textContent=url;
+  document.getElementById('nta1').value=notes;
+}
+
+function openNotes2(btn,title,url,notes){
+  const p=document.getElementById('panel2');
+  p.classList.toggle('open');
+  document.getElementById('nt2').textContent=title;
+  document.getElementById('nu2').textContent=url;
+  document.getElementById('nta2').value=notes;
+}
+</script>
+</body>
+</html>

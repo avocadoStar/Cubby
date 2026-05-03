@@ -9,7 +9,7 @@ import DropIndicator from './DropIndicator'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
-import { useEffect, useMemo, useRef, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useCallback, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   DndContext,
@@ -33,6 +33,7 @@ export type ListItem =
 import ItemDroppable from './ItemDroppable'
 import DraggableFolderRow from './FolderRow'
 import SearchResults from './SearchResults'
+import NotesPanel from './NotesPanel'
 
 export default function MainLayout() {
   const { bookmarks, load, selectAll, selectedIds, selectedFolderIds, toggleFolderSelect } = useBookmarkStore()
@@ -40,6 +41,7 @@ export default function MainLayout() {
   const { setActive, setOver, clearDrag, activeItem, activeId } = useDndStore()
   const { query: searchQuery, results: searchResults } = useSearchStore()
   const isSearching = searchQuery !== ''
+  const [notesBookmarkId, setNotesBookmarkId] = useState<string | null>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const livePointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -55,6 +57,8 @@ export default function MainLayout() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+        const tag = (e.target as HTMLElement)?.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return
         e.preventDefault()
         selectAll(subFolderIds)
       }
@@ -89,7 +93,7 @@ export default function MainLayout() {
   const rowVirtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 32,
+    estimateSize: () => 46,
     overscan: 10,
   })
 
@@ -450,12 +454,12 @@ export default function MainLayout() {
           ) : (
           <>
           <div className="flex-1" ref={scrollRef} style={{ overflow: 'auto' }}>
-            <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
+            <div style={{ height: rowVirtualizer.getTotalSize() + 8, position: 'relative' }}>
               {rowVirtualizer.getVirtualItems().map((vi) => {
                 const item = items[vi.index]
                 const wrapperStyle: React.CSSProperties = {
                   position: 'absolute',
-                  top: 0,
+                  top: 8,
                   left: 0,
                   width: '100%',
                   height: vi.size,
@@ -489,7 +493,7 @@ export default function MainLayout() {
                     folderMap={folderMap}
                     style={wrapperStyle}
                   >
-                    <BookmarkRow bookmark={item.bookmark} />
+                    <BookmarkRow bookmark={item.bookmark} onOpenNotes={() => setNotesBookmarkId(item.bookmark.id)} />
                   </ItemDroppable>
                 )
               })}
@@ -498,6 +502,7 @@ export default function MainLayout() {
           </>
           )}
         </div>
+        <NotesPanel bookmark={notesBookmarkId ? bookmarks.find(b => b.id === notesBookmarkId) ?? null : null} onClose={() => setNotesBookmarkId(null)} />
       </div>
 
       <DragOverlay dropAnimation={null} modifiers={[dragOverlayTopLeftModifier]}>

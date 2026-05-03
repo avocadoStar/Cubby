@@ -49,6 +49,7 @@ func SetupRoutes(
 		protected.POST("/bookmarks", bookmarkH.Create)
 		protected.PUT("/bookmarks/:id", bookmarkH.Update)
 		protected.DELETE("/bookmarks/:id", bookmarkH.Delete)
+		protected.PATCH("/bookmarks/:id/notes", bookmarkH.UpdateNotes)
 		protected.PUT("/bookmarks/:id/restore", bookmarkH.Restore)
 		protected.POST("/bookmarks/move", bookmarkH.Move)
 		protected.POST("/bookmarks/batch-delete", bookmarkH.BatchDelete)

@@ -16,6 +16,7 @@ export interface Bookmark {
   folder_id: string | null
   sort_key: string
   version: number
+  notes: string
   created_at: string
   updated_at: string
 }

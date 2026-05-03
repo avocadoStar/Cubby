@@ -29,12 +29,14 @@ function FolderRowComponent({
     <div
       data-context="folder"
       data-id={folder.id}
-      className="flex items-center mx-1 px-2 rounded select-none cursor-default"
+      className="flex items-center px-2 select-none cursor-default"
       style={{
-        height: 32,
+        height: 38, borderRadius: 8,
+        border: '1px solid var(--app-border, #E0E0E0)',
+        margin: '0 4px 8px 4px',
         opacity: isDragging ? 0.3 : 1,
-        background: isInside ? '#E5F0FF' : isFolderSelected ? '#E5F0FF' : hovered ? '#F5F5F5' : 'transparent',
-        outline: isInside ? '1px solid #0078D4' : undefined,
+        background: isInside ? 'var(--accent-light, #E5F0FF)' : isFolderSelected ? 'var(--accent-light, #E5F0FF)' : hovered ? 'var(--app-hover, #F5F5F5)' : 'var(--app-card, #FFFFFF)',
+        outline: isInside ? '1px solid var(--app-accent, #0078D4)' : undefined,
         outlineOffset: -1,
         touchAction: 'none',
       }}
@@ -65,7 +67,7 @@ function FolderRowComponent({
       <span className="flex-shrink-0 text-xs text-[#888] mr-8" style={{ width: 320 }}>文件夹</span>
       <span className="flex-shrink-0 text-xs text-[#888]" style={{ width: 100, minWidth: 100 }} />
       <div
-        className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default mr-2"
+        className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default"
         style={{ opacity: hovered ? 1 : 0.35, color: hovered ? '#cc3333' : '#999' }}
         onClick={(e) => { e.stopPropagation(); onDelete() }}
       >
@@ -75,9 +77,11 @@ function FolderRowComponent({
       </div>
       <div
         className="flex-shrink-0"
-        style={{ width: 1, alignSelf: 'stretch', background: hovered ? '#e0e0e0' : 'transparent' }}
+        style={{ width: 1, alignSelf: 'stretch', background: hovered ? '#e0e0e0' : 'transparent', margin: '0 6px' }}
       />
-      <ChevronRight size={14} stroke="#999" strokeWidth={1.5} className="flex-shrink-0 ml-2" />
+      <span className="flex-shrink-0 flex items-center justify-center" style={{ width: 26 }}>
+        <ChevronRight size={14} stroke="#999" strokeWidth={1.5} />
+      </span>
     </div>
   )
 }
