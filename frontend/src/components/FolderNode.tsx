@@ -1,4 +1,4 @@
-import { memo, useRef, useEffect } from 'react'
+import { memo, useRef, useEffect, useState } from 'react'
 import type { Folder } from '../types'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
@@ -13,6 +13,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
   const isExpanded = expandedIds.has(node.id)
   const isSelected = selectedId === node.id
   const hasChildren = node.has_children
+  const [hovered, setHovered] = useState(false)
 
   const isOver = overId === `droppable:sidebar:${node.id}`
   const isInside = isOver && dropPosition === 'inside'
@@ -69,11 +70,15 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
           ? '#E5F0FF'
           : isSelected
             ? '#E5F0FF'
-            : 'transparent',
+            : hovered
+              ? '#F5F5F5'
+              : 'transparent',
         outline: isInside ? '1px solid #0078D4' : undefined,
         outlineOffset: -1,
         touchAction: 'none',
       }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={() => select(node.id)}
       {...listeners}
       {...attributes}
