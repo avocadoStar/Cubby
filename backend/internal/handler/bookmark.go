@@ -82,6 +82,15 @@ func (h *BookmarkHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (h *BookmarkHandler) Restore(c *gin.Context) {
+	b, err := h.svc.Restore(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, b)
+}
+
 func (h *BookmarkHandler) Move(c *gin.Context) {
 	var req struct {
 		ID       string  `json:"id"`

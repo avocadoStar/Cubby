@@ -44,6 +44,7 @@ func (r *stubBookmarkRepo) Update(id, title, url string, version int) (*model.Bo
 	return nil, nil
 }
 func (r *stubBookmarkRepo) SoftDelete(id string) error            { return nil }
+func (r *stubBookmarkRepo) Restore(id string) (*model.Bookmark, error) { return nil, nil }
 func (r *stubBookmarkRepo) BatchSoftDelete(ids []string) error    { return nil }
 func (r *stubBookmarkRepo) Move(id string, folderID *string, sortKey string, version int) (*model.Bookmark, error) {
 	return nil, nil

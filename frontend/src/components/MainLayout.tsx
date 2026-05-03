@@ -1,6 +1,7 @@
 import Sidebar from './Sidebar'
 import Toolbar from './Toolbar'
 import BookmarkRow from './BookmarkRow'
+import ToastContainer from './Toast'
 import BatchActionBar from './BatchActionBar'
 import ContextMenu from './ContextMenu'
 import DropIndicator from './DropIndicator'
@@ -566,6 +567,7 @@ export default function MainLayout() {
   })
 
   return (
+    <>
     <DndContext
       sensors={sensors}
       collisionDetection={pointerClosestCenter}
@@ -668,5 +670,7 @@ export default function MainLayout() {
 
       <DropIndicator />
     </DndContext>
+    <ToastContainer />
+    </>
   )
 }

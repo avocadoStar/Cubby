@@ -2,19 +2,21 @@ import { create } from 'zustand'
 import type { Bookmark } from '../types'
 import { api, ConflictError } from '../services/api'
 import { useFolderStore } from './folderStore'
+import { useToastStore } from './toastStore'
 
 interface BookmarkState {
   bookmarks: Bookmark[]
   selectedIds: Set<string>
   selectedFolderIds: Set<string>
   loading: boolean
+  deletingIds: Set<string>
   load: (folderId?: string | null) => Promise<void>
   toggleSelect: (id: string) => void
   toggleFolderSelect: (id: string) => void
   selectAll: (folderIds?: string[]) => void
   clearSelection: () => void
   deleteSelected: () => Promise<void>
-  deleteOne: (id: string) => Promise<void>
+  deleteOne: (id: string) => void
   move: (id: string, folderId: string | null, prevId: string | null, nextId: string | null, version: number, sortKey?: string) => Promise<void>
 }
 
@@ -23,6 +25,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   selectedIds: new Set(),
   selectedFolderIds: new Set(),
   loading: false,
+  deletingIds: new Set(),
 
   load: async (folderId) => {
     set({ loading: true })
@@ -75,8 +78,70 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     await folderStore.loadChildren(null)
   },
 
-  deleteOne: async (id) => {
-    await api.deleteBookmark(id)
+  deleteOne: (id) => {
+    const bookmark = get().bookmarks.find((b) => b.id === id)
+    if (!bookmark) return
+
+    // Start fade-out animation
+    set((s) => ({
+      deletingIds: new Set(s.deletingIds).add(id),
+      selectedIds: (() => { const n = new Set(s.selectedIds); n.delete(id); return n })(),
+    }))
+
+    let undoClicked = false
+    let done = false
+
+    const finishUndo = () => {
+      if (undoClicked || done) return
+      undoClicked = true
+      set((s) => {
+        const d = new Set(s.deletingIds)
+        d.delete(id)
+        // Restore the bookmark to the list (same ID, same position)
+        const next = [...s.bookmarks, bookmark]
+        next.sort((a, b) => a.sort_key < b.sort_key ? -1 : 1)
+        return { bookmarks: next, deletingIds: d }
+      })
+    }
+
+    const finishDelete = () => {
+      if (undoClicked || done) return
+      done = true
+      set((s) => ({
+        bookmarks: s.bookmarks.filter((b) => b.id !== id),
+        deletingIds: (() => { const d = new Set(s.deletingIds); d.delete(id); return d })(),
+      }))
+    }
+
+    // Call delete API immediately
+    api.deleteBookmark(id).then(() => {
+      if (undoClicked) return
+      finishDelete()
+      // Show undo toast (API succeeded)
+      useToastStore.getState().show({
+        message: `已删除 "${bookmark.title}"`,
+        onUndo: () => {
+          undoClicked = true
+          // Restore via backend
+          api.restoreBookmark(id).then((restored) => {
+            if (restored) {
+              set((s) => {
+                const next = [...s.bookmarks, restored]
+                next.sort((a, b) => a.sort_key < b.sort_key ? -1 : 1)
+                const d = new Set(s.deletingIds)
+                d.delete(id)
+                return { bookmarks: next, deletingIds: d }
+              })
+            }
+          }).catch(() => {
+            finishUndo()
+          })
+        },
+      })
+    }).catch(() => {
+      // API failed — re-add bookmark
+      finishUndo()
+    })
   },
 
   move: async (id, folderId, prevId, nextId, version, sortKey) => {

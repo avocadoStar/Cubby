@@ -12,6 +12,7 @@ type BookmarkRepo interface {
 	Create(title, url string, folderID *string, sortKey string) (*model.Bookmark, error)
 	Update(id, title, url string, version int) (*model.Bookmark, error)
 	SoftDelete(id string) error
+	Restore(id string) (*model.Bookmark, error)
 	BatchSoftDelete(ids []string) error
 	Move(id string, folderID *string, sortKey string, version int) (*model.Bookmark, error)
 	Search(query string) ([]model.Bookmark, error)

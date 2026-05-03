@@ -92,6 +92,9 @@ export const api = {
   deleteBookmark: (id: string) =>
     request<void>(`/bookmarks/${id}`, { method: 'DELETE' }),
 
+  restoreBookmark: (id: string) =>
+    request<Bookmark>(`/bookmarks/${id}/restore`, { method: 'PUT' }),
+
   moveBookmark: (req: MoveRequest) =>
     request<Bookmark>('/bookmarks/move', {
       method: 'POST',

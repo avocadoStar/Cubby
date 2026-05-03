@@ -81,6 +81,14 @@ func (r *bookmarkRepo) SoftDelete(id string) error {
 	return err
 }
 
+func (r *bookmarkRepo) Restore(id string) (*model.Bookmark, error) {
+	_, err := r.DB.Exec(`UPDATE bookmark SET deleted_at=NULL WHERE id=?`, id)
+	if err != nil {
+		return nil, err
+	}
+	return r.GetByID(id)
+}
+
 func (r *bookmarkRepo) BatchSoftDelete(ids []string) error {
 	tx, err := r.DB.Begin()
 	if err != nil {

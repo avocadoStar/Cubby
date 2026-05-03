@@ -53,6 +53,10 @@ func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID, sort
 	return s.repo.Move(id, folderID, sortKey, version)
 }
 
+func (s *BookmarkService) Restore(id string) (*model.Bookmark, error) {
+	return s.repo.Restore(id)
+}
+
 func (s *BookmarkService) BatchDelete(ids []string) error {
 	return s.repo.BatchSoftDelete(ids)
 }

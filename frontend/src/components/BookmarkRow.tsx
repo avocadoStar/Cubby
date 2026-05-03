@@ -5,8 +5,9 @@ import { useDndStore } from '../stores/dndStore'
 import { useDraggable } from '@dnd-kit/core'
 
 const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
-  const { selectedIds, toggleSelect, deleteOne } = useBookmarkStore()
+  const { selectedIds, toggleSelect, deleteOne, deletingIds } = useBookmarkStore()
   const isSelected = selectedIds.has(bookmark.id)
+  const isDeleting = deletingIds.has(bookmark.id)
   const [hovered, setHovered] = useState(false)
 
   const overId = useDndStore((s) => s.overId)
@@ -32,8 +33,14 @@ const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
       data-id={bookmark.id}
       className="flex items-center mx-1 px-2 rounded select-none cursor-default"
       style={{
-        height: 32,
-        opacity: isDragging ? 0.3 : 1,
+        height: isDeleting ? 0 : 32,
+        opacity: isDeleting ? 0 : isDragging ? 0.3 : 1,
+        marginTop: isDeleting ? 0 : undefined,
+        marginBottom: isDeleting ? 0 : undefined,
+        paddingTop: isDeleting ? 0 : undefined,
+        paddingBottom: isDeleting ? 0 : undefined,
+        overflow: 'hidden',
+        transition: isDeleting ? 'opacity 0.2s ease-out, height 0.2s ease-out 0.05s, margin 0.2s ease-out 0.05s, padding 0.2s ease-out 0.05s' : 'none',
         background: isOverInside
           ? '#E5F0FF'
           : isSelected
