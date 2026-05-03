@@ -36,7 +36,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         height: isDeleting ? 0 : 38,
         opacity: isDeleting ? 0 : isDragging ? 0.3 : 1,
         marginBottom: isDeleting ? 0 : 8,
-        marginLeft: 4, marginRight: 4,
+        marginLeft: 45, marginRight: 45,
         overflow: 'hidden',
         borderRadius: 8,
         border: '1px solid var(--app-border)',

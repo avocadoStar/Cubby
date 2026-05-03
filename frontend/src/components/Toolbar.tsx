@@ -89,6 +89,7 @@ export default function Toolbar() {
               <text x="3" y="15" fontFamily="serif" fontSize="14" fontWeight="bold">A</text>
               <text x="11" y="13" fontFamily="serif" fontSize="9">A</text>
             </svg>
+            <span>字体调整</span>
           </button>
           {showFontSize && <FontSizePopover onClose={() => setShowFontSize(false)} />}
         </div>

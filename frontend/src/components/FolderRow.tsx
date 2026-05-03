@@ -33,7 +33,7 @@ function FolderRowComponent({
       style={{
         height: 38, borderRadius: 8,
         border: '1px solid var(--app-border, #E0E0E0)',
-        margin: '0 4px 8px 4px',
+        margin: '0 45px 8px 45px',
         opacity: isDragging ? 0.3 : 1,
         background: isInside ? 'var(--accent-light, #E5F0FF)' : isFolderSelected ? 'var(--accent-light, #E5F0FF)' : hovered ? 'var(--app-hover, #F5F5F5)' : 'var(--app-card, #FFFFFF)',
         outline: isInside ? '1px solid var(--app-accent, #0078D4)' : undefined,
