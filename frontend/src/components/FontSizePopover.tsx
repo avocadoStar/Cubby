@@ -67,7 +67,7 @@ export default function FontSizePopover({ onClose }: { onClose: () => void }) {
         className="text-center text-[#888] py-2 border-t border-[#e8e8e8] select-none"
         style={{ fontSize: `var(--fs-body)` }}
       >
-        预览文本示例 Lorem ipsum
+        预览文本示例 Cubby
       </div>
     </div>
   )

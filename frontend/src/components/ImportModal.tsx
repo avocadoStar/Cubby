@@ -57,7 +57,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
             <span className="text-sm text-[#666]">选择浏览器导出的 HTML 文件</span>
-            <span className="text-xs-scalable text-[#999]">支持 Chrome / Edge / Firefox 导出格式</span>
+            <span className="text-xs text-[#999]">支持 Chrome / Edge / Firefox 导出格式</span>
             <input type="file" accept=".html,.htm" className="hidden" onChange={(e) => {
               const file = e.target.files?.[0]
               if (file) handleFile(file)
@@ -98,7 +98,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
               </svg>
             </div>
             <p className="text-sm font-medium text-red-600 mb-1">导入失败</p>
-            <p className="text-xs-scalable text-[#888] mb-4 max-h-16 overflow-auto">{error}</p>
+            <p className="text-xs text-[#888] mb-4 max-h-16 overflow-auto">{error}</p>
             <div className="flex justify-center gap-2">
               <button onClick={onClose} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-body cursor-default">取消</button>
               <button onClick={handleRetry} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-body font-medium cursor-default">重试</button>

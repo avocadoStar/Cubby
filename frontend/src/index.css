@@ -3,6 +3,7 @@
 :root {
   --fs-body: 13px;
   --fs-small: 9px;
+  --text-xs: var(--fs-small);
 }
 
 body {
@@ -15,4 +16,3 @@ body {
 
 .text-body { font-size: var(--fs-body); }
 .text-small { font-size: var(--fs-small); }
-.text-xs-scalable { font-size: calc(var(--fs-body) - 1px); }

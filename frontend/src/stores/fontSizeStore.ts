@@ -3,9 +3,9 @@ import { create } from 'zustand'
 export type FontSizePreset = 'small' | 'medium' | 'large'
 
 const PRESET_VALUES: Record<FontSizePreset, { body: number; small: number }> = {
-  small:  { body: 12, small: 8 },
-  medium: { body: 13, small: 9 },
-  large:  { body: 15, small: 11 },
+  small:  { body: 13, small: 9 },
+  medium: { body: 15, small: 11 },
+  large:  { body: 17, small: 13 },
 }
 
 function applyPreset(preset: FontSizePreset) {
@@ -20,7 +20,7 @@ interface FontSizeState {
 }
 
 export const useFontSizeStore = create<FontSizeState>((set) => ({
-  preset: ((localStorage.getItem('cubby-font-size') || 'medium') as FontSizePreset),
+  preset: ((localStorage.getItem('cubby-font-size') || 'small') as FontSizePreset),
 
   setPreset: (preset) => {
     localStorage.setItem('cubby-font-size', preset)

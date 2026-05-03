@@ -138,8 +138,8 @@ function FolderRowComponent({
         <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
       </svg>
       <span className="flex-1 truncate text-body text-[#1a1a1a]">{folder.name}</span>
-      <span className="flex-shrink-0 text-xs-scalable text-[#888] mr-8" style={{ width: 320 }}>文件夹</span>
-      <span className="flex-shrink-0 text-xs-scalable text-[#888]" style={{ width: 100, minWidth: 100 }} />
+      <span className="flex-shrink-0 text-xs text-[#888] mr-8" style={{ width: 320 }}>文件夹</span>
+      <span className="flex-shrink-0 text-xs text-[#888]" style={{ width: 100, minWidth: 100 }} />
       <div
         className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default mr-2"
         style={{ opacity: hovered ? 1 : 0.35, color: hovered ? '#cc3333' : '#999' }}
@@ -650,7 +650,7 @@ export default function MainLayout() {
                       ))}
                     </span>
                     {r.kind === 'bookmark' && r.url && (
-                      <span className="flex-shrink-0 truncate text-xs-scalable text-[#888] ml-4" style={{ maxWidth: 320 }}>
+                      <span className="flex-shrink-0 truncate text-xs text-[#888] ml-4" style={{ maxWidth: 320 }}>
                         {highlightMatches(r.url, searchQuery).map((seg, i) => (
                           <span key={i} style={seg.highlight ? { background: '#FFF2A8', borderRadius: 2, padding: '0 1px' } : undefined}>
                             {seg.text}
@@ -659,7 +659,7 @@ export default function MainLayout() {
                       </span>
                     )}
                     {r.kind === 'folder' && (
-                      <span className="flex-shrink-0 text-xs-scalable text-[#888] ml-4">文件夹</span>
+                      <span className="flex-shrink-0 text-xs text-[#888] ml-4">文件夹</span>
                     )}
                   </div>
                 ))}
