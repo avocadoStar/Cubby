@@ -80,6 +80,15 @@ func (h *FolderHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (h *FolderHandler) Restore(c *gin.Context) {
+	f, err := h.svc.Restore(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, f)
+}
+
 func (h *FolderHandler) BatchDelete(c *gin.Context) {
 	var req struct {
 		IDs []string `json:"ids"`

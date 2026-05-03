@@ -67,6 +67,9 @@ export const api = {
   deleteFolder: (id: string) =>
     request<void>(`/folders/${id}`, { method: 'DELETE' }),
 
+  restoreFolder: (id: string) =>
+    request<Folder>(`/folders/${id}/restore`, { method: 'PUT' }),
+
   moveFolder: (req: MoveRequest) =>
     request<Folder>('/folders/move', {
       method: 'POST',

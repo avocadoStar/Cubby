@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Folder } from '../types'
 import { api, ConflictError } from '../services/api'
+import { useToastStore } from './toastStore'
 
 interface FolderState {
   folderMap: Map<string, Folder>
@@ -13,6 +14,7 @@ interface FolderState {
   select: (id: string | null) => Promise<void>
   rebuildVisible: () => void
   create: (name: string, parentId: string | null) => Promise<void>
+  deleteOne: (id: string) => void
   moveFolder: (
     id: string,
     newParentId: string | null,
@@ -117,6 +119,66 @@ export const useFolderStore = create<FolderState>((set, get) => ({
   create: async (name, parentId) => {
     await api.createFolder(name, parentId)
     await get().loadChildren(parentId)
+  },
+
+  deleteOne: (id) => {
+    const folder = get().folderMap.get(id)
+    if (!folder) return
+
+    // Remove from childrenMap so it disappears from sidebar immediately
+    set((s) => {
+      const folderMap = new Map(s.folderMap)
+      folderMap.delete(id)
+      const childrenMap = new Map(s.childrenMap)
+      for (const [pid, children] of childrenMap) {
+        childrenMap.set(pid, children.filter((cid) => cid !== id))
+      }
+      return { folderMap, childrenMap }
+    })
+    get().rebuildVisible()
+
+    let undone = false
+
+    const doUndo = () => {
+      if (undone) return
+      undone = true
+      api.restoreFolder(id).then((restored) => {
+        if (restored) {
+          set((s) => {
+            const folderMap = new Map(s.folderMap)
+            folderMap.set(id, restored)
+            return { folderMap }
+          })
+          // Reload parent to refresh children ordering
+          get().loadChildren(restored.parent_id)
+          get().rebuildVisible()
+        }
+      }).catch(() => {
+        // Re-add locally if restore fails
+        set((s) => {
+          const folderMap = new Map(s.folderMap)
+          folderMap.set(id, folder)
+          return { folderMap }
+        })
+        const parentId = folder.parent_id
+        get().loadChildren(parentId)
+        get().rebuildVisible()
+      })
+    }
+
+    // Call delete API immediately
+    api.deleteFolder(id).then(() => {
+      if (undone) return
+      const parentId = folder.parent_id
+      get().loadChildren(parentId)
+      get().rebuildVisible()
+      useToastStore.getState().show({
+        message: `已删除 "${folder.name}"`,
+        onUndo: doUndo,
+      })
+    }).catch(() => {
+      doUndo()
+    })
   },
 
   moveFolder: async (id, newParentId, prevId, nextId, version, sortKey) => {

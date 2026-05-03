@@ -63,6 +63,10 @@ func (s *FolderService) Delete(id string) error {
 	return s.repo.SoftDelete(id)
 }
 
+func (s *FolderService) Restore(id string) (*model.Folder, error) {
+	return s.repo.Restore(id)
+}
+
 func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string, sortKeyOverride *string, version int) (*model.Folder, error) {
 	if sortKeyOverride != nil && *sortKeyOverride != "" {
 		return s.repo.Move(id, parentID, *sortKeyOverride, version)

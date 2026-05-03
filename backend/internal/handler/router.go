@@ -40,6 +40,7 @@ func SetupRoutes(
 		protected.POST("/folders", folderH.Create)
 		protected.PUT("/folders/:id", folderH.Update)
 		protected.DELETE("/folders/:id", folderH.Delete)
+		protected.PUT("/folders/:id/restore", folderH.Restore)
 		protected.POST("/folders/move", folderH.Move)
 		protected.POST("/folders/batch-delete", folderH.BatchDelete)
 

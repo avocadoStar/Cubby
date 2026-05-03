@@ -25,6 +25,7 @@ type FolderRepo interface {
 	Create(name string, parentID *string, sortKey string) (*model.Folder, error)
 	Update(id, name string, version int) (*model.Folder, error)
 	SoftDelete(id string) error
+	Restore(id string) (*model.Folder, error)
 	Rebalance(updates []SortKeyUpdate) error
 	Move(id string, parentID *string, sortKey string, version int) (*model.Folder, error)
 }

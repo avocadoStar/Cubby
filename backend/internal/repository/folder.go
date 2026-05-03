@@ -81,6 +81,14 @@ func (r *folderRepo) SoftDelete(id string) error {
 	return err
 }
 
+func (r *folderRepo) Restore(id string) (*model.Folder, error) {
+	_, err := r.DB.Exec(`UPDATE folder SET deleted_at=NULL WHERE id=?`, id)
+	if err != nil {
+		return nil, err
+	}
+	return r.Get(id)
+}
+
 func (r *folderRepo) Rebalance(updates []SortKeyUpdate) error {
 	tx, err := r.DB.Begin()
 	if err != nil {

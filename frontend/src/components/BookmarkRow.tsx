@@ -89,7 +89,7 @@ const BookmarkRow = memo(({ bookmark }: { bookmark: Bookmark }) => {
       </span>
       <div
         className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default"
-        style={{ opacity: hovered ? 1 : 0, color: '#999' }}
+        style={{ opacity: hovered ? 1 : 0.35, color: hovered ? '#cc3333' : '#999' }}
         onClick={(e) => { e.stopPropagation(); deleteOne(bookmark.id) }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">

@@ -8,7 +8,7 @@ import DropIndicator from './DropIndicator'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
-import { useEffect, useMemo, useRef, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useCallback, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   DndContext,
@@ -87,6 +87,7 @@ function FolderRowComponent({
   onNavigate,
   isDragging,
   isInside,
+  onDelete,
 }: {
   folder: Folder
   isFolderSelected: boolean
@@ -94,7 +95,10 @@ function FolderRowComponent({
   onNavigate: () => void
   isDragging: boolean
   isInside: boolean
+  onDelete: () => void
 }) {
+  const [hovered, setHovered] = useState(false)
+
   return (
     <div
       data-context="folder"
@@ -103,11 +107,13 @@ function FolderRowComponent({
       style={{
         height: 32,
         opacity: isDragging ? 0.3 : 1,
-        background: isInside ? '#E5F0FF' : isFolderSelected ? '#E5F0FF' : 'transparent',
+        background: isInside ? '#E5F0FF' : isFolderSelected ? '#E5F0FF' : hovered ? '#F5F5F5' : 'transparent',
         outline: isInside ? '1px solid #0078D4' : undefined,
         outlineOffset: -1,
         touchAction: 'none',
       }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={onNavigate}
     >
       <div
@@ -132,7 +138,20 @@ function FolderRowComponent({
       <span className="flex-1 truncate text-[13px] text-[#1a1a1a]">{folder.name}</span>
       <span className="flex-shrink-0 text-xs text-[#888] mr-8" style={{ width: 320 }}>文件夹</span>
       <span className="flex-shrink-0 text-xs text-[#888]" style={{ width: 100, minWidth: 100 }} />
-      <ChevronRight size={14} stroke="#999" strokeWidth={1.5} className="flex-shrink-0" />
+      <div
+        className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default mr-2"
+        style={{ opacity: hovered ? 1 : 0.35, color: hovered ? '#cc3333' : '#999' }}
+        onClick={(e) => { e.stopPropagation(); onDelete() }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </div>
+      <div
+        className="flex-shrink-0"
+        style={{ width: 1, alignSelf: 'stretch', background: hovered ? '#e0e0e0' : 'transparent' }}
+      />
+      <ChevronRight size={14} stroke="#999" strokeWidth={1.5} className="flex-shrink-0 ml-2" />
     </div>
   )
 }
@@ -143,11 +162,13 @@ function DraggableFolderRow({
   isFolderSelected,
   onToggleSelect,
   onNavigate,
+  onDelete,
 }: {
   folder: Folder
   isFolderSelected: boolean
   onToggleSelect: () => void
   onNavigate: () => void
+  onDelete: () => void
 }) {
   const overId = useDndStore((s) => s.overId)
   const dropPosition = useDndStore((s) => s.dropPosition)
@@ -169,6 +190,7 @@ function DraggableFolderRow({
         onNavigate={onNavigate}
         isDragging={isDragging}
         isInside={isInside}
+        onDelete={onDelete}
       />
     </div>
   )
@@ -610,6 +632,7 @@ export default function MainLayout() {
                         isFolderSelected={selectedFolderIds.has(item.folder.id)}
                         onToggleSelect={() => toggleFolderSelect(item.folder.id)}
                         onNavigate={() => select(item.folder.id)}
+                        onDelete={() => useFolderStore.getState().deleteOne(item.folder.id)}
                       />
                     </ItemDroppable>
                   )
