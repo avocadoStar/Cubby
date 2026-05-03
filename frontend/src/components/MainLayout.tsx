@@ -3,14 +3,13 @@ import Toolbar from './Toolbar'
 import BookmarkRow from './BookmarkRow'
 import ToastContainer from './Toast'
 import { useSearchStore } from '../stores/searchStore'
-import { highlightMatches } from '../lib/highlight'
 import BatchActionBar from './BatchActionBar'
 import ContextMenu from './ContextMenu'
 import DropIndicator from './DropIndicator'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
-import { useEffect, useMemo, useRef, useCallback, useState } from 'react'
+import { useEffect, useMemo, useRef, useCallback } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import {
   DndContext,
@@ -19,8 +18,6 @@ import {
   getClientRect,
   useSensor,
   useSensors,
-  useDroppable,
-  useDraggable,
   type Modifier,
   type DragStartEvent,
   type DragMoveEvent,
@@ -28,175 +25,14 @@ import {
 } from '@dnd-kit/core'
 import { POINTER_SENSOR_CONFIG, pointerClosestCenter, calcDropPosition, computePlacement, getUnifiedSiblings, normalizeOverId, type UnifiedSortableItem } from '../lib/dndUtils'
 import type { Folder, Bookmark } from '../types'
-import { ChevronRight } from 'lucide-react'
 
-type ListItem =
+export type ListItem =
   | { kind: 'folder'; folder: Folder }
   | { kind: 'bookmark'; bookmark: Bookmark }
 
-/** Droppable wrapper for each right-panel item (folder or bookmark). */
-function ItemDroppable({
-  item,
-  activeId,
-  folderMap,
-  style,
-  children,
-}: {
-  item: ListItem
-  activeId: string | null
-  folderMap: Map<string, Folder>
-  style: React.CSSProperties
-  children: React.ReactNode
-}) {
-  const nodeId = item.kind === 'folder' ? item.folder.id : item.bookmark.id
-  const dropId = `droppable:${nodeId}`
-
-  // Disable dropping on self, or on descendants of the dragged folder
-  const disabled = useMemo(() => {
-    if (!activeId || activeId === dropId) return false
-    const activeFolderId = activeId.startsWith('droppable:') ? activeId.slice('droppable:'.length) : activeId
-    if (activeFolderId === nodeId) return true
-
-    // Check if this node is a descendant of the dragged folder
-    let current: string | null = nodeId
-    while (current) {
-      const f = folderMap.get(current)
-      if (!f || !f.parent_id) break
-      if (f.parent_id === activeFolderId) return true
-      current = f.parent_id
-    }
-    return false
-  }, [activeId, nodeId, dropId, folderMap])
-
-  const { setNodeRef } = useDroppable({ id: dropId, data: { item }, disabled })
-
-  return (
-    <div
-      ref={setNodeRef}
-      data-drop-id={dropId}
-      style={{ ...style, touchAction: 'none' }}
-    >
-      {children}
-    </div>
-  )
-}
-
-/** Inline folder row rendered in the right panel. */
-function FolderRowComponent({
-  folder,
-  isFolderSelected,
-  onToggleSelect,
-  onNavigate,
-  isDragging,
-  isInside,
-  onDelete,
-}: {
-  folder: Folder
-  isFolderSelected: boolean
-  onToggleSelect: () => void
-  onNavigate: () => void
-  isDragging: boolean
-  isInside: boolean
-  onDelete: () => void
-}) {
-  const [hovered, setHovered] = useState(false)
-
-  return (
-    <div
-      data-context="folder"
-      data-id={folder.id}
-      className="flex items-center mx-1 px-2 rounded select-none cursor-default"
-      style={{
-        height: 32,
-        opacity: isDragging ? 0.3 : 1,
-        background: isInside ? '#E5F0FF' : isFolderSelected ? '#E5F0FF' : hovered ? '#F5F5F5' : 'transparent',
-        outline: isInside ? '1px solid #0078D4' : undefined,
-        outlineOffset: -1,
-        touchAction: 'none',
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={onNavigate}
-    >
-      <div
-        className="flex-shrink-0 mr-2.5 flex items-center justify-center cursor-default"
-        style={{
-          width: 18, height: 18,
-          borderRadius: '50%',
-          border: isFolderSelected ? '2px solid #0078D4' : '2px solid #c0c0c0',
-          background: isFolderSelected ? '#0078D4' : 'transparent',
-        }}
-        onClick={(e) => { e.stopPropagation(); onToggleSelect() }}
-      >
-        {isFolderSelected && (
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        )}
-      </div>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6" className="flex-shrink-0 mr-2">
-        <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
-      </svg>
-      <span className="flex-1 truncate text-body text-[#1a1a1a]">{folder.name}</span>
-      <span className="flex-shrink-0 text-xs text-[#888] mr-8" style={{ width: 320 }}>文件夹</span>
-      <span className="flex-shrink-0 text-xs text-[#888]" style={{ width: 100, minWidth: 100 }} />
-      <div
-        className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default mr-2"
-        style={{ opacity: hovered ? 1 : 0.35, color: hovered ? '#cc3333' : '#999' }}
-        onClick={(e) => { e.stopPropagation(); onDelete() }}
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </div>
-      <div
-        className="flex-shrink-0"
-        style={{ width: 1, alignSelf: 'stretch', background: hovered ? '#e0e0e0' : 'transparent' }}
-      />
-      <ChevronRight size={14} stroke="#999" strokeWidth={1.5} className="flex-shrink-0 ml-2" />
-    </div>
-  )
-}
-
-/** Draggable folder row wrapper. */
-function DraggableFolderRow({
-  folder,
-  isFolderSelected,
-  onToggleSelect,
-  onNavigate,
-  onDelete,
-}: {
-  folder: Folder
-  isFolderSelected: boolean
-  onToggleSelect: () => void
-  onNavigate: () => void
-  onDelete: () => void
-}) {
-  const overId = useDndStore((s) => s.overId)
-  const dropPosition = useDndStore((s) => s.dropPosition)
-  const dndSource = useDndStore((s) => s.source)
-  const isOver = overId === `droppable:${folder.id}`
-  const isInside = isOver && dropPosition === 'inside' && dndSource === 'main'
-
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: folder.id,
-    data: { kind: 'folder', folder },
-  })
-
-  return (
-    <div ref={setNodeRef} {...listeners} {...attributes}>
-      <FolderRowComponent
-        folder={folder}
-        isFolderSelected={isFolderSelected}
-        onToggleSelect={onToggleSelect}
-        onNavigate={onNavigate}
-        isDragging={isDragging}
-        isInside={isInside}
-        onDelete={onDelete}
-      />
-    </div>
-  )
-}
+import ItemDroppable from './ItemDroppable'
+import DraggableFolderRow from './FolderRow'
+import SearchResults from './SearchResults'
 
 export default function MainLayout() {
   const { bookmarks, load, selectAll, selectedIds, selectedFolderIds, toggleFolderSelect } = useBookmarkStore()
@@ -609,65 +445,11 @@ export default function MainLayout() {
         <div className="flex-1 flex flex-col min-w-0">
           <Toolbar />
           <BatchActionBar />
-          {isSearching && (
-            <div className="px-4 py-2 text-body text-[#666] border-b border-[#e8e8e8]">
-              找到了与"<span className="text-[#1a1a1a] font-medium">{searchQuery}</span>"相符的 {searchResults.length} 结果
-            </div>
-          )}
+          {isSearching ? (
+            <SearchResults query={searchQuery} results={searchResults} />
+          ) : (
+          <>
           <div className="flex-1" ref={scrollRef} style={{ overflow: 'auto' }}>
-            {isSearching ? (
-              <div style={{ paddingTop: 4 }}>
-                {searchResults.map((r) => (
-                  <div
-                    key={`${r.kind}-${r.id}`}
-                    className="flex items-center mx-1 px-2 rounded select-none cursor-default"
-                    style={{ height: 32 }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#F5F5F5')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    onClick={() => {
-                      if (r.kind === 'folder') {
-                        useSearchStore.getState().clearSearch()
-                        useFolderStore.getState().select(r.id)
-                      } else {
-                        window.open(r.url!, '_blank')
-                      }
-                    }}
-                  >
-                    {r.kind === 'folder' ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6" className="flex-shrink-0 mr-2">
-                        <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
-                      </svg>
-                    ) : (
-                      <div className="flex-shrink-0 mr-2 rounded-sm flex items-center justify-center text-small text-[#666]" style={{ width: 16, height: 16, background: '#e8e8e8' }}>
-                        {r.title.charAt(0)}
-                      </div>
-                    )}
-                    <span className="flex-1 truncate text-body text-[#1a1a1a]">
-                      {highlightMatches(r.title, searchQuery).map((seg, i) => (
-                        <span key={i} style={seg.highlight ? { background: '#FFF2A8', borderRadius: 2, padding: '0 1px' } : undefined}>
-                          {seg.text}
-                        </span>
-                      ))}
-                    </span>
-                    {r.kind === 'bookmark' && r.url && (
-                      <span className="flex-shrink-0 truncate text-xs text-[#888] ml-4" style={{ maxWidth: 320 }}>
-                        {highlightMatches(r.url, searchQuery).map((seg, i) => (
-                          <span key={i} style={seg.highlight ? { background: '#FFF2A8', borderRadius: 2, padding: '0 1px' } : undefined}>
-                            {seg.text}
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                    {r.kind === 'folder' && (
-                      <span className="flex-shrink-0 text-xs text-[#888] ml-4">文件夹</span>
-                    )}
-                  </div>
-                ))}
-                {searchResults.length === 0 && searchQuery && (
-                  <div className="text-center text-body text-[#999] py-12">没有找到相关结果</div>
-                )}
-              </div>
-            ) : (
             <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
               {rowVirtualizer.getVirtualItems().map((vi) => {
                 const item = items[vi.index]
@@ -712,8 +494,9 @@ export default function MainLayout() {
                 )
               })}
             </div>
-            )}
           </div>
+          </>
+          )}
         </div>
       </div>
 
