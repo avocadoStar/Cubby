@@ -146,10 +146,6 @@ export default function ContextMenu() {
                 onClick={() => openUrl('_blank', 'popup')}>
                 在新窗口中打开
               </button>
-              <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
-                onClick={() => openUrl('_blank', 'private')}>
-                在新建 InPrivate 窗口中打开
-              </button>
               <div className="border-t border-[#e8e8e8] my-0.5" />
               <button className="block w-full text-left h-8 px-3 rounded text-[13px] text-red-500 hover:bg-[#f5f5f5] cursor-default"
                 onClick={handleDelete}>
