@@ -13,6 +13,6 @@ func NewSearchService(repo repository.BookmarkRepo) *SearchService {
 	return &SearchService{repo: repo}
 }
 
-func (s *SearchService) Search(query string) ([]model.Bookmark, error) {
-	return s.repo.Search(query)
+func (s *SearchService) Search(query string) ([]model.SearchResult, error) {
+	return s.repo.SearchBoth(query)
 }

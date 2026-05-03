@@ -20,7 +20,7 @@ func NewSearchHandler(svc *service.SearchService) *SearchHandler {
 func (h *SearchHandler) Search(c *gin.Context) {
 	q := c.Query("q")
 	if q == "" {
-		c.JSON(http.StatusOK, []model.Bookmark{})
+		c.JSON(http.StatusOK, []model.SearchResult{})
 		return
 	}
 	results, err := h.svc.Search(q)
@@ -29,7 +29,7 @@ func (h *SearchHandler) Search(c *gin.Context) {
 		return
 	}
 	if results == nil {
-		results = []model.Bookmark{}
+		results = []model.SearchResult{}
 	}
 	c.JSON(http.StatusOK, results)
 }

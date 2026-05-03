@@ -1,4 +1,4 @@
-import type { Folder, Bookmark, MoveRequest } from '../types'
+import type { Folder, Bookmark, SearchResultItem, MoveRequest } from '../types'
 
 const BASE = '/api'
 
@@ -118,7 +118,7 @@ export const api = {
 
   // Search
   search: (q: string) =>
-    request<Bookmark[]>(`/search?q=${encodeURIComponent(q)}`),
+    request<SearchResultItem[]>(`/search?q=${encodeURIComponent(q)}`),
 
   // Import
   fetchMetadata: (url: string) =>

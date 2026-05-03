@@ -155,3 +155,28 @@ func (r *bookmarkRepo) Search(query string) ([]model.Bookmark, error) {
 	}
 	return bookmarks, nil
 }
+
+func (r *bookmarkRepo) SearchBoth(query string) ([]model.SearchResult, error) {
+	q := "%" + query + "%"
+	rows, err := r.DB.Query(`
+		SELECT 'bookmark', id, title, url, folder_id, NULL FROM bookmark
+		WHERE (title LIKE ? OR url LIKE ?) AND deleted_at IS NULL
+		UNION ALL
+		SELECT 'folder', id, name, NULL, NULL, parent_id FROM folder
+		WHERE name LIKE ? AND deleted_at IS NULL
+		ORDER BY title
+	`, q, q, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []model.SearchResult
+	for rows.Next() {
+		var sr model.SearchResult
+		if err := rows.Scan(&sr.Kind, &sr.ID, &sr.Title, &sr.URL, &sr.FolderID, &sr.ParentID); err != nil {
+			return nil, err
+		}
+		results = append(results, sr)
+	}
+	return results, nil
+}

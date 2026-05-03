@@ -23,6 +23,15 @@ type Bookmark struct {
 	UpdatedAt string  `json:"updated_at"`
 }
 
+type SearchResult struct {
+	Kind     string  `json:"kind"` // "bookmark" or "folder"
+	ID       string  `json:"id"`
+	Title    string  `json:"title"`
+	URL      *string `json:"url,omitempty"`
+	FolderID *string `json:"folder_id,omitempty"`
+	ParentID *string `json:"parent_id,omitempty"`
+}
+
 type Setting struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`

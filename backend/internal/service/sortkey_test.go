@@ -23,6 +23,11 @@ func (r *stubBookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 			result = append(result, b)
 		}
 	}
+	for i := 1; i < len(result); i++ {
+		for j := i; j > 0 && result[j].SortKey < result[j-1].SortKey; j-- {
+			result[j], result[j-1] = result[j-1], result[j]
+		}
+	}
 	return result, nil
 }
 
@@ -49,7 +54,8 @@ func (r *stubBookmarkRepo) BatchSoftDelete(ids []string) error    { return nil }
 func (r *stubBookmarkRepo) Move(id string, folderID *string, sortKey string, version int) (*model.Bookmark, error) {
 	return nil, nil
 }
-func (r *stubBookmarkRepo) Search(query string) ([]model.Bookmark, error) { return nil, nil }
+func (r *stubBookmarkRepo) Search(query string) ([]model.Bookmark, error)       { return nil, nil }
+func (r *stubBookmarkRepo) SearchBoth(query string) ([]model.SearchResult, error) { return nil, nil }
 func (r *stubBookmarkRepo) Rebalance(updates []repository.SortKeyUpdate) error {
 	for _, u := range updates {
 		b := r.items[u.ID]
@@ -73,6 +79,11 @@ func (r *stubFolderRepo) List(parentID *string) ([]model.Folder, error) {
 	for _, f := range r.items {
 		if parentID == nil && f.ParentID == nil || parentID != nil && f.ParentID != nil && *f.ParentID == *parentID {
 			result = append(result, f)
+		}
+	}
+	for i := 1; i < len(result); i++ {
+		for j := i; j > 0 && result[j].SortKey < result[j-1].SortKey; j-- {
+			result[j], result[j-1] = result[j-1], result[j]
 		}
 	}
 	return result, nil

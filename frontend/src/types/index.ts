@@ -19,6 +19,15 @@ export interface Bookmark {
   updated_at: string
 }
 
+export interface SearchResultItem {
+  kind: 'bookmark' | 'folder'
+  id: string
+  title: string
+  url?: string | null
+  folder_id?: string | null
+  parent_id?: string | null
+}
+
 export interface MoveRequest {
   id: string
   parent_id?: string | null

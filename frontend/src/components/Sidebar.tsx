@@ -1,6 +1,7 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
+import { useSearchStore } from '../stores/searchStore'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useDroppable } from '@dnd-kit/core'
 import FolderNode from './FolderNode'
@@ -93,8 +94,23 @@ export default function Sidebar() {
     folderMap,
   } = useFolderStore()
   const { activeId } = useDndStore()
+  const searchStore = useSearchStore()
+  const [query, setQuery] = useState('')
 
   const scrollRef = useRef<HTMLDivElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    clearTimeout(debounceRef.current)
+    if (!query.trim()) {
+      searchStore.clearSearch()
+      return
+    }
+    debounceRef.current = setTimeout(() => {
+      searchStore.search(query)
+    }, 250)
+    return () => clearTimeout(debounceRef.current)
+  }, [query])
 
   useEffect(() => {
     loadChildren(null)
@@ -119,7 +135,23 @@ export default function Sidebar() {
             <input
               className="flex-1 border-none outline-none text-[13px] bg-transparent"
               placeholder="搜索收藏夹"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
             />
+            {query && (
+              <div
+                className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full cursor-default"
+                style={{ background: '#d1d1d1', color: '#fff' }}
+                onClick={() => {
+                  setQuery('')
+                  searchStore.clearSearch()
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </div>
+            )}
           </div>
         </div>
 

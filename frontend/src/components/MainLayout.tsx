@@ -2,6 +2,8 @@ import Sidebar from './Sidebar'
 import Toolbar from './Toolbar'
 import BookmarkRow from './BookmarkRow'
 import ToastContainer from './Toast'
+import { useSearchStore } from '../stores/searchStore'
+import { highlightMatches } from '../lib/highlight'
 import BatchActionBar from './BatchActionBar'
 import ContextMenu from './ContextMenu'
 import DropIndicator from './DropIndicator'
@@ -200,6 +202,8 @@ export default function MainLayout() {
   const { bookmarks, load, selectAll, selectedIds, selectedFolderIds, toggleFolderSelect } = useBookmarkStore()
   const { selectedId, childrenMap, folderMap, select } = useFolderStore()
   const { setActive, setOver, clearDrag, activeItem, activeId } = useDndStore()
+  const { query: searchQuery, results: searchResults } = useSearchStore()
+  const isSearching = searchQuery !== ''
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const livePointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -605,7 +609,65 @@ export default function MainLayout() {
         <div className="flex-1 flex flex-col min-w-0">
           <Toolbar />
           <BatchActionBar />
+          {isSearching && (
+            <div className="px-4 py-2 text-[13px] text-[#666] border-b border-[#e8e8e8]">
+              找到了与"<span className="text-[#1a1a1a] font-medium">{searchQuery}</span>"相符的 {searchResults.length} 结果
+            </div>
+          )}
           <div className="flex-1" ref={scrollRef} style={{ overflow: 'auto' }}>
+            {isSearching ? (
+              <div style={{ paddingTop: 4 }}>
+                {searchResults.map((r) => (
+                  <div
+                    key={`${r.kind}-${r.id}`}
+                    className="flex items-center mx-1 px-2 rounded select-none cursor-default"
+                    style={{ height: 32 }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#F5F5F5')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    onClick={() => {
+                      if (r.kind === 'folder') {
+                        useSearchStore.getState().clearSearch()
+                        useFolderStore.getState().select(r.id)
+                      } else {
+                        window.open(r.url!, '_blank')
+                      }
+                    }}
+                  >
+                    {r.kind === 'folder' ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0C54F" stroke="#D4A830" strokeWidth="0.6" className="flex-shrink-0 mr-2">
+                        <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
+                      </svg>
+                    ) : (
+                      <div className="flex-shrink-0 mr-2 rounded-sm flex items-center justify-center text-[9px] text-[#666]" style={{ width: 16, height: 16, background: '#e8e8e8' }}>
+                        {r.title.charAt(0)}
+                      </div>
+                    )}
+                    <span className="flex-1 truncate text-[13px] text-[#1a1a1a]">
+                      {highlightMatches(r.title, searchQuery).map((seg, i) => (
+                        <span key={i} style={seg.highlight ? { background: '#FFF2A8', borderRadius: 2, padding: '0 1px' } : undefined}>
+                          {seg.text}
+                        </span>
+                      ))}
+                    </span>
+                    {r.kind === 'bookmark' && r.url && (
+                      <span className="flex-shrink-0 truncate text-xs text-[#888] ml-4" style={{ maxWidth: 320 }}>
+                        {highlightMatches(r.url, searchQuery).map((seg, i) => (
+                          <span key={i} style={seg.highlight ? { background: '#FFF2A8', borderRadius: 2, padding: '0 1px' } : undefined}>
+                            {seg.text}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                    {r.kind === 'folder' && (
+                      <span className="flex-shrink-0 text-xs text-[#888] ml-4">文件夹</span>
+                    )}
+                  </div>
+                ))}
+                {searchResults.length === 0 && searchQuery && (
+                  <div className="text-center text-[13px] text-[#999] py-12">没有找到相关结果</div>
+                )}
+              </div>
+            ) : (
             <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
               {rowVirtualizer.getVirtualItems().map((vi) => {
                 const item = items[vi.index]
@@ -650,6 +712,7 @@ export default function MainLayout() {
                 )
               })}
             </div>
+            )}
           </div>
         </div>
       </div>
