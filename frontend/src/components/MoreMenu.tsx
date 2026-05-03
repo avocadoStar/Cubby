@@ -35,13 +35,21 @@ export default function MoreMenu() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               <span>导入收藏夹</span>
             </button>
-            <a
-              href="/api/export"
-              className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default no-underline"
+            <button
+              className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default border-none bg-transparent"
+              onClick={async () => {
+                const token = localStorage.getItem('token')
+                const res = await fetch('/api/export', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+                const blob = await res.blob()
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url; a.download = 'bookmarks.html'; a.click()
+                URL.revokeObjectURL(url); setOpen(false)
+              }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span>导出收藏夹</span>
-            </a>
+            </button>
           </div>
         )}
       </div>
