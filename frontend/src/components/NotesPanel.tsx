@@ -19,7 +19,7 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
   const open = bookmark !== null
 
   useEffect(() => {
-    if (bookmark) { setNotes(bookmark.notes || ''); setSaved(false) }
+    if (bookmark) { setNotes(bookmark.notes || ''); notesRef.current = bookmark.notes || ''; setSaved(false) }
   }, [bookmark?.id])
 
   const save = useCallback((value: string) => {

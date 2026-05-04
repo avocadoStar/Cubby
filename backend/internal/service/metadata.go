@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -118,12 +119,34 @@ func (s *MetadataService) FetchTitle(rawURL string) (*Metadata, error) {
 		return nil, err
 	}
 
-	client := &http.Client{Timeout: 8 * time.Second}
+	parsed, _ := url.Parse(rawURL)
+	host := parsed.Hostname()
+
+	// Resolve DNS once, then dial the validated IP directly to prevent DNS rebinding.
+	ips, err := net.LookupIP(host)
+	if err != nil || len(ips) == 0 {
+		return nil, errURLNotAllowed
+	}
+	resolvedIP := ips[0].String()
+
+	// Custom transport that dials the validated IP, not re-resolving via DNS.
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			_, port, _ := net.SplitHostPort(addr)
+			target := net.JoinHostPort(resolvedIP, port)
+			dialer := &net.Dialer{Timeout: 5 * time.Second}
+			return dialer.DialContext(ctx, network, target)
+		},
+	}
+	client := &http.Client{Timeout: 8 * time.Second, Transport: transport}
+
 	req, err := http.NewRequest("GET", rawURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36")
+	// Set Host header explicitly so TLS SNI and Host header use the original hostname.
+	req.Host = host
 
 	resp, err := client.Do(req)
 	if err != nil {

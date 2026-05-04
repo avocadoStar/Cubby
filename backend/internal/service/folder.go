@@ -75,7 +75,11 @@ func (s *FolderService) Restore(id string) (*model.Folder, error) {
 
 func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string, sortKeyOverride *string, version int) (*model.Folder, error) {
 	if parentID != nil {
-		if s.isDescendant(id, *parentID) {
+		isDesc, err := s.isDescendant(id, *parentID)
+		if err != nil {
+			return nil, fmt.Errorf("check cycle: %w", err)
+		}
+		if isDesc {
 			return nil, fmt.Errorf("cannot move folder into itself or its descendants")
 		}
 	}
@@ -91,22 +95,22 @@ func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string
 
 // isDescendant checks whether folderID is an ancestor of targetParentID
 // by walking up the ancestor chain from targetParentID.
-func (s *FolderService) isDescendant(folderID, targetParentID string) bool {
+func (s *FolderService) isDescendant(folderID, targetParentID string) (bool, error) {
 	current := targetParentID
 	for current != "" {
 		if current == folderID {
-			return true
+			return true, nil
 		}
 		f, err := s.repo.Get(current)
 		if err != nil {
-			return false
+			return false, fmt.Errorf("check ancestor %s: %w", current, err)
 		}
 		if f.ParentID == nil {
-			return false
+			return false, nil
 		}
 		current = *f.ParentID
 	}
-	return false
+	return false, nil
 }
 
 func (s *FolderService) rebalanceChildren(parentID *string, excludeID string) error {
@@ -140,7 +144,9 @@ func (s *FolderService) rebalanceChildren(parentID *string, excludeID string) er
 func (s *FolderService) BatchDelete(ids []string) error {
 	var folderIDs, bookmarkIDs []string
 	for _, id := range ids {
-		s.collectTree(id, &folderIDs, &bookmarkIDs)
+		if err := s.collectTree(id, &folderIDs, &bookmarkIDs); err != nil {
+			return fmt.Errorf("collect tree for %s: %w", id, err)
+		}
 	}
 	if len(folderIDs) == 0 && len(bookmarkIDs) == 0 {
 		return nil
