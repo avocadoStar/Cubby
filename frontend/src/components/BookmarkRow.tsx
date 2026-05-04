@@ -5,9 +5,10 @@ import { useDndStore } from '../stores/dndStore'
 import { useDraggable } from '@dnd-kit/core'
 
 const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpenNotes?: () => void }) => {
-  const { selectedIds, toggleSelect, deleteOne, deletingIds } = useBookmarkStore()
-  const isSelected = selectedIds.has(bookmark.id)
-  const isDeleting = deletingIds.has(bookmark.id)
+  const isSelected = useBookmarkStore(s => s.selectedIds.has(bookmark.id))
+  const isDeleting = useBookmarkStore(s => s.deletingIds.has(bookmark.id))
+  const toggleSelect = useBookmarkStore(s => s.toggleSelect)
+  const deleteOne = useBookmarkStore(s => s.deleteOne)
   const [hovered, setHovered] = useState(false)
 
   const overId = useDndStore((s) => s.overId)
@@ -15,6 +16,8 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
   const dndSource = useDndStore((s) => s.source)
   const isOver = overId === `droppable:bookmark:${bookmark.id}`
   const isOverInside = isOver && dropPosition === 'inside' && dndSource === 'main'
+
+  const highlight = hovered && !isOverInside && !isSelected
 
   const {
     attributes,
@@ -39,7 +42,8 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         marginLeft: 45, marginRight: 45,
         overflow: 'hidden',
         borderRadius: 8,
-        border: '1px solid var(--app-border)',
+        border: highlight ? '1px solid #CCC' : '1px solid var(--app-border)',
+        boxShadow: highlight ? '0 1px 2px rgba(0,0,0,0.04)' : 'none',
         transition: isDeleting ? 'opacity 0.2s ease-out, height 0.2s ease-out, margin 0.2s ease-out' : 'border-color 0.15s, box-shadow 0.15s',
         background: isOverInside ? 'var(--accent-light, #E5F0FF)'
           : isSelected ? 'var(--accent-light, #E5F0FF)'
@@ -49,16 +53,8 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         outlineOffset: -1,
         touchAction: 'none',
       }}
-      onMouseEnter={() => {
-        setHovered(true)
-        const el = document.querySelector(`[data-id="${bookmark.id}"]`) as HTMLElement | null
-        if (el && !isOverInside && !isSelected) { el.style.borderColor = '#CCC'; el.style.boxShadow = '0 1px 2px rgba(0,0,0,0.04)' }
-      }}
-      onMouseLeave={() => {
-        setHovered(false)
-        const el = document.querySelector(`[data-id="${bookmark.id}"]`) as HTMLElement | null
-        if (el && !isOverInside && !isSelected) { el.style.borderColor = 'var(--app-border, #E0E0E0)'; el.style.boxShadow = 'none' }
-      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={() => window.open(bookmark.url, '_blank')}
       {...listeners}
       {...attributes}

@@ -5,14 +5,16 @@ import { themes } from '../lib/themes'
 export default function ThemeSwitcher({ onClose }: { onClose: () => void }) {
   const { themeId, setTheme } = useThemeStore()
   const ref = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+      if (ref.current && !ref.current.contains(e.target as Node)) onCloseRef.current()
     }
-    setTimeout(() => document.addEventListener('mousedown', handler), 0)
+    document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [onClose])
+  }, [])
 
   return (
     <div

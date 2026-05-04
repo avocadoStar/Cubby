@@ -32,10 +32,10 @@ export interface Theme {
 }
 
 const F: ThemeVars = {
-  '--bg': 'var(--bg)', '--card-bg': 'var(--card-bg)', '--border': '#E0E0E0', '--border-hover': '#CCCCCC',
-  '--hover': 'var(--hover)', '--accent': 'var(--accent)', '--accent-light': 'var(--accent-light)',
+  '--bg': '#FAFAFA', '--card-bg': '#FFFFFF', '--border': '#E0E0E0', '--border-hover': '#CCCCCC',
+  '--hover': '#F5F5F5', '--accent': '#0078D4', '--accent-light': '#E5F0FF',
   '--text-primary': '#1a1a1a', '--text-secondary': '#888', '--text-tertiary': '#AAA',
-  '--danger': 'var(--danger)', '--note-hover': 'rgba(0,0,0,0.06)', '--note-bg': '#F8F8F8',
+  '--danger': '#cc3333', '--note-hover': 'rgba(0,0,0,0.06)', '--note-bg': '#F8F8F8',
   '--shadow': '0 1px 2px rgba(0,0,0,0.04)', '--shadow-lg': '0 2px 8px rgba(0,0,0,0.1)',
   '--overlay': 'rgba(0,0,0,0.15)', '--search-highlight': '#FFF2A8',
   '--folder-icon-fill': '#F0C54F', '--folder-icon-stroke': '#D4A830',

@@ -6,16 +6,17 @@ function token(): string | null {
   return localStorage.getItem('token')
 }
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+async function request<T>(url: string, options?: RequestInit & { rawBody?: boolean }): Promise<T> {
+  const headers: Record<string, string> = {}
+  if (!(options?.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
   }
   const t = token()
   if (t) {
     headers['Authorization'] = `Bearer ${t}`
   }
 
-  const res = await fetch(BASE + url, { ...options, headers: { ...headers, ...options?.headers } })
+  const res = await fetch(BASE + url, { ...options, headers: { ...headers, ...options?.headers as Record<string, string> } })
 
   if (res.status === 401) {
     localStorage.removeItem('token')
@@ -130,9 +131,6 @@ export const api = {
   importBookmarks: (file: File) => {
     const form = new FormData()
     form.append('file', file)
-    const t = token()
-    const headers: Record<string, string> = {}
-    if (t) headers['Authorization'] = `Bearer ${t}`
-    return fetch(BASE + '/import', { method: 'POST', body: form, headers })
+    return request<{ bookmarks: number; folders: number }>('/import', { method: 'POST', body: form })
   },
 }

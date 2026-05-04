@@ -57,7 +57,7 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
               <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--app-text2)' }}>备注 Notes</div>
               <div style={{ fontSize: 10, color: notes.length > 900 ? '#E4A000' : 'var(--app-text3)' }}>{notes.length} / 1000</div>
             </div>
-            <textarea value={notes} onChange={(e) => { setNotes(e.target.value); save(e.target.value) }}
+            <textarea value={notes} onChange={(e) => { setNotes(e.target.value); save(e.target.value) }} maxLength={1000}
               placeholder="输入备注..." style={{ width: '100%', flex: 1, minHeight: 120, padding: 12, borderRadius: 8, border: '1px solid var(--app-border)', fontSize: 13, lineHeight: 1.6, fontFamily: 'inherit', color: 'var(--app-text)', background: 'var(--app-note-bg)', resize: 'none', outline: 'none' }}
               onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--app-accent)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0,120,212,.1)' }}
               onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--app-border)'; e.currentTarget.style.boxShadow = 'none' }}

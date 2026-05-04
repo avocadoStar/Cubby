@@ -19,11 +19,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
     setStatus('importing')
     setError(null)
     try {
-      const res = await api.importBookmarks(file)
-      if (!res.ok) {
-        throw new Error(await res.text())
-      }
-      const data: ImportResult = await res.json()
+      const data = await api.importBookmarks(file) as unknown as ImportResult
       setResult(data)
       setStatus('done')
     } catch (e) {
