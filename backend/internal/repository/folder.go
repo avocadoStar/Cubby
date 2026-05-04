@@ -39,6 +39,9 @@ func (r *folderRepo) List(parentID *string) ([]model.Folder, error) {
 		}
 		folders = append(folders, f)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return folders, nil
 }
 
@@ -83,14 +86,31 @@ func (r *folderRepo) Update(id, name string, version int) (*model.Folder, error)
 }
 
 func (r *folderRepo) SoftDelete(id string) error {
-	_, err := r.DB.Exec(`UPDATE folder SET deleted_at=datetime('now') WHERE id=?`, id)
-	return err
+	res, err := r.DB.Exec(`UPDATE folder SET deleted_at=datetime('now') WHERE id=?`, id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *folderRepo) Restore(id string) (*model.Folder, error) {
-	_, err := r.DB.Exec(`UPDATE folder SET deleted_at=NULL WHERE id=?`, id)
+	res, err := r.DB.Exec(`UPDATE folder SET deleted_at=NULL WHERE id=?`, id)
 	if err != nil {
 		return nil, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if n == 0 {
+		return nil, sql.ErrNoRows
 	}
 	return r.Get(id)
 }
@@ -127,4 +147,25 @@ func (r *folderRepo) Move(id string, parentID *string, sortKey string, version i
 		return nil, sql.ErrNoRows
 	}
 	return r.Get(id)
+}
+
+// BatchDeleteTree soft-deletes all specified folders and bookmarks in a single transaction.
+func (r *folderRepo) BatchDeleteTree(folderIDs, bookmarkIDs []string) error {
+	tx, err := r.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, id := range folderIDs {
+		if _, err := tx.Exec(`UPDATE folder SET deleted_at=datetime('now') WHERE id=?`, id); err != nil {
+			return err
+		}
+	}
+	for _, id := range bookmarkIDs {
+		if _, err := tx.Exec(`UPDATE bookmark SET deleted_at=datetime('now') WHERE id=?`, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }

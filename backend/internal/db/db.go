@@ -2,6 +2,8 @@ package db
 
 import (
 	"database/sql"
+	"strings"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -56,6 +58,8 @@ func migrate(db *sql.DB) {
 		panic(err)
 	}
 	if _, err := db.Exec(`ALTER TABLE bookmark ADD COLUMN notes TEXT NOT NULL DEFAULT ''`); err != nil {
-		// Column already exists — safe to ignore
+		if !strings.Contains(err.Error(), "duplicate column name") {
+			panic(err)
+		}
 	}
 }

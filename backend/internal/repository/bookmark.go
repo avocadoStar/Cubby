@@ -35,6 +35,9 @@ func (r *bookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 		}
 		bookmarks = append(bookmarks, b)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return bookmarks, nil
 }
 
@@ -77,14 +80,31 @@ func (r *bookmarkRepo) Update(id, title, url string, version int) (*model.Bookma
 }
 
 func (r *bookmarkRepo) SoftDelete(id string) error {
-	_, err := r.DB.Exec(`UPDATE bookmark SET deleted_at=datetime('now') WHERE id=?`, id)
-	return err
+	res, err := r.DB.Exec(`UPDATE bookmark SET deleted_at=datetime('now') WHERE id=?`, id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *bookmarkRepo) Restore(id string) (*model.Bookmark, error) {
-	_, err := r.DB.Exec(`UPDATE bookmark SET deleted_at=NULL WHERE id=?`, id)
+	res, err := r.DB.Exec(`UPDATE bookmark SET deleted_at=NULL WHERE id=?`, id)
 	if err != nil {
 		return nil, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if n == 0 {
+		return nil, sql.ErrNoRows
 	}
 	return r.GetByID(id)
 }
@@ -121,9 +141,20 @@ func (r *bookmarkRepo) Move(id string, folderID *string, sortKey string, version
 }
 
 func (r *bookmarkRepo) UpdateNotes(id, notes string) error {
-	_, err := r.DB.Exec(`UPDATE bookmark SET notes=?, updated_at=datetime('now') WHERE id=? AND deleted_at IS NULL`, notes, id)
-	return err
+	res, err := r.DB.Exec(`UPDATE bookmark SET notes=?, updated_at=datetime('now') WHERE id=? AND deleted_at IS NULL`, notes, id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
+
 func (r *bookmarkRepo) Rebalance(updates []SortKeyUpdate) error {
 	tx, err := r.DB.Begin()
 	if err != nil {
@@ -145,13 +176,13 @@ func (r *bookmarkRepo) Rebalance(updates []SortKeyUpdate) error {
 func (r *bookmarkRepo) SearchBoth(query string) ([]model.SearchResult, error) {
 	q := "%" + query + "%"
 	rows, err := r.DB.Query(`
-		SELECT 'bookmark', id, title, url, folder_id, NULL FROM bookmark
-		WHERE (title LIKE ? OR url LIKE ?) AND deleted_at IS NULL
-		UNION ALL
-		SELECT 'folder', id, name, NULL, NULL, parent_id FROM folder
-		WHERE name LIKE ? AND deleted_at IS NULL
-		ORDER BY title
-	`, q, q, q)
+			SELECT 'bookmark', id, title, url, folder_id, NULL FROM bookmark
+			WHERE (title LIKE ? OR url LIKE ?) AND deleted_at IS NULL
+			UNION ALL
+			SELECT 'folder', id, name, NULL, NULL, parent_id FROM folder
+			WHERE name LIKE ? AND deleted_at IS NULL
+			ORDER BY title
+		`, q, q, q)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +194,9 @@ func (r *bookmarkRepo) SearchBoth(query string) ([]model.SearchResult, error) {
 			return nil, err
 		}
 		results = append(results, sr)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return results, nil
 }

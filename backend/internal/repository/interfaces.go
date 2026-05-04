@@ -29,6 +29,7 @@ type FolderRepo interface {
 	Restore(id string) (*model.Folder, error)
 	Rebalance(updates []SortKeyUpdate) error
 	Move(id string, parentID *string, sortKey string, version int) (*model.Folder, error)
+	BatchDeleteTree(folderIDs []string, bookmarkIDs []string) error
 }
 
 type SettingRepo interface {

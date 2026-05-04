@@ -2,6 +2,7 @@ package service
 
 import (
 	"cubby/internal/repository"
+	"fmt"
 	"io"
 	"net/url"
 	"regexp"
@@ -23,8 +24,10 @@ func NewImportService(fr repository.FolderRepo, br repository.BookmarkRepo) *Imp
 }
 
 type ImportResult struct {
-	Bookmarks int `json:"bookmarks"`
-	Folders   int `json:"folders"`
+	Bookmarks    int    `json:"bookmarks"`
+	Folders      int    `json:"folders"`
+	Errors       int    `json:"errors"`
+	ErrorMessage string `json:"error_message,omitempty"`
 }
 
 // ImportHTML parses a Netscape-format bookmark HTML file.
@@ -69,11 +72,13 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 			nextFolderSortKey[sk] = sortKey
 
 			folder, err := s.folderRepo.Create(name, parentID, sortKey)
-			if err == nil {
-				folderStack = append(folderStack, folder.ID)
-				result.Folders++
+			if err != nil {
+				result.Errors++
+				continue
 			}
-			continue // skip failed folder creation silently — most are duplicate names
+			folderStack = append(folderStack, folder.ID)
+			result.Folders++
+			continue
 		}
 
 		if aMatch := aRe.FindStringSubmatch(line); aMatch != nil {
@@ -96,7 +101,11 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 			sortKey := after(lastKey)
 			nextBookmarkSortKey[sk] = sortKey
 
-			s.bookmarkRepo.Create(title, href, folderID, sortKey)
+			_, err := s.bookmarkRepo.Create(title, href, folderID, sortKey)
+			if err != nil {
+				result.Errors++
+				continue
+			}
 			result.Bookmarks++
 			continue
 		}
@@ -104,6 +113,10 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 		if dlEndRe.MatchString(line) && len(folderStack) > 0 {
 			folderStack = folderStack[:len(folderStack)-1]
 		}
+	}
+
+	if result.Errors > 0 {
+		result.ErrorMessage = fmt.Sprintf("%d items skipped due to errors", result.Errors)
 	}
 
 	return result, nil

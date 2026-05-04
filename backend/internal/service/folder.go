@@ -25,7 +25,10 @@ func (s *FolderService) List(parentID *string) ([]model.Folder, error) {
 }
 
 func (s *FolderService) Create(name string, parentID *string) (*model.Folder, error) {
-	children, _ := s.repo.List(parentID)
+	children, err := s.repo.List(parentID)
+	if err != nil {
+		return nil, fmt.Errorf("list siblings: %w", err)
+	}
 	sortKey := after("")
 	if len(children) > 0 {
 		lastKey := children[len(children)-1].SortKey
@@ -34,7 +37,10 @@ func (s *FolderService) Create(name string, parentID *string) (*model.Folder, er
 			if err := s.rebalanceChildren(parentID, ""); err != nil {
 				return nil, fmt.Errorf("rebalance failed during create: %w", err)
 			}
-			children, _ = s.repo.List(parentID)
+			children, err = s.repo.List(parentID)
+			if err != nil {
+				return nil, fmt.Errorf("list siblings after rebalance: %w", err)
+			}
 			if len(children) == 0 {
 				sortKey = after("")
 			} else {
@@ -68,6 +74,11 @@ func (s *FolderService) Restore(id string) (*model.Folder, error) {
 }
 
 func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string, sortKeyOverride *string, version int) (*model.Folder, error) {
+	if parentID != nil {
+		if s.isDescendant(id, *parentID) {
+			return nil, fmt.Errorf("cannot move folder into itself or its descendants")
+		}
+	}
 	if sortKeyOverride != nil && *sortKeyOverride != "" {
 		return s.repo.Move(id, parentID, *sortKeyOverride, version)
 	}
@@ -76,6 +87,26 @@ func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string
 		return nil, err
 	}
 	return s.repo.Move(id, parentID, sortKey, version)
+}
+
+// isDescendant checks whether folderID is an ancestor of targetParentID
+// by walking up the ancestor chain from targetParentID.
+func (s *FolderService) isDescendant(folderID, targetParentID string) bool {
+	current := targetParentID
+	for current != "" {
+		if current == folderID {
+			return true
+		}
+		f, err := s.repo.Get(current)
+		if err != nil {
+			return false
+		}
+		if f.ParentID == nil {
+			return false
+		}
+		current = *f.ParentID
+	}
+	return false
 }
 
 func (s *FolderService) rebalanceChildren(parentID *string, excludeID string) error {
@@ -105,23 +136,25 @@ func (s *FolderService) rebalanceChildren(parentID *string, excludeID string) er
 	return s.repo.Rebalance(updates)
 }
 
-// BatchDelete recursively soft-deletes folders and all their contents.
+// BatchDelete recursively soft-deletes folders and all their contents in a single transaction.
 func (s *FolderService) BatchDelete(ids []string) error {
+	var folderIDs, bookmarkIDs []string
 	for _, id := range ids {
-		if err := s.deleteRecursive(id); err != nil {
-			return err
-		}
+		s.collectTree(id, &folderIDs, &bookmarkIDs)
 	}
-	return nil
+	if len(folderIDs) == 0 && len(bookmarkIDs) == 0 {
+		return nil
+	}
+	return s.repo.BatchDeleteTree(folderIDs, bookmarkIDs)
 }
 
-func (s *FolderService) deleteRecursive(folderID string) error {
+func (s *FolderService) collectTree(folderID string, folderIDs, bookmarkIDs *[]string) error {
 	children, err := s.repo.List(&folderID)
 	if err != nil {
 		return fmt.Errorf("list children of %s: %w", folderID, err)
 	}
 	for _, child := range children {
-		if err := s.deleteRecursive(child.ID); err != nil {
+		if err := s.collectTree(child.ID, folderIDs, bookmarkIDs); err != nil {
 			return err
 		}
 	}
@@ -130,9 +163,8 @@ func (s *FolderService) deleteRecursive(folderID string) error {
 		return fmt.Errorf("list bookmarks of %s: %w", folderID, err)
 	}
 	for _, b := range bookmarks {
-		if err := s.bookmarkRepo.SoftDelete(b.ID); err != nil {
-			return fmt.Errorf("soft delete bookmark %s: %w", b.ID, err)
-		}
+		*bookmarkIDs = append(*bookmarkIDs, b.ID)
 	}
-	return s.repo.SoftDelete(folderID)
+	*folderIDs = append(*folderIDs, folderID)
+	return nil
 }
