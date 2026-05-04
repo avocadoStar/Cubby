@@ -3,6 +3,7 @@ import Breadcrumb from './Breadcrumb'
 import MoreMenu from './MoreMenu'
 import { useFolderStore } from '../stores/folderStore'
 import { useBookmarkStore } from '../stores/bookmarkStore'
+import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
 import CreateFolderModal from './CreateFolderModal'
 import FontSizePopover from './FontSizePopover'
@@ -10,6 +11,7 @@ import FontSizePopover from './FontSizePopover'
 export default function Toolbar() {
   const { selectedId } = useFolderStore()
   const { load } = useBookmarkStore()
+  const logout = useAuthStore(s => s.logout)
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [showFontSize, setShowFontSize] = useState(false)
   const [showAddBookmark, setShowAddBookmark] = useState(false)
@@ -93,6 +95,17 @@ export default function Toolbar() {
           </button>
           {showFontSize && <FontSizePopover onClose={() => setShowFontSize(false)} />}
         </div>
+        <button
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+          onClick={logout}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          <span>退出</span>
+        </button>
         <MoreMenu />
       </div>
 
