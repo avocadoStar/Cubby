@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import type { SearchResultItem } from '../types'
 import { api } from '../services/api'
 
+let searchController: AbortController | null = null
+
 interface SearchState {
   query: string
   results: SearchResultItem[]
@@ -20,11 +22,14 @@ export const useSearchStore = create<SearchState>((set) => ({
       set({ query: '', results: [], loading: false })
       return
     }
+    searchController?.abort()
+    searchController = new AbortController()
     set({ query: q, loading: true })
     try {
-      const results = await api.search(q)
+      const results = await api.search(q, searchController.signal)
       set({ results, loading: false })
-    } catch {
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
       set({ results: [], loading: false })
     }
   },

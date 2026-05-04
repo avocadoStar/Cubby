@@ -17,8 +17,11 @@ export default function FontSizePopover({ onClose }: { onClose: () => void }) {
         onClose()
       }
     }
-    setTimeout(() => document.addEventListener('mousedown', handler), 0)
-    return () => document.removeEventListener('mousedown', handler)
+    const timeoutId = setTimeout(() => document.addEventListener('mousedown', handler), 0)
+    return () => {
+      clearTimeout(timeoutId)
+      document.removeEventListener('mousedown', handler)
+    }
   }, [onClose])
 
   const idx = PRESETS.findIndex((p) => p.key === preset)

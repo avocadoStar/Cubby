@@ -6,7 +6,7 @@ function token(): string | null {
   return localStorage.getItem('token')
 }
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
+async function request<T>(url: string, options?: RequestInit & { signal?: AbortSignal }): Promise<T> {
   const headers: Record<string, string> = {}
   if (!(options?.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
@@ -16,7 +16,8 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     headers['Authorization'] = `Bearer ${t}`
   }
 
-  const res = await fetch(BASE + url, { ...options, headers: { ...headers, ...options?.headers as Record<string, string> } })
+  const { signal, ...rest } = options ?? {}
+  const res = await fetch(BASE + url, { ...rest, headers: { ...headers, ...(options?.headers as Record<string, string>) }, signal })
 
   if (res.status === 401) {
     localStorage.removeItem('token')
@@ -78,8 +79,8 @@ export const api = {
     }),
 
   // Bookmarks
-  getBookmarks: (folderId?: string | null) =>
-    request<Bookmark[]>(`/bookmarks${folderId ? `?folder_id=${folderId}` : ''}`),
+  getBookmarks: (folderId?: string | null, signal?: AbortSignal) =>
+    request<Bookmark[]>(`/bookmarks${folderId ? `?folder_id=${folderId}` : ''}`, { signal }),
 
   createBookmark: (title: string, url: string, folderId?: string | null) =>
     request<Bookmark>('/bookmarks', {
@@ -121,8 +122,8 @@ export const api = {
     }),
 
   // Search
-  search: (q: string) =>
-    request<SearchResultItem[]>(`/search?q=${encodeURIComponent(q)}`),
+  search: (q: string, signal?: AbortSignal) =>
+    request<SearchResultItem[]>(`/search?q=${encodeURIComponent(q)}`, { signal }),
 
   // Import
   fetchMetadata: (url: string) =>

@@ -45,6 +45,14 @@ export default function ContextMenu() {
     }
   }, [handleContextMenu])
 
+  // Clean up stale editingBookmark reference
+  useEffect(() => {
+    if (editingBookmark) {
+      const bm = useBookmarkStore.getState().bookmarks.find(b => b.id === editingBookmark)
+      if (!bm) setEditingBookmark(null)
+    }
+  }, [editingBookmark])
+
   if (!menu && !editingBookmark && !renamingFolder) return null
 
   const isBookmark = target?.type === 'bookmark'
@@ -195,7 +203,7 @@ export default function ContextMenu() {
       {/* Edit Bookmark Modal */}
       {editingBookmark && (() => {
         const bm = useBookmarkStore.getState().bookmarks.find(b => b.id === editingBookmark)
-        if (!bm) { setEditingBookmark(null); return null }
+        if (!bm) return null
         return (
           <EditBookmarkModal
             bookmark={bm}

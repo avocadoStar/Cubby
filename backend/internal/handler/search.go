@@ -25,7 +25,7 @@ func (h *SearchHandler) Search(c *gin.Context) {
 	}
 	results, err := h.svc.Search(q)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	if results == nil {

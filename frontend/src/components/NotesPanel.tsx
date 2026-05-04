@@ -13,6 +13,9 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
   const [saved, setSaved] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const notesRef = useRef('')
+  const bookmarkRef = useRef(bookmark)
+  bookmarkRef.current = bookmark
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const open = bookmark !== null
 
   useEffect(() => {
@@ -20,22 +23,30 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
   }, [bookmark?.id])
 
   const save = useCallback((value: string) => {
-    if (!bookmark) return
+    const bm = bookmarkRef.current
+    if (!bm) return
     clearTimeout(timerRef.current)
     notesRef.current = value
     timerRef.current = setTimeout(async () => {
-      try { await api.updateNotes(bookmark.id, value); setSaved(true); setTimeout(() => setSaved(false), 1500) } catch { /* ignore */ }
+      try {
+        await api.updateNotes(bm.id, value)
+        setSaved(true)
+        clearTimeout(savedTimerRef.current)
+        savedTimerRef.current = setTimeout(() => setSaved(false), 1500)
+      } catch { /* ignore */ }
     }, 500)
-  }, [bookmark])
+  }, []) // no dependency on bookmark since we use bookmarkRef
 
-  // Flush pending save on unmount
+  // Flush pending save on unmount or bookmark change
   useEffect(() => () => {
     const timer = timerRef.current
-    if (timer && bookmark && notesRef.current !== bookmark.notes) {
+    const bm = bookmarkRef.current
+    clearTimeout(savedTimerRef.current)
+    if (timer && bm && notesRef.current !== bm.notes) {
       clearTimeout(timer)
-      api.updateNotes(bookmark.id, notesRef.current).catch(() => {})
+      api.updateNotes(bm.id, notesRef.current).catch(() => {})
     }
-  }, [bookmark])
+  }, [bookmark?.id])
 
   const folderPath = bookmark ? (() => {
     const { folderMap } = useFolderStore.getState()

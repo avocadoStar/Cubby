@@ -26,7 +26,7 @@ func (h *FolderHandler) List(c *gin.Context) {
 	}
 	folders, err := h.svc.List(pid)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	if folders == nil {
@@ -57,7 +57,7 @@ func (h *FolderHandler) Create(c *gin.Context) {
 
 	f, err := h.svc.Create(req.Name, req.ParentID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, f)
@@ -93,7 +93,7 @@ func (h *FolderHandler) Update(c *gin.Context) {
 
 func (h *FolderHandler) Delete(c *gin.Context) {
 	if err := h.svc.Delete(c.Param("id")); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -102,7 +102,7 @@ func (h *FolderHandler) Delete(c *gin.Context) {
 func (h *FolderHandler) Restore(c *gin.Context) {
 	f, err := h.svc.Restore(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, f)
@@ -117,7 +117,7 @@ func (h *FolderHandler) BatchDelete(c *gin.Context) {
 		return
 	}
 	if err := h.svc.BatchDelete(req.IDs); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)

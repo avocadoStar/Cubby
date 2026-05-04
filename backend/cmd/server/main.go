@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -95,6 +96,10 @@ func main() {
 	r.Static("/assets", "./cmd/server/static/assets")
 	r.StaticFile("/favicon.svg", "./cmd/server/static/favicon.svg")
 	r.NoRoute(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
 		c.File("./cmd/server/static/index.html")
 	})
 

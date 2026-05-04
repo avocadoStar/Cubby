@@ -32,7 +32,7 @@ func (h *ImportExportHandler) Import(c *gin.Context) {
 
 	result, err := h.importSvc.ImportHTML(file)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		internalError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, result)

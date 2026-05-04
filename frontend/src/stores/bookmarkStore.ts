@@ -4,6 +4,8 @@ import { api, ConflictError } from '../services/api'
 import { useFolderStore } from './folderStore'
 import { useToastStore } from './toastStore'
 
+let loadController: AbortController | null = null
+
 interface BookmarkState {
   bookmarks: Bookmark[]
   selectedIds: Set<string>
@@ -28,9 +30,17 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   deletingIds: new Set(),
 
   load: async (folderId) => {
+    loadController?.abort()
+    loadController = new AbortController()
     set({ loading: true })
-    const bookmarks = await api.getBookmarks(folderId)
-    set({ bookmarks, loading: false, selectedIds: new Set(), selectedFolderIds: new Set() })
+    try {
+      const bookmarks = await api.getBookmarks(folderId, loadController.signal)
+      set({ bookmarks, loading: false, selectedIds: new Set(), selectedFolderIds: new Set() })
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      set({ loading: false })
+      throw e
+    }
   },
 
   toggleSelect: (id) => {
@@ -120,6 +130,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       useToastStore.getState().show({
         message: `已删除 "${bookmark.title}"`,
         onUndo: () => {
+          if (undoClicked) return  // prevent double-click
           undoClicked = true
           // Restore via backend
           api.restoreBookmark(id).then((restored) => {
@@ -133,7 +144,9 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
               })
             }
           }).catch(() => {
-            finishUndo()
+            // Restore failed — undo the undo, allow finishDelete
+            undoClicked = false
+            finishDelete()
           })
         },
       })
