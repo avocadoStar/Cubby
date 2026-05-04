@@ -31,7 +31,7 @@ import SearchResults from './SearchResults'
 import NotesPanel from './NotesPanel'
 
 export default function MainLayout() {
-  const { bookmarks, load, selectAll, selectedFolderIds, toggleFolderSelect } = useBookmarkStore()
+  const { bookmarks, load, selectAll, selectedFolderIds, toggleFolderSelect, loading } = useBookmarkStore()
   const { selectedId, childrenMap, folderMap, select } = useFolderStore()
   const { activeItem, activeId } = useDndStore()
   const { query: searchQuery, results: searchResults } = useSearchStore()
@@ -40,9 +40,9 @@ export default function MainLayout() {
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const mounted = useRef(false)
-  useEffect(() => { load(null); mounted.current = true }, [])
-  useEffect(() => { if (mounted.current) load(selectedId) }, [selectedId])
+  useEffect(() => {
+    load(selectedId)
+  }, [selectedId])
 
   const subFolderIds = useMemo(() => {
     return (childrenMap.get(selectedId) || []).filter((id) => folderMap.has(id))
@@ -121,6 +121,11 @@ export default function MainLayout() {
           ) : (
           <>
           <div className="flex-1" ref={scrollRef} style={{ overflow: 'auto' }}>
+            {loading && items.length === 0 ? (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200, color: 'var(--app-text3)', fontSize: 14 }}>
+                加载中...
+              </div>
+            ) : (
             <div style={{ height: rowVirtualizer.getTotalSize() + 8, position: 'relative' }}>
               {rowVirtualizer.getVirtualItems().map((vi) => {
                 const item = items[vi.index]
@@ -165,6 +170,7 @@ export default function MainLayout() {
                 )
               })}
             </div>
+            )}
           </div>
           </>
           )}

@@ -71,16 +71,16 @@ const ALIASES: Record<string, string[]> = {
 }
 
 function createVars(base: Partial<Record<keyof ThemeVars, string>>): ThemeVars {
-  const vars: Record<string, string> = {}
+  const vars = {} as Record<keyof ThemeVars, string>
   for (const [canon, aliases] of Object.entries(ALIASES)) {
     const value = (base as Record<string, string>)[canon] ?? ''
-    vars[canon] = value
-    for (const alias of aliases) vars[alias] = value
+    vars[canon as keyof ThemeVars] = value
+    for (const alias of aliases) vars[alias as keyof ThemeVars] = value
   }
   for (const [key, value] of Object.entries(base)) {
-    if (!(key in vars)) vars[key] = value
+    if (!(key in vars)) vars[key as keyof ThemeVars] = value
   }
-  return vars as unknown as ThemeVars
+  return vars as ThemeVars
 }
 
 export const themes: Theme[] = [

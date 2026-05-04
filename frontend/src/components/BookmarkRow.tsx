@@ -60,6 +60,9 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
       {...attributes}
     >
       <div
+        role="checkbox"
+        aria-checked={isSelected}
+        aria-label="选择收藏夹"
         className="flex-shrink-0 mr-2.5 flex items-center justify-center cursor-default"
         style={{
           width: 18, height: 18,
@@ -70,7 +73,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         onClick={(e) => { e.stopPropagation(); toggleSelect(bookmark.id) }}
       >
         {isSelected && (
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+          <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         )}
@@ -94,11 +97,13 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         {bookmark.created_at.slice(0, 10)}
       </span>
       <div
+        role="button"
+        aria-label="删除收藏夹"
         className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default"
         style={{ opacity: hovered ? 1 : 0.35, color: hovered ? 'var(--app-danger)' : 'var(--app-text3)' }}
         onClick={(e) => { e.stopPropagation(); deleteOne(bookmark.id) }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </div>

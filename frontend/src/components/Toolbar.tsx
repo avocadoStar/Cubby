@@ -96,7 +96,7 @@ export default function Toolbar() {
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
           onClick={() => setShowCreateFolder(true)}
         >
-          <svg fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
+          <svg aria-hidden="true" fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
             <path d="M4.5 3A2.5 2.5 0 002 5.5v9A2.5 2.5 0 004.5 17h5.1c-.16-.32-.3-.65-.4-1H4.5A1.5 1.5 0 013 14.5v-7h4.07c.41 0 .8-.17 1.09-.47L9.62 5.5h5.88c.83 0 1.5.67 1.5 1.5v2.6c.36.18.7.4 1 .66V7a2.5 2.5 0 00-2.5-2.5H9.67l-1.6-1.2a1.5 1.5 0 00-.9-.3H4.5zM3 5.5C3 4.67 3.67 4 4.5 4h2.67c.1 0 .21.04.3.1l1.22.92-1.26 1.32a.5.5 0 01-.36.16H3v-1zm16 9a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zm-4-2a.5.5 0 00-1 0V14h-1.5a.5.5 0 000 1H14v1.5a.5.5 0 001 0V15h1.5a.5.5 0 000-1H15v-1.5z" fillRule="nonzero"/>
           </svg>
           <span>添加文件夹</span>
@@ -109,7 +109,7 @@ export default function Toolbar() {
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
             onClick={() => setShowFontSize(!showFontSize)}
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <text x="3" y="15" fontFamily="serif" fontSize="14" fontWeight="bold">A</text>
               <text x="11" y="13" fontFamily="serif" fontSize="9">A</text>
             </svg>
@@ -125,7 +125,7 @@ export default function Toolbar() {
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
             onClick={() => setShowTheme(!showTheme)}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10" />
               <path d="M12 2a15.3 15.3 0 00-4 10 15.3 15.3 0 004 10" />
@@ -161,7 +161,7 @@ export default function Toolbar() {
                   />
                   <span className="flex-1 text-left text-body">{t.name}</span>
                   {themeId === t.id && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
@@ -177,7 +177,7 @@ export default function Toolbar() {
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
           onClick={logout}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />

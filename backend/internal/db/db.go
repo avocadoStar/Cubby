@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -12,7 +13,10 @@ func MustOpen(path string) *sql.DB {
 	if err != nil {
 		panic(err)
 	}
-	db.SetMaxOpenConns(1)
+	db.SetMaxOpenConns(2)
+	db.SetMaxIdleConns(2)
+	db.SetConnMaxLifetime(30 * time.Minute)
+	db.SetConnMaxIdleTime(5 * time.Minute)
 	migrate(db)
 	return db
 }

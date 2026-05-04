@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { useDndStore } from '../stores/dndStore'
 import { ChevronRight } from 'lucide-react'
@@ -14,7 +14,7 @@ interface FolderRowComponentProps {
   onDelete: () => void
 }
 
-function FolderRowComponent({
+const FolderRowComponent = memo(function FolderRowComponent({
   folder,
   isFolderSelected,
   onToggleSelect,
@@ -47,6 +47,9 @@ function FolderRowComponent({
       onClick={onNavigate}
     >
       <div
+        role="checkbox"
+        aria-checked={isFolderSelected}
+        aria-label="选择文件夹"
         className="flex-shrink-0 mr-2.5 flex items-center justify-center cursor-default"
         style={{
           width: 18, height: 18,
@@ -57,7 +60,7 @@ function FolderRowComponent({
         onClick={(e) => { e.stopPropagation(); onToggleSelect() }}
       >
         {isFolderSelected && (
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+          <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         )}
@@ -71,7 +74,7 @@ function FolderRowComponent({
           boxShadow: 'var(--row-icon-shadow)',
         }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--folder-icon-fill)" stroke="var(--folder-icon-stroke)" strokeWidth="0.6">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="var(--folder-icon-fill)" stroke="var(--folder-icon-stroke)" strokeWidth="0.6">
           <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
         </svg>
       </div>
@@ -79,11 +82,13 @@ function FolderRowComponent({
       <span className="flex-shrink-0 truncate text-xs mr-8" style={{ width: 320, color: 'var(--app-text2)' }}>文件夹</span>
       <span className="flex-shrink-0 text-xs" style={{ width: 100, minWidth: 100, color: 'var(--app-text2)' }} />
       <div
+        role="button"
+        aria-label="删除文件夹"
         className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default"
         style={{ opacity: hovered ? 1 : 0.35, color: hovered ? 'var(--app-danger)' : 'var(--app-text3)' }}
         onClick={(e) => { e.stopPropagation(); onDelete() }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </div>
@@ -96,7 +101,7 @@ function FolderRowComponent({
       </span>
     </div>
   )
-}
+})
 
 interface DraggableFolderRowProps {
   folder: Folder
