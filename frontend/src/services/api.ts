@@ -6,7 +6,12 @@ function token(): string | null {
   return localStorage.getItem('token')
 }
 
-async function request<T>(url: string, options?: RequestInit & { signal?: AbortSignal }): Promise<T> {
+type RequestOptions = RequestInit & {
+  signal?: AbortSignal
+  skipAuthRedirect?: boolean
+}
+
+async function request<T>(url: string, options?: RequestOptions): Promise<T> {
   const headers: Record<string, string> = {}
   if (!(options?.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'
@@ -16,12 +21,17 @@ async function request<T>(url: string, options?: RequestInit & { signal?: AbortS
     headers['Authorization'] = `Bearer ${t}`
   }
 
-  const { signal, ...rest } = options ?? {}
+  const { signal, skipAuthRedirect = false, ...rest } = options ?? {}
   const res = await fetch(BASE + url, { ...rest, headers: { ...headers, ...(options?.headers as Record<string, string>) }, signal })
 
   if (res.status === 401) {
+    if (skipAuthRedirect) {
+      const text = await res.text()
+      throw new Error(text || 'Unauthorized')
+    }
     localStorage.removeItem('token')
     window.location.reload()
+    throw new Error('Unauthorized')
   }
   if (res.status === 409) {
     throw new ConflictError()
@@ -48,6 +58,7 @@ export const api = {
     request<{ token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ password }),
+      skipAuthRedirect: true,
     }),
 
   // Folders
