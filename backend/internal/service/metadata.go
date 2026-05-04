@@ -1,8 +1,12 @@
 package service
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -18,9 +22,100 @@ type Metadata struct {
 	Title string `json:"title"`
 }
 
+var errURLNotAllowed = errors.New("URL not allowed")
+
+// allowedPorts maps explicitly permitted port numbers.
+var allowedPorts = map[string]bool{
+	"":      true, // default port for the scheme
+	"80":    true,
+	"443":   true,
+}
+
+// isPrivateIP reports whether an IP address falls in a private, loopback,
+// or link-local range.
+func isPrivateIP(ip net.IP) bool {
+	privateRanges := []struct {
+		network *net.IPNet
+	}{
+		// loopback
+		{mustParseCIDR("127.0.0.0/8")},
+		{mustParseCIDR("::1/128")},
+		// private (RFC 1918 + IPv6 unique local)
+		{mustParseCIDR("10.0.0.0/8")},
+		{mustParseCIDR("172.16.0.0/12")},
+		{mustParseCIDR("192.168.0.0/16")},
+		{mustParseCIDR("fc00::/7")},
+		// link-local
+		{mustParseCIDR("169.254.0.0/16")},
+		{mustParseCIDR("fe80::/10")},
+		// unspecified / multicast
+		{mustParseCIDR("0.0.0.0/8")},
+		{mustParseCIDR("::/128")},
+		{mustParseCIDR("::ffff:0:0/96")},
+	}
+	for _, r := range privateRanges {
+		if r.network.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func mustParseCIDR(s string) *net.IPNet {
+	_, network, err := net.ParseCIDR(s)
+	if err != nil {
+		panic(fmt.Sprintf("parse CIDR %q: %v", s, err))
+	}
+	return network
+}
+
+// validateURL performs SSRF protection checks on the provided URL.
+func validateURL(rawURL string) error {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return errURLNotAllowed
+	}
+
+	// Only allow http and https schemes.
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return errURLNotAllowed
+	}
+
+	host := parsed.Hostname()
+	if host == "" {
+		return errURLNotAllowed
+	}
+
+	// Restrict ports.
+	port := parsed.Port()
+	if !allowedPorts[port] {
+		return errURLNotAllowed
+	}
+
+	// Resolve hostname and check resolved IPs.
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return errURLNotAllowed
+	}
+	if len(ips) == 0 {
+		return errURLNotAllowed
+	}
+	for _, ip := range ips {
+		if isPrivateIP(ip) {
+			return errURLNotAllowed
+		}
+	}
+
+	return nil
+}
+
 func (s *MetadataService) FetchTitle(rawURL string) (*Metadata, error) {
 	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
 		rawURL = "https://" + rawURL
+	}
+
+	if err := validateURL(rawURL); err != nil {
+		return nil, err
 	}
 
 	client := &http.Client{Timeout: 8 * time.Second}

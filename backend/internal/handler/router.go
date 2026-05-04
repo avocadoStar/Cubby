@@ -4,6 +4,7 @@ import (
 	"cubby/internal/config"
 	"cubby/internal/middleware"
 	"cubby/internal/service"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,7 +29,7 @@ func SetupRoutes(
 	api := r.Group("/api")
 
 	// Public routes
-	api.POST("/auth/login", authH.Login)
+	api.POST("/auth/login", middleware.RateLimit(5, time.Minute), authH.Login)
 
 	// Protected routes
 	protected := api.Group("")

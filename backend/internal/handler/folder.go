@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"cubby/internal/model"
 	"cubby/internal/service"
@@ -47,6 +48,13 @@ func (h *FolderHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "name required"})
 		return
 	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	if len(req.Name) > maxNameLength {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name exceeds maximum length of 200 characters"})
+		return
+	}
+
 	f, err := h.svc.Create(req.Name, req.ParentID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -68,6 +76,13 @@ func (h *FolderHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "name required"})
 		return
 	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	if len(req.Name) > maxNameLength {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name exceeds maximum length of 200 characters"})
+		return
+	}
+
 	f, err := h.svc.Update(c.Param("id"), req.Name, req.Version)
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "conflict"})

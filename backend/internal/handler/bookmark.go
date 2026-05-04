@@ -2,11 +2,19 @@ package handler
 
 import (
 	"net/http"
+	"net/url"
+	"strings"
 
 	"cubby/internal/model"
 	"cubby/internal/service"
 
 	"github.com/gin-gonic/gin"
+)
+
+const (
+	maxURLLength   = 2048
+	maxTitleLength = 500
+	maxNameLength  = 200
 )
 
 type BookmarkHandler struct {
@@ -48,6 +56,26 @@ func (h *BookmarkHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "title and url required"})
 		return
 	}
+
+	req.Title = strings.TrimSpace(req.Title)
+	req.URL = strings.TrimSpace(req.URL)
+
+	if len(req.URL) > maxURLLength {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url exceeds maximum length of 2048 characters"})
+		return
+	}
+	if len(req.Title) > maxTitleLength {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "title exceeds maximum length of 500 characters"})
+		return
+	}
+
+	parsed, err := url.Parse(req.URL)
+	if err != nil || !parsed.IsAbs() || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url must be a valid absolute URL with http or https scheme"})
+		return
+	}
+	req.URL = parsed.String()
+
 	b, err := h.svc.Create(req.Title, req.URL, req.FolderID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -70,6 +98,26 @@ func (h *BookmarkHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "title and url required"})
 		return
 	}
+
+	req.Title = strings.TrimSpace(req.Title)
+	req.URL = strings.TrimSpace(req.URL)
+
+	if len(req.URL) > maxURLLength {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url exceeds maximum length of 2048 characters"})
+		return
+	}
+	if len(req.Title) > maxTitleLength {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "title exceeds maximum length of 500 characters"})
+		return
+	}
+
+	parsed, err := url.Parse(req.URL)
+	if err != nil || !parsed.IsAbs() || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "url must be a valid absolute URL with http or https scheme"})
+		return
+	}
+	req.URL = parsed.String()
+
 	b, err := h.svc.Update(c.Param("id"), req.Title, req.URL, req.Version)
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})

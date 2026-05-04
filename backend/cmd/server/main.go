@@ -7,6 +7,7 @@ import (
 	"cubby/internal/handler"
 	"cubby/internal/repository"
 	"cubby/internal/service"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -43,6 +44,51 @@ func main() {
 	metadataSvc := service.NewMetadataService()
 
 	r := gin.Default()
+
+	// Task 1.5: Limit request body size to 10MB.
+	r.Use(func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 10<<20)
+		c.Next()
+	})
+
+	// Task 1.6: CORS middleware.
+	allowedOrigins := cfg.AllowedOrigins
+	r.Use(func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+
+		var allowed bool
+		if len(allowedOrigins) == 0 {
+			// Same-origin only: no Origin header or Origin matches the request host.
+			if origin == "" || origin == fmt.Sprintf("http://%s", c.Request.Host) || origin == fmt.Sprintf("https://%s", c.Request.Host) {
+				allowed = true
+			}
+		} else {
+			for _, o := range allowedOrigins {
+				if origin == o {
+					allowed = true
+					break
+				}
+			}
+		}
+
+		if allowed && origin != "" {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+		}
+
+		// Always expose CORS headers for preflight so the client can proceed.
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Header("Access-Control-Max-Age", "43200")
+
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	})
+
 	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, metadataSvc, cfg)
 
 	// Serve frontend static files in production

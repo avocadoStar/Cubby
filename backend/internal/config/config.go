@@ -16,10 +16,11 @@ const (
 )
 
 type Config struct {
-	Port      string `yaml:"port"`
-	DBPath    string `yaml:"db_path"`
-	JWTSecret string `yaml:"jwt_secret"`
-	Password  string `yaml:"password"`
+	Port           string   `yaml:"port"`
+	DBPath         string   `yaml:"db_path"`
+	JWTSecret      string   `yaml:"jwt_secret"`
+	Password       string   `yaml:"password"`
+	AllowedOrigins []string `yaml:"allowed_origins"`
 }
 
 func Load() (*Config, error) {
@@ -48,6 +49,20 @@ func Load() (*Config, error) {
 	}
 	if cfg.Password == "" {
 		return nil, fmt.Errorf("config: password is required")
+	}
+
+	// Credential strength validation.
+	if len(cfg.JWTSecret) < 32 {
+		return nil, fmt.Errorf("config: jwt_secret must be at least 32 characters (generate a secure secret: openssl rand -hex 32)")
+	}
+	placeholders := []string{"change-me", "change-me-in-production", "secret", "jwt-secret"}
+	for _, p := range placeholders {
+		if cfg.JWTSecret == p {
+			return nil, fmt.Errorf("config: jwt_secret uses a known placeholder value (generate a secure secret: openssl rand -hex 32)")
+		}
+	}
+	if len(cfg.Password) < 8 {
+		return nil, fmt.Errorf("config: password must be at least 8 characters")
 	}
 
 	return cfg, nil

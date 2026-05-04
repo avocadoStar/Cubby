@@ -24,7 +24,7 @@ func (h *MetadataHandler) Fetch(c *gin.Context) {
 	}
 	meta, err := h.svc.FetchTitle(url)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"title": url})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, meta)
