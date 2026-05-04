@@ -35,22 +35,3 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
-
-func (h *AuthHandler) Setup(c *gin.Context) {
-	var req struct {
-		Password string `json:"password"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
-		return
-	}
-	if len(req.Password) < 4 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "password too short (min 4 chars)"})
-		return
-	}
-	if err := h.svc.SetupPassword(req.Password); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "setup failed"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"ok": true})
-}

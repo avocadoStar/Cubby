@@ -1,29 +1,64 @@
 package config
 
-import "os"
+import (
+	"flag"
+	"fmt"
+	"os"
+
+	"gopkg.in/yaml.v3"
+)
+
+const (
+	defaultPort        = "8080"
+	defaultDBPath      = "cubby.db"
+	defaultConfigPath  = "config.yaml"
+	fallbackConfigPath = "../config.yaml"
+)
 
 type Config struct {
-	Port      string
-	DBPath    string
-	JWTSecret string
+	Port      string `yaml:"port"`
+	DBPath    string `yaml:"db_path"`
+	JWTSecret string `yaml:"jwt_secret"`
+	Password  string `yaml:"password"`
 }
 
-func Load() *Config {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+func Load() (*Config, error) {
+	configPath := resolveDefaultConfigPath()
+	flag.StringVar(&configPath, "config", configPath, "path to config yaml")
+	flag.Parse()
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("read config %s: %w", configPath, err)
 	}
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "cubby.db"
+
+	cfg := &Config{}
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("parse config: %w", err)
 	}
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		jwtSecret = "change-me-in-production"
+
+	if cfg.Port == "" {
+		cfg.Port = defaultPort
 	}
-	return &Config{
-		Port:      port,
-		DBPath:    dbPath,
-		JWTSecret: jwtSecret,
+	if cfg.DBPath == "" {
+		cfg.DBPath = defaultDBPath
 	}
+	if cfg.JWTSecret == "" {
+		return nil, fmt.Errorf("config: jwt_secret is required")
+	}
+	if cfg.Password == "" {
+		return nil, fmt.Errorf("config: password is required")
+	}
+
+	return cfg, nil
+}
+
+func resolveDefaultConfigPath() string {
+	for _, path := range []string{defaultConfigPath, fallbackConfigPath} {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	return defaultConfigPath
 }

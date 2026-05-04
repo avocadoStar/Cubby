@@ -13,7 +13,7 @@
 ├── backend/               # Go + Gin + SQLite
 │   ├── cmd/server/        # 入口
 │   └── internal/
-│       ├── config/        # 配置（环境变量）
+│       ├── config/        # 配置（YAML 文件）
 │       ├── db/            # 数据库初始化 & 迁移
 │       ├── handler/       # HTTP 处理器（路由、认证、CRUD）
 │       ├── middleware/     # JWT 中间件
@@ -78,36 +78,23 @@ cd ..
 
 > 如果你安装了 make：`make build && ./cubby-server` 一键完成上述步骤。
 
-## 首次配置密码
-
-Cubby 是单用户模式，首次使用需要设置密码：
-
-```powershell
-curl -X POST http://localhost:8080/api/auth/setup `
-  -H "Content-Type: application/json" `
-  -d '{\"password\":\"你的密码\"}'
-```
-
-设置后在登录页输入密码即可进入。密码以 bcrypt 哈希存储在 SQLite 中。
-
 ## 配置
 
-通过环境变量配置：
-
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `PORT` | `8080` | 后端端口 |
-| `DB_PATH` | `cubby.db` | SQLite 数据库文件路径 |
-| `JWT_SECRET` | `change-me-in-production` | JWT 签名密钥（生产环境务必修改） |
-
-示例：
+复制示例配置文件并修改：
 
 ```powershell
-$env:PORT="3000"
-$env:DB_PATH="D:\data\cubby.db"
-$env:JWT_SECRET="your-random-secret"
-go run ./cmd/server/
+cp config.example.yaml config.yaml
 ```
+
+`config.yaml` 内容：
+
+```yaml
+port: "8080"                          # HTTP 监听端口
+db_path: "cubby.db"                   # SQLite 数据库文件路径
+jwt_secret: "change-me-in-production" # JWT 签名密钥（生产环境务必修改）
+password: "your-password"             # 登录密码（启动时自动 bcrypt 加密）
+```
+
 
 ## 功能
 

@@ -1,8 +1,0 @@
-./auth.go
-./bookmark.go
-./folder.go
-./import.go
-./lexorank.go
-./metadata.go
-./search.go
-./lexorank_test.go

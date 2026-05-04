@@ -18,7 +18,10 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("load config: %v", err)
+	}
 
 	database := db.MustOpen(cfg.DBPath)
 	defer database.Close()
@@ -30,6 +33,9 @@ func main() {
 	sortKeySvc := service.NewSortKeyService(bookmarkRepo, folderRepo)
 
 	authSvc := service.NewAuthService(cfg, settingRepo)
+	if err := authSvc.SyncConfiguredPassword(); err != nil {
+		log.Fatalf("sync configured password: %v", err)
+	}
 	folderSvc := service.NewFolderService(folderRepo, bookmarkRepo, sortKeySvc)
 	bookmarkSvc := service.NewBookmarkService(bookmarkRepo, sortKeySvc)
 	searchSvc := service.NewSearchService(bookmarkRepo)

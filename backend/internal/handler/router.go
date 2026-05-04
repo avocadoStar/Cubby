@@ -29,7 +29,6 @@ func SetupRoutes(
 
 	// Public routes
 	api.POST("/auth/login", authH.Login)
-	api.POST("/auth/setup", authH.Setup)
 
 	// Protected routes
 	protected := api.Group("")

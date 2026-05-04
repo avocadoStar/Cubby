@@ -5,3 +5,6 @@ node_modules/
 .env
 cubby-server
 backend/cmd/server/static/
+backend/.gocache/
+config.yaml
+backend/config.yaml
