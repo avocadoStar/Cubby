@@ -8,7 +8,11 @@ port: "8080"
 db_path: "cubby.db"
 
 # JWT 签名密钥（生产环境务必修改为随机字符串）
+# - 最少 32 个字符
+# - 生成方法：openssl rand -hex 32
+# - 不能使用常见占位符如 "change-me"、"secret" 等
 jwt_secret: "change-me-in-production"
 
 # 登录密码（明文，启动时自动加密存储）
+# - 最少 8 个字符
 password: "your-password"
