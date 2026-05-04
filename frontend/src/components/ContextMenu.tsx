@@ -31,7 +31,6 @@ export default function ContextMenu() {
   useEffect(() => {
     document.addEventListener('contextmenu', handleContextMenu)
     const close = (e: MouseEvent) => {
-      // Only close if clicking outside the menu
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenu(null)
       }
@@ -81,17 +80,13 @@ export default function ContextMenu() {
     const folderStore = useFolderStore.getState()
     if (isBookmark) {
       await api.deleteBookmark(targetId)
-      // Optimistic: remove from local state immediately
       useBookmarkStore.getState().load(folderStore.selectedId)
     } else {
-      // Get parent before deleting so we can refresh it
       const folder = folderStore.folderMap.get(targetId)
       const parentId = folder?.parent_id ?? null
       await api.deleteFolder(targetId)
-      // Reload parent's children and root
       await folderStore.loadChildren(parentId)
       await folderStore.loadChildren(null)
-      // If deleted folder was selected, navigate to parent
       if (folderStore.selectedId === targetId) {
         folderStore.select(parentId)
       }
@@ -119,35 +114,53 @@ export default function ContextMenu() {
     setFolderName('')
   }
 
+  const menuBtnStyle: React.CSSProperties = { color: 'var(--app-text)' }
+  const menuBtnHoverBg = 'var(--app-hover)'
+
   return (
     <>
       {menu && (
         <div
           ref={menuRef}
-          className="fixed z-[100] bg-white border border-[#e0e0e0] rounded-lg shadow-lg p-1 min-w-[200px]"
-          style={{ left: menu.x, top: menu.y }}
+          className="fixed z-[100] rounded-lg shadow-lg p-1 min-w-[200px]"
+          style={{ left: menu.x, top: menu.y, background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }}
         >
           {isBookmark && (
             <>
-              <button className="block w-full text-left h-8 px-3 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body cursor-default"
+                style={menuBtnStyle}
+                onMouseEnter={e => { e.currentTarget.style.background = menuBtnHoverBg }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 onClick={() => { closeMenu(); if (targetId) setEditingBookmark(targetId) }}>
                 编辑
               </button>
-              <button className="block w-full text-left h-8 px-3 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body cursor-default"
+                style={menuBtnStyle}
+                onMouseEnter={e => { e.currentTarget.style.background = menuBtnHoverBg }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 onClick={handleCopyLink}>
                 复制链接
               </button>
-              <div className="border-t border-[#e8e8e8] my-0.5" />
-              <button className="block w-full text-left h-8 px-3 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              <div className="border-t my-0.5" style={{ borderColor: 'var(--divider-color)' }} />
+              <button className="block w-full text-left h-8 px-3 rounded text-body cursor-default"
+                style={menuBtnStyle}
+                onMouseEnter={e => { e.currentTarget.style.background = menuBtnHoverBg }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 onClick={() => openUrl('_blank')}>
                 在新标签页中打开
               </button>
-              <button className="block w-full text-left h-8 px-3 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body cursor-default"
+                style={menuBtnStyle}
+                onMouseEnter={e => { e.currentTarget.style.background = menuBtnHoverBg }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 onClick={() => openUrl('_blank', 'popup')}>
                 在新窗口中打开
               </button>
-              <div className="border-t border-[#e8e8e8] my-0.5" />
-              <button className="block w-full text-left h-8 px-3 rounded text-body text-red-500 hover:bg-[#f5f5f5] cursor-default"
+              <div className="border-t my-0.5" style={{ borderColor: 'var(--divider-color)' }} />
+              <button className="block w-full text-left h-8 px-3 rounded text-body cursor-default"
+                style={{ color: 'var(--app-danger)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = menuBtnHoverBg }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 onClick={handleDelete}>
                 删除
               </button>
@@ -156,12 +169,18 @@ export default function ContextMenu() {
 
           {!isBookmark && (
             <>
-              <button className="block w-full text-left h-8 px-3 rounded text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+              <button className="block w-full text-left h-8 px-3 rounded text-body cursor-default"
+                style={menuBtnStyle}
+                onMouseEnter={e => { e.currentTarget.style.background = menuBtnHoverBg }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 onClick={handleRename}>
                 重命名
               </button>
-              <div className="border-t border-[#e8e8e8] my-0.5" />
-              <button className="block w-full text-left h-8 px-3 rounded text-body text-red-500 hover:bg-[#f5f5f5] cursor-default"
+              <div className="border-t my-0.5" style={{ borderColor: 'var(--divider-color)' }} />
+              <button className="block w-full text-left h-8 px-3 rounded text-body cursor-default"
+                style={{ color: 'var(--app-danger)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = menuBtnHoverBg }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                 onClick={handleDelete}>
                 删除
               </button>
@@ -187,19 +206,22 @@ export default function ContextMenu() {
 
       {/* Rename Folder Modal */}
       {renamingFolder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onClick={() => setRenamingFolder(null)}>
-          <div className="bg-white border border-[#e0e0e0] rounded-lg shadow-xl p-6 w-80" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold text-[#1a1a1a] mb-4">重命名文件夹</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--overlay)' }} onClick={() => setRenamingFolder(null)}>
+          <div className="rounded-lg shadow-xl p-6 w-80" style={{ background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--app-text)' }}>重命名文件夹</h3>
             <input
               autoFocus
               value={folderName}
               onChange={e => setFolderName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && submitRename()}
-              className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-4"
+              className="w-full h-9 px-3 rounded text-sm outline-none mb-4"
+              style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)', color: 'var(--app-text)' }}
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setRenamingFolder(null)} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-body cursor-default">取消</button>
-              <button onClick={submitRename} disabled={!folderName.trim()} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-body font-medium cursor-default disabled:opacity-50">保存</button>
+              <button onClick={() => setRenamingFolder(null)} className="h-8 px-4 rounded text-body cursor-default"
+                style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)', color: 'var(--app-text)' }}>取消</button>
+              <button onClick={submitRename} disabled={!folderName.trim()} className="h-8 px-4 border-none rounded text-white text-body font-medium cursor-default disabled:opacity-50"
+                style={{ background: 'var(--app-accent)' }}>保存</button>
             </div>
           </div>
         </div>

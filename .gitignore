@@ -8,3 +8,5 @@ backend/cmd/server/static/
 backend/.gocache/
 config.yaml
 backend/config.yaml
+docs/
+designs/

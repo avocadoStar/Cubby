@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
 import { useSearchStore } from '../stores/searchStore'
@@ -27,16 +27,16 @@ function AllBookmarksDroppable({
       className="flex items-center h-8 mx-1 px-2 rounded cursor-default select-none"
       style={{
         margin: '0 4px',
-        background: isSelected ? '#E5F0FF' : 'transparent',
+        background: isSelected ? 'var(--accent-light)' : 'transparent',
       }}
       onClick={onSelect}
     >
       <Star
         size={16}
-        stroke={isSelected ? '#0078D4' : '#1a1a1a'}
+        stroke={isSelected ? 'var(--app-accent)' : 'var(--app-text)'}
         strokeWidth={1.6}
       />
-      <span className="ml-2.5 text-body text-[#1a1a1a]">所有书签</span>
+      <span className="ml-2.5 text-body" style={{ color: 'var(--app-text)' }}>所有书签</span>
     </div>
   )
 }
@@ -98,7 +98,7 @@ export default function Sidebar() {
   const [query, setQuery] = useState('')
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     clearTimeout(debounceRef.current)
@@ -124,16 +124,17 @@ export default function Sidebar() {
   })
 
   return (
-    <div className="w-[280px] min-w-[280px] border-r border-[#e8e8e8] flex flex-col bg-white h-full">
-        <div className="pt-5 px-5 pb-3 text-lg font-semibold text-[#1a1a1a]">
+    <div className="w-[280px] min-w-[280px] flex flex-col h-full" style={{ borderRight: 'var(--sidebar-border)', background: 'var(--app-card)' }}>
+        <div className="pt-5 px-5 pb-3 text-lg font-semibold" style={{ color: 'var(--app-text)' }}>
           收藏夹
         </div>
 
         <div className="px-4 pb-2">
-          <div className="flex items-center h-8 border border-[#d1d1d1] rounded px-2 gap-1.5">
-            <Search size={14} stroke="#888" />
+          <div className="flex items-center h-8 rounded px-2 gap-1.5" style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)' }}>
+            <Search size={14} stroke="var(--app-text2)" />
             <input
               className="flex-1 border-none outline-none text-body bg-transparent"
+              style={{ color: 'var(--app-text)' }}
               placeholder="搜索收藏夹"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -141,7 +142,7 @@ export default function Sidebar() {
             {query && (
               <div
                 className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full cursor-default"
-                style={{ background: '#d1d1d1', color: '#fff' }}
+                style={{ background: 'var(--app-text3)', color: '#fff' }}
                 onClick={() => {
                   setQuery('')
                   searchStore.clearSearch()

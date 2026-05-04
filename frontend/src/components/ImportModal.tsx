@@ -41,19 +41,23 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onClick={onClose}>
-      <div className="bg-white border border-[#e0e0e0] rounded-lg shadow-xl p-6 w-96" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-base font-semibold text-[#1a1a1a] mb-4">导入收藏夹</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--overlay)' }} onClick={onClose}>
+      <div className="rounded-lg shadow-xl p-6 w-96" style={{ background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--app-text)' }}>导入收藏夹</h3>
 
         {status === 'idle' && (
-          <label className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-[#d1d1d1] rounded-lg cursor-pointer hover:border-[#0078D4] transition-colors duration-200">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="1.5">
+          <label className="flex flex-col items-center gap-3 p-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-200"
+            style={{ borderColor: 'var(--app-border)', color: 'var(--app-text2)' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--app-accent)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--app-border)' }}
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            <span className="text-sm text-[#666]">选择浏览器导出的 HTML 文件</span>
-            <span className="text-xs text-[#999]">支持 Chrome / Edge / Firefox 导出格式</span>
+            <span className="text-sm" style={{ color: 'var(--app-text2)' }}>选择浏览器导出的 HTML 文件</span>
+            <span className="text-xs" style={{ color: 'var(--app-text3)' }}>支持 Chrome / Edge / Firefox 导出格式</span>
             <input type="file" accept=".html,.htm" className="hidden" onChange={(e) => {
               const file = e.target.files?.[0]
               if (file) handleFile(file)
@@ -63,8 +67,8 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
 
         {status === 'importing' && (
           <div className="flex flex-col items-center gap-3 py-8">
-            <div className="w-8 h-8 border-2 border-[#0078D4] border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-[#666]">正在导入…</p>
+            <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--app-accent)', borderTopColor: 'transparent' }} />
+            <p className="text-sm" style={{ color: 'var(--app-text2)' }}>正在导入…</p>
           </div>
         )}
 
@@ -76,11 +80,12 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
               </svg>
             </div>
             <p className="text-sm font-medium text-green-700 mb-2">导入完成!</p>
-            <p className="text-sm text-[#666]">
+            <p className="text-sm" style={{ color: 'var(--app-text2)' }}>
               共导入 {result?.bookmarks ?? 0} 条书签
               {(result?.folders ?? 0) > 0 && `, ${result!.folders} 个文件夹`}
             </p>
-            <button onClick={handleDone} className="mt-4 h-8 px-6 border-none rounded bg-[#0078D4] text-white text-body font-medium cursor-default hover:bg-[#0066b3]">
+            <button onClick={handleDone} className="mt-4 h-8 px-6 border-none rounded text-white text-body font-medium cursor-default"
+              style={{ background: 'var(--app-accent)' }}>
               完成
             </button>
           </div>
@@ -94,10 +99,16 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
               </svg>
             </div>
             <p className="text-sm font-medium text-red-600 mb-1">导入失败</p>
-            <p className="text-xs text-[#888] mb-4 max-h-16 overflow-auto">{error}</p>
+            <p className="text-xs mb-4 max-h-16 overflow-auto" style={{ color: 'var(--app-text2)' }}>{error}</p>
             <div className="flex justify-center gap-2">
-              <button onClick={onClose} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-body cursor-default">取消</button>
-              <button onClick={handleRetry} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-body font-medium cursor-default">重试</button>
+              <button onClick={onClose} className="h-8 px-4 rounded text-body cursor-default"
+                style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)', color: 'var(--app-text)' }}>
+                取消
+              </button>
+              <button onClick={handleRetry} className="h-8 px-4 border-none rounded text-white text-body font-medium cursor-default"
+                style={{ background: 'var(--app-accent)' }}>
+                重试
+              </button>
             </div>
           </div>
         )}

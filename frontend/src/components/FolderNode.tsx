@@ -28,7 +28,6 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
     data: { node, depth },
   })
 
-  // Hover expand: start 500ms timer when pointer enters 'inside', cancel when it leaves.
   const expandTimerRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -67,13 +66,14 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
         margin: '0 4px',
         opacity: isDragging ? 0.3 : 1,
         background: isInside
-          ? '#E5F0FF'
+          ? 'var(--accent-light)'
           : isSelected
-            ? '#E5F0FF'
+            ? 'var(--accent-light)'
             : hovered
-              ? '#F5F5F5'
+              ? 'var(--tree-hover-bg)'
               : 'transparent',
-        outline: isInside ? '1px solid #0078D4' : undefined,
+        boxShadow: hovered && !isSelected && !isInside ? 'var(--tree-hover-shadow)' : 'none',
+        outline: isInside ? '1px solid var(--app-accent)' : undefined,
         outlineOffset: -1,
         touchAction: 'none',
       }}
@@ -93,23 +93,23 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       >
         {hasChildren &&
           (isExpanded ? (
-            <ChevronDown size={12} stroke="#666" strokeWidth={2} />
+            <ChevronDown size={12} stroke="var(--app-text2)" strokeWidth={2} />
           ) : (
-            <ChevronRight size={12} stroke="#666" strokeWidth={2} />
+            <ChevronRight size={12} stroke="var(--app-text2)" strokeWidth={2} />
           ))}
       </span>
       <svg
         width="16"
         height="16"
         viewBox="0 0 24 24"
-        fill="#F0C54F"
-        stroke="#D4A830"
+        fill="var(--folder-icon-fill)"
+        stroke="var(--folder-icon-stroke)"
         strokeWidth="0.6"
         className="flex-shrink-0 ml-1"
       >
         <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
       </svg>
-      <span className="ml-2 truncate text-body text-[#1a1a1a]">{node.name}</span>
+      <span className="ml-2 truncate text-body" style={{ color: 'var(--app-text)' }}>{node.name}</span>
     </div>
   )
 })

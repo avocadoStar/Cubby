@@ -4,18 +4,6 @@
   --fs-body: 13px;
   --fs-small: 9px;
   --text-xs: var(--fs-small);
-
-  /* Fluent Card theme */
-  --app-bg: #FAFAFA;
-  --app-card: #FFFFFF;
-  --app-border: #E0E0E0;
-  --app-hover: #F5F5F5;
-  --app-accent: #0078D4;
-  --app-text: #1a1a1a;
-  --app-text2: #888;
-  --app-text3: #999;
-  --app-danger: #cc3333;
-  --app-note-bg: #F8F8F8;
 }
 
 body {

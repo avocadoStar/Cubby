@@ -4,6 +4,8 @@ import MoreMenu from './MoreMenu'
 import { useFolderStore } from '../stores/folderStore'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useAuthStore } from '../stores/authStore'
+import { useThemeStore } from '../stores/themeStore'
+import { themes } from '../lib/themes'
 import { api } from '../services/api'
 import CreateFolderModal from './CreateFolderModal'
 import FontSizePopover from './FontSizePopover'
@@ -12,13 +14,16 @@ export default function Toolbar() {
   const { selectedId } = useFolderStore()
   const { load } = useBookmarkStore()
   const logout = useAuthStore(s => s.logout)
+  const { themeId, setTheme } = useThemeStore()
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [showFontSize, setShowFontSize] = useState(false)
+  const [showTheme, setShowTheme] = useState(false)
   const [showAddBookmark, setShowAddBookmark] = useState(false)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const themeRef = useRef<HTMLDivElement>(null)
 
   // Auto-fetch title when URL changes
   useEffect(() => {
@@ -28,7 +33,6 @@ export default function Toolbar() {
       setFetchingTitle(true)
       try {
         const meta = await api.fetchMetadata(url.trim())
-        // Only set title if user hasn't manually changed it
         setTitle(prev => prev ? prev : meta.title)
       } catch { /* ignore fetch errors */ }
       setFetchingTitle(false)
@@ -36,9 +40,18 @@ export default function Toolbar() {
     return () => clearTimeout(urlTimer.current)
   }, [url])
 
+  // Close theme popover on outside click
+  useEffect(() => {
+    if (!showTheme) return
+    const handler = (e: MouseEvent) => {
+      if (themeRef.current && !themeRef.current.contains(e.target as Node)) setShowTheme(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showTheme])
+
   const handleUrlChange = (value: string) => {
     setUrl(value)
-    // Auto-prepend https://
     if (value && !/^https?:\/\//i.test(value) && value.includes('.')) {
       setUrl('https://' + value)
       return
@@ -60,11 +73,14 @@ export default function Toolbar() {
 
   return (
     <>
-      <div className="flex items-center gap-1 px-5 py-2 border-b border-[#e8e8e8]" style={{ height: 48 }}>
+      <div className="flex items-center gap-1 px-5 py-2" style={{ height: 48, borderBottom: '1px solid var(--divider-color)' }}>
         <Breadcrumb />
         <div className="flex-1" />
         <button
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default"
+          style={{ color: 'var(--app-text)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
           onClick={() => setShowAddBookmark(true)}
         >
           <svg aria-hidden="true" fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
@@ -74,7 +90,10 @@ export default function Toolbar() {
           <span>添加收藏夹</span>
         </button>
         <button
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default"
+          style={{ color: 'var(--app-text)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
           onClick={() => setShowCreateFolder(true)}
         >
           <svg fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
@@ -84,19 +103,78 @@ export default function Toolbar() {
         </button>
         <div style={{ position: 'relative' }}>
           <button
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default"
+            style={{ color: 'var(--app-text)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
             onClick={() => setShowFontSize(!showFontSize)}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <text x="3" y="15" fontFamily="serif" fontSize="14" fontWeight="bold">A</text>
               <text x="11" y="13" fontFamily="serif" fontSize="9">A</text>
             </svg>
-            <span>字体调整</span>
+            <span>字号</span>
           </button>
           {showFontSize && <FontSizePopover onClose={() => setShowFontSize(false)} />}
         </div>
+        <div style={{ position: 'relative' }}>
+          <button
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default"
+            style={{ color: 'var(--app-text)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+            onClick={() => setShowTheme(!showTheme)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10" />
+              <path d="M12 2a15.3 15.3 0 00-4 10 15.3 15.3 0 004 10" />
+              <path d="M2 12h20" />
+            </svg>
+            <span>主题</span>
+          </button>
+          {showTheme && (
+            <div
+              ref={themeRef}
+              className="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-lg p-3"
+              style={{ width: 200, background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }}
+            >
+              <div className="text-body font-medium mb-2" style={{ color: 'var(--app-text)' }}>主题</div>
+              {themes.map(t => (
+                <button
+                  key={t.id}
+                  className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-body cursor-default border-none bg-transparent"
+                  style={{ color: 'var(--app-text)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                  onClick={() => { setTheme(t.id); setShowTheme(false) }}
+                >
+                  <span
+                    className="flex-shrink-0 rounded-full"
+                    style={{
+                      width: 14, height: 14,
+                      background: t.vars['--bg'],
+                      boxShadow: t.id === 'neumorphism'
+                        ? '-2px -2px 4px #ffffff, 2px 2px 4px #b0b0b0'
+                        : `0 0 0 1px ${t.vars['--border']}`,
+                    }}
+                  />
+                  <span className="flex-1 text-left text-body">{t.name}</span>
+                  {themeId === t.id && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body text-[#1a1a1a] hover:bg-[#f5f5f5] cursor-default"
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default"
+          style={{ color: 'var(--app-text)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
           onClick={logout}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -111,26 +189,46 @@ export default function Toolbar() {
 
       {/* Add Bookmark Modal */}
       {showAddBookmark && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onClick={() => setShowAddBookmark(false)}>
-          <div className="bg-white border border-[#e0e0e0] rounded-lg shadow-xl p-6 w-96" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold text-[#1a1a1a] mb-4">添加收藏夹</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--overlay)' }} onClick={() => setShowAddBookmark(false)}>
+          <div className="rounded-lg shadow-xl p-6 w-96" style={{ background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--app-text)' }}>添加收藏夹</h3>
             <input
               autoFocus
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder={fetchingTitle ? "正在获取标题…" : "名称"}
-              className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-3"
+              className="w-full h-9 px-3 rounded text-sm outline-none mb-3"
+              style={{
+                border: 'var(--input-border)',
+                boxShadow: 'var(--input-shadow)',
+                background: 'var(--input-bg)',
+                color: 'var(--app-text)',
+              }}
             />
             <input
               value={url}
               onChange={e => handleUrlChange(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddBookmark()}
               placeholder="URL"
-              className="w-full h-9 px-3 border border-[#d1d1d1] rounded text-sm outline-none focus:border-[#0078D4] mb-4"
+              className="w-full h-9 px-3 rounded text-sm outline-none mb-4"
+              style={{
+                border: 'var(--input-border)',
+                boxShadow: 'var(--input-shadow)',
+                background: 'var(--input-bg)',
+                color: 'var(--app-text)',
+              }}
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowAddBookmark(false)} className="h-8 px-4 border border-[#d1d1d1] rounded bg-white text-body cursor-default">取消</button>
-              <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()} className="h-8 px-4 border-none rounded bg-[#0078D4] text-white text-body font-medium cursor-default disabled:opacity-50">添加</button>
+              <button onClick={() => setShowAddBookmark(false)}
+                className="h-8 px-4 rounded text-body cursor-default"
+                style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)', color: 'var(--app-text)' }}>
+                取消
+              </button>
+              <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()}
+                className="h-8 px-4 border-none rounded text-white text-body font-medium cursor-default disabled:opacity-50"
+                style={{ background: 'var(--app-accent)' }}>
+                添加
+              </button>
             </div>
           </div>
         </div>

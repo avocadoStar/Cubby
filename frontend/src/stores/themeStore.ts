@@ -1,12 +1,5 @@
 import { create } from 'zustand'
-import { themes, type Theme } from '../lib/themes'
-
-function applyTheme(theme: Theme) {
-  const root = document.documentElement
-  for (const [key, value] of Object.entries(theme.vars)) {
-    root.style.setProperty(key, value as string)
-  }
-}
+import { themes, applyTheme, type Theme } from '../lib/themes'
 
 interface ThemeState {
   themeId: string

@@ -17,14 +17,16 @@ export default function BatchActionBar() {
     <div
       role="dialog"
       aria-label="alert dialog"
-      className="absolute right-[63px] top-[14px] z-50 flex items-center gap-4 bg-white border border-[#e0e0e0] rounded-lg px-4 py-3 shadow-lg text-body"
+      className="absolute right-[63px] top-[14px] z-50 flex items-center gap-4 rounded-lg px-4 py-3 shadow-lg text-body"
+      style={{ background: 'var(--app-card)', border: '1px solid var(--app-border)' }}
     >
       {deleting ? (
         <>
-          <div className="w-4 h-4 border-2 border-[#0078D4] border-t-transparent rounded-full animate-spin" />
-          <span className="text-[#666]">正在删除…</span>
+          <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--app-accent)', borderTopColor: 'transparent' }} />
+          <span style={{ color: 'var(--app-text2)' }}>正在删除…</span>
           <button
-            className="h-7 px-3.5 border border-[#d1d1d1] rounded bg-[#f5f5f5] text-[#aaa] text-body cursor-default"
+            className="h-7 px-3.5 rounded text-body cursor-default"
+            style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)', color: 'var(--app-text3)' }}
             disabled
           >
             取消
@@ -32,15 +34,17 @@ export default function BatchActionBar() {
         </>
       ) : (
         <>
-          <span className="text-[#1a1a1a]">已选择 {count} 项</span>
+          <span style={{ color: 'var(--app-text)' }}>已选择 {count} 项</span>
           <button
-            className="h-7 px-3.5 border-none rounded bg-[#0078D4] text-white text-body font-medium cursor-default"
+            className="h-7 px-3.5 border-none rounded text-white text-body font-medium cursor-default"
+            style={{ background: 'var(--app-accent)' }}
             onClick={handleDelete}
           >
             删除
           </button>
           <button
-            className="h-7 px-3.5 border border-[#d1d1d1] rounded bg-white text-[#1a1a1a] text-body cursor-default"
+            className="h-7 px-3.5 rounded text-body cursor-default"
+            style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)', color: 'var(--app-text)' }}
             onClick={clearSelection}
           >
             取消
