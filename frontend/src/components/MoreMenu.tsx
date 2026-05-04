@@ -1,13 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import ImportModal from './ImportModal'
-import { useThemeStore } from '../stores/themeStore'
-import { themes } from '../lib/themes'
 
 export default function MoreMenu() {
   const [open, setOpen] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const { themeId, setTheme } = useThemeStore()
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -55,32 +52,6 @@ export default function MoreMenu() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               <span>导出收藏夹</span>
             </button>
-            <div className="h-px mx-2 my-1" style={{ background: 'var(--app-border)' }} />
-            {themes.map(t => (
-              <button
-                key={t.id}
-                className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-body cursor-default border-none bg-transparent"
-                style={{ color: 'var(--app-text)', background: themeId === t.id ? 'var(--app-hover)' : 'transparent' }}
-                onClick={() => setTheme(t.id)}
-              >
-                <span
-                  className="flex-shrink-0 rounded-full"
-                  style={{
-                    width: 14, height: 14,
-                    background: t.vars['--bg'],
-                    boxShadow: t.id === 'neumorphism'
-                      ? '2px 2px 4px rgba(163,177,198,0.4), -2px -2px 4px rgba(255,255,255,0.6)'
-                      : `0 0 0 1px ${t.vars['--border']}`,
-                  }}
-                />
-                <span className="flex-1 text-left text-body">{t.name}</span>
-                {themeId === t.id && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            ))}
           </div>
         )}
       </div>
