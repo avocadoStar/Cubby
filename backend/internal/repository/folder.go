@@ -44,9 +44,11 @@ func (r *folderRepo) List(parentID *string) ([]model.Folder, error) {
 
 func (r *folderRepo) Get(id string) (*model.Folder, error) {
 	var f model.Folder
-	err := r.DB.QueryRow(`SELECT id,name,parent_id,sort_key,version,created_at,updated_at
+	err := r.DB.QueryRow(`SELECT id,name,parent_id,sort_key,version,
+		EXISTS(SELECT 1 FROM folder c WHERE c.parent_id=folder.id AND c.deleted_at IS NULL) as has_children,
+		created_at,updated_at
 		FROM folder WHERE id=? AND deleted_at IS NULL`, id).
-		Scan(&f.ID, &f.Name, &f.ParentID, &f.SortKey, &f.Version, &f.CreatedAt, &f.UpdatedAt)
+		Scan(&f.ID, &f.Name, &f.ParentID, &f.SortKey, &f.Version, &f.HasChildren, &f.CreatedAt, &f.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}

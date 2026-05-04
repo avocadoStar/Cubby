@@ -267,9 +267,12 @@ export function useDragAndDrop(
         await bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version)
       }
     } catch (e) {
-      if (e instanceof ConflictError) throw e
-      console.error('Move failed', e)
-      useToastStore.getState().show({ message: '移动失败，请重试' })
+      if (e instanceof ConflictError) {
+        useToastStore.getState().show({ message: '数据已变更，请重试' })
+      } else {
+        console.error('Move failed', e)
+        useToastStore.getState().show({ message: '移动失败，请重试' })
+      }
     }
     multiDragRef.current = []
     clearDrag()

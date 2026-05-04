@@ -21,8 +21,12 @@ export const useSearchStore = create<SearchState>((set) => ({
       return
     }
     set({ query: q, loading: true })
-    const results = await api.search(q)
-    set({ results, loading: false })
+    try {
+      const results = await api.search(q)
+      set({ results, loading: false })
+    } catch {
+      set({ results: [], loading: false })
+    }
   },
 
   clearSearch: () => set({ query: '', results: [], loading: false }),

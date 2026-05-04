@@ -6,7 +6,7 @@ function token(): string | null {
   return localStorage.getItem('token')
 }
 
-async function request<T>(url: string, options?: RequestInit & { rawBody?: boolean }): Promise<T> {
+async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {}
   if (!(options?.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json'

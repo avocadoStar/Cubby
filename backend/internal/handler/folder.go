@@ -64,6 +64,10 @@ func (h *FolderHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name required"})
+		return
+	}
 	f, err := h.svc.Update(c.Param("id"), req.Name, req.Version)
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "conflict"})

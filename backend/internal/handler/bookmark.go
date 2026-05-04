@@ -66,6 +66,10 @@ func (h *BookmarkHandler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
+	if req.Title == "" || req.URL == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "title and url required"})
+		return
+	}
 	b, err := h.svc.Update(c.Param("id"), req.Title, req.URL, req.Version)
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})

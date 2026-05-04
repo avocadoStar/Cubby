@@ -4,6 +4,9 @@ import { useFolderStore } from '../stores/folderStore'
 import { api } from '../services/api'
 import EditBookmarkModal from './EditBookmarkModal'
 
+const MENU_BTN_STYLE: React.CSSProperties = { color: 'var(--app-text)' }
+const MENU_BTN_HOVER_BG = 'var(--app-hover)'
+
 interface Target {
   id: string
   type: 'bookmark' | 'folder'
@@ -114,8 +117,8 @@ export default function ContextMenu() {
     setFolderName('')
   }
 
-  const menuBtnStyle: React.CSSProperties = { color: 'var(--app-text)' }
-  const menuBtnHoverBg = 'var(--app-hover)'
+  const menuBtnStyle = MENU_BTN_STYLE
+  const menuBtnHoverBg = MENU_BTN_HOVER_BG
 
   return (
     <>

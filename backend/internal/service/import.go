@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+var stripTagsRe = regexp.MustCompile(`<[^>]*>`)
+var h3Re = regexp.MustCompile(`(?i)<H3[^>]*>(.*?)</H3>`)
+var aRe = regexp.MustCompile(`(?i)<A[^>]*HREF="([^"]*)"[^>]*>(.*?)</A>`)
+var dlEndRe = regexp.MustCompile(`(?i)</DL>`)
+
 type ImportService struct {
 	folderRepo   repository.FolderRepo
 	bookmarkRepo repository.BookmarkRepo
@@ -45,10 +50,6 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 		return *parentID
 	}
 
-	h3Re := regexp.MustCompile(`(?i)<H3[^>]*>(.*?)</H3>`)
-	aRe := regexp.MustCompile(`(?i)<A[^>]*HREF="([^"]*)"[^>]*>(.*?)</A>`)
-	dlEndRe := regexp.MustCompile(`(?i)</DL>`)
-
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		if h3Match := h3Re.FindStringSubmatch(line); h3Match != nil {
@@ -72,7 +73,7 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 				folderStack = append(folderStack, folder.ID)
 				result.Folders++
 			}
-			continue
+			continue // skip failed folder creation silently — most are duplicate names
 		}
 
 		if aMatch := aRe.FindStringSubmatch(line); aMatch != nil {
@@ -109,6 +110,5 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 }
 
 func stripTags(s string) string {
-	re := regexp.MustCompile(`<[^>]*>`)
-	return re.ReplaceAllString(s, "")
+	return stripTagsRe.ReplaceAllString(s, "")
 }

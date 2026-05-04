@@ -40,8 +40,9 @@ export default function MainLayout() {
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { load(null) }, [])
-  useEffect(() => { load(selectedId) }, [selectedId])
+  const mounted = useRef(false)
+  useEffect(() => { load(null); mounted.current = true }, [])
+  useEffect(() => { if (mounted.current) load(selectedId) }, [selectedId])
 
   const subFolderIds = useMemo(() => {
     return (childrenMap.get(selectedId) || []).filter((id) => folderMap.has(id))

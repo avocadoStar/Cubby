@@ -55,5 +55,7 @@ func migrate(db *sql.DB) {
 	if _, err := db.Exec(ddl); err != nil {
 		panic(err)
 	}
-	db.Exec(`ALTER TABLE bookmark ADD COLUMN notes TEXT NOT NULL DEFAULT ''`)
+	if _, err := db.Exec(`ALTER TABLE bookmark ADD COLUMN notes TEXT NOT NULL DEFAULT ''`); err != nil {
+		// Column already exists — safe to ignore
+	}
 }

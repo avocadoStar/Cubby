@@ -92,12 +92,11 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     let done = false
 
     const finishUndo = () => {
-      if (undoClicked || done) return
+      if (undoClicked) return
       undoClicked = true
       set((s) => {
         const d = new Set(s.deletingIds)
         d.delete(id)
-        // Restore the bookmark to the list (same ID, same position)
         const next = [...s.bookmarks, bookmark]
         next.sort((a, b) => a.sort_key < b.sort_key ? -1 : 1)
         return { bookmarks: next, deletingIds: d }

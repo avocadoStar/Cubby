@@ -116,15 +116,23 @@ func (s *FolderService) BatchDelete(ids []string) error {
 }
 
 func (s *FolderService) deleteRecursive(folderID string) error {
-	children, _ := s.repo.List(&folderID)
+	children, err := s.repo.List(&folderID)
+	if err != nil {
+		return fmt.Errorf("list children of %s: %w", folderID, err)
+	}
 	for _, child := range children {
 		if err := s.deleteRecursive(child.ID); err != nil {
 			return err
 		}
 	}
-	bookmarks, _ := s.bookmarkRepo.List(&folderID)
+	bookmarks, err := s.bookmarkRepo.List(&folderID)
+	if err != nil {
+		return fmt.Errorf("list bookmarks of %s: %w", folderID, err)
+	}
 	for _, b := range bookmarks {
-		s.bookmarkRepo.SoftDelete(b.ID)
+		if err := s.bookmarkRepo.SoftDelete(b.ID); err != nil {
+			return fmt.Errorf("soft delete bookmark %s: %w", b.ID, err)
+		}
 	}
 	return s.repo.SoftDelete(folderID)
 }
