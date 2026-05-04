@@ -1,4 +1,4 @@
-# Cubby
+# <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='0' fill='%23F0F0F0'/%3E%3Crect x='14' y='14' width='36' height='36' fill='%23E53935'/%3E%3Cpath d='M24 22h16v24l-8-6-8 6z' fill='%23fff'/%3E%3C/svg%3E" width="28" height="28" alt=""> Cubby
 
 类 edge://favorites/ 的书签管理器，Fluent 风格两栏布局。
 

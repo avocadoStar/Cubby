@@ -11,7 +11,10 @@ export default function LoginPage() {
         onSubmit={(e) => { e.preventDefault(); login(password) }}
         className="w-80 p-8 flex flex-col gap-4"
       >
-        <h1 className="text-2xl font-semibold text-center text-[#1a1a1a]">Cubby</h1>
+        <h1 className="text-2xl font-semibold text-center text-[#1a1a1a] flex items-center justify-center gap-2">
+          <img src="/favicon.svg" alt="" className="w-7 h-7" />
+          Cubby
+        </h1>
         <p className="text-sm text-center text-[#666]">输入密码以访问收藏夹</p>
         <input
           type="password"
