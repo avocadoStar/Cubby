@@ -41,7 +41,7 @@ func main() {
 	}
 	folderSvc := service.NewFolderService(folderRepo, bookmarkRepo, sortKeySvc)
 	bookmarkSvc := service.NewBookmarkService(bookmarkRepo, sortKeySvc)
-	moveSvc := service.NewMoveService(moveRepo, folderSvc)
+	moveSvc := service.NewMoveService(moveRepo, folderSvc, sortKeySvc)
 	searchSvc := service.NewSearchService(bookmarkRepo)
 	importSvc := service.NewImportService(folderRepo, bookmarkRepo)
 	metadataSvc := service.NewMetadataService()

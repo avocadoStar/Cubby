@@ -51,27 +51,53 @@ func (h *ImportExportHandler) exportFolder(b *strings.Builder, parentID *string,
 }
 
 func key(pid *string) string {
-	if pid == nil { return "__root__" }
+	if pid == nil {
+		return "__root__"
+	}
 	return *pid
 }
 
 func (h *ImportExportHandler) Export(c *gin.Context) {
 	format := c.DefaultQuery("format", "html")
 
+	folderMap := make(map[string][]model.Folder)
+	bookmarkMap := make(map[string][]model.Bookmark)
+	allFolders := []model.Folder{}
+	allBookmarks := []model.Bookmark{}
+	var loadAll func(pid *string) error
+	loadAll = func(pid *string) error {
+		children, err := h.folderSvc.List(pid)
+		if err != nil {
+			return err
+		}
+		folderMap[key(pid)] = children
+		allFolders = append(allFolders, children...)
+		bms, err := h.bookmarkSvc.List(pid)
+		if err != nil {
+			return err
+		}
+		bookmarkMap[key(pid)] = bms
+		allBookmarks = append(allBookmarks, bms...)
+		for _, f := range children {
+			if err := loadAll(&f.ID); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := loadAll(nil); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load data for export"})
+		return
+	}
+
 	if format == "json" {
-		folders, err := h.folderSvc.List(nil)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list folders"})
-			return
+		if allFolders == nil {
+			allFolders = []model.Folder{}
 		}
-		bookmarks, err := h.bookmarkSvc.List(nil)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list bookmarks"})
-			return
+		if allBookmarks == nil {
+			allBookmarks = []model.Bookmark{}
 		}
-		if folders == nil { folders = []model.Folder{} }
-		if bookmarks == nil { bookmarks = []model.Bookmark{} }
-		data := gin.H{"folders": folders, "bookmarks": bookmarks}
+		data := gin.H{"folders": allFolders, "bookmarks": allBookmarks}
 		j, err := json.Marshal(data)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal export data"})
@@ -88,33 +114,6 @@ func (h *ImportExportHandler) Export(c *gin.Context) {
 	b.WriteString("<TITLE>Bookmarks</TITLE>\n")
 	b.WriteString("<H1>Bookmarks</H1>\n")
 	b.WriteString("<DL><p>\n")
-
-	// Build folder tree and bookmark map in a single pass
-	folderMap := make(map[string][]model.Folder)
-	bookmarkMap := make(map[string][]model.Bookmark)
-	var loadAll func(pid *string) error
-	loadAll = func(pid *string) error {
-		children, err := h.folderSvc.List(pid)
-		if err != nil {
-			return err
-		}
-		folderMap[key(pid)] = children
-		bms, err := h.bookmarkSvc.List(pid)
-		if err != nil {
-			return err
-		}
-		bookmarkMap[key(pid)] = bms
-		for _, f := range children {
-			if err := loadAll(&f.ID); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	if err := loadAll(nil); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load data for export"})
-		return
-	}
 
 	// Export root bookmarks
 	for _, bm := range bookmarkMap["__root__"] {

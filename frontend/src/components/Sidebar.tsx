@@ -96,7 +96,8 @@ export default function Sidebar() {
     folderMap,
   } = useFolderStore()
   const { activeId } = useDndStore()
-  const searchStore = useSearchStore()
+  const search = useSearchStore((state) => state.search)
+  const clearSearch = useSearchStore((state) => state.clearSearch)
   const [query, setQuery] = useState('')
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -105,18 +106,18 @@ export default function Sidebar() {
   useEffect(() => {
     clearTimeout(debounceRef.current)
     if (!query.trim()) {
-      searchStore.clearSearch()
+      clearSearch()
       return
     }
     debounceRef.current = setTimeout(() => {
-      searchStore.search(query)
+      search(query)
     }, 250)
     return () => clearTimeout(debounceRef.current)
-  }, [query])
+  }, [clearSearch, query, search])
 
   useEffect(() => {
     loadChildren(null)
-  }, [])
+  }, [loadChildren])
 
   const rowVirtualizer = useVirtualizer({
     count: visibleNodes.length,
@@ -147,7 +148,7 @@ export default function Sidebar() {
                 style={{ background: 'var(--app-text3)', color: '#fff' }}
                 onClick={() => {
                   setQuery('')
-                  searchStore.clearSearch()
+                  clearSearch()
                 }}
               >
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">

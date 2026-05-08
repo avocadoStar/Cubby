@@ -44,7 +44,9 @@ export interface BatchMoveItem {
   kind: 'bookmark' | 'folder'
   id: string
   parent_id: string | null
-  sort_key: string
+  prev_id?: string | null
+  next_id?: string | null
+  optimistic_sort_key?: string
   version: number
 }
 

@@ -42,7 +42,7 @@ export default function MainLayout() {
 
   useEffect(() => {
     load(selectedId)
-  }, [selectedId])
+  }, [load, selectedId])
 
   const subFolderIds = useMemo(() => {
     return (childrenMap.get(selectedId) || []).filter((id) => folderMap.has(id))

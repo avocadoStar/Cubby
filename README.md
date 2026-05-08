@@ -4,7 +4,7 @@
 
 ## 环境要求
 
-- [Go](https://go.dev/dl/) 1.21+
+- [Go](https://go.dev/dl/) 1.25+
 - [Node.js](https://nodejs.org/) 20+
 
 ## 项目结构

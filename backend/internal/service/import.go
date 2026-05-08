@@ -87,7 +87,9 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 			if title == "" {
 				title = href
 			}
-			if _, parseErr := url.Parse(href); parseErr != nil {
+			parsed, parseErr := url.Parse(href)
+			if parseErr != nil || !parsed.IsAbs() || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+				result.Errors++
 				continue
 			}
 

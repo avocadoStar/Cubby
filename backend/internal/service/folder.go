@@ -66,11 +66,11 @@ func (s *FolderService) Update(id, name string, version int) (*model.Folder, err
 }
 
 func (s *FolderService) Delete(id string) error {
-	return s.repo.SoftDelete(id)
+	return s.BatchDelete([]string{id})
 }
 
 func (s *FolderService) Restore(id string) (*model.Folder, error) {
-	return s.repo.Restore(id)
+	return s.repo.RestoreTree(id)
 }
 
 func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string, sortKeyOverride *string, version int) (*model.Folder, error) {

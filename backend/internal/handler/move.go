@@ -22,7 +22,8 @@ func (h *MoveHandler) BatchMove(c *gin.Context) {
 			Kind     string  `json:"kind"`
 			ID       string  `json:"id"`
 			ParentID *string `json:"parent_id"`
-			SortKey  string  `json:"sort_key"`
+			PrevID   *string `json:"prev_id"`
+			NextID   *string `json:"next_id"`
 			Version  int     `json:"version"`
 		} `json:"items"`
 	}
@@ -37,7 +38,8 @@ func (h *MoveHandler) BatchMove(c *gin.Context) {
 			Kind:     item.Kind,
 			ID:       item.ID,
 			ParentID: item.ParentID,
-			SortKey:  item.SortKey,
+			PrevID:   item.PrevID,
+			NextID:   item.NextID,
 			Version:  item.Version,
 		})
 	}

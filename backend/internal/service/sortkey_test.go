@@ -106,6 +106,7 @@ func (r *stubFolderRepo) Create(name string, parentID *string, sortKey string) (
 func (r *stubFolderRepo) Update(id, name string, version int) (*model.Folder, error) { return nil, nil }
 func (r *stubFolderRepo) SoftDelete(id string) error                                 { return nil }
 func (r *stubFolderRepo) Restore(id string) (*model.Folder, error)                   { return nil, nil }
+func (r *stubFolderRepo) RestoreTree(id string) (*model.Folder, error)               { return nil, nil }
 func (r *stubFolderRepo) Rebalance(updates []repository.SortKeyUpdate) error {
 	for _, u := range updates {
 		f := r.items[u.ID]

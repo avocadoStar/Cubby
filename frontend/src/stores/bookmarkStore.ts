@@ -217,7 +217,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       }
       useToastStore.getState().show({
         message: e instanceof ConflictError
-          ? '数据已变更，请刷新后重试'
+          ? e.message
           : '移动失败，请重试',
       })
       throw e
@@ -253,7 +253,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
         .map((item) => {
           const original = originalById.get(item.id)
           return original
-            ? { ...original, folder_id: item.parent_id, sort_key: item.sort_key, version: item.version }
+            ? { ...original, folder_id: item.parent_id, sort_key: item.optimistic_sort_key ?? original.sort_key, version: item.version }
             : null
         })
         .filter((bookmark): bookmark is Bookmark => Boolean(bookmark))
@@ -277,7 +277,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
           const original = folderSnapshot.folderMap.get(item.id)
           if (!original) continue
           const oldParentId = original.parent_id
-          folderMap.set(item.id, { ...original, parent_id: item.parent_id, sort_key: item.sort_key, version: item.version })
+          folderMap.set(item.id, { ...original, parent_id: item.parent_id, sort_key: item.optimistic_sort_key ?? original.sort_key, version: item.version })
 
           if (childrenMap.has(oldParentId)) {
             childrenMap.set(oldParentId, (childrenMap.get(oldParentId) ?? []).filter((childId) => childId !== item.id))
@@ -360,7 +360,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       useFolderStore.setState(folderSnapshot)
       useToastStore.getState().show({
         message: e instanceof ConflictError
-          ? '数据已变更，请刷新后重试'
+          ? e.message
           : '移动失败，请重试',
       })
       throw e

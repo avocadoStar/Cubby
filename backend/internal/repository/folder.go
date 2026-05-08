@@ -115,6 +115,51 @@ func (r *folderRepo) Restore(id string) (*model.Folder, error) {
 	return r.Get(id)
 }
 
+func (r *folderRepo) RestoreTree(id string) (*model.Folder, error) {
+	tx, err := r.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := tx.Exec(`
+		WITH RECURSIVE tree(id) AS (
+			SELECT id FROM folder WHERE id=?
+			UNION ALL
+			SELECT f.id FROM folder f JOIN tree t ON f.parent_id=t.id
+		)
+		UPDATE folder
+		SET deleted_at=NULL, version=version+1, updated_at=datetime('now')
+		WHERE id IN (SELECT id FROM tree)`, id)
+	if err != nil {
+		return nil, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if n == 0 {
+		return nil, sql.ErrNoRows
+	}
+
+	if _, err := tx.Exec(`
+		WITH RECURSIVE tree(id) AS (
+			SELECT id FROM folder WHERE id=?
+			UNION ALL
+			SELECT f.id FROM folder f JOIN tree t ON f.parent_id=t.id
+		)
+		UPDATE bookmark
+		SET deleted_at=NULL, version=version+1, updated_at=datetime('now')
+		WHERE folder_id IN (SELECT id FROM tree)`, id); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return r.Get(id)
+}
+
 func (r *folderRepo) Rebalance(updates []SortKeyUpdate) error {
 	tx, err := r.DB.Begin()
 	if err != nil {
@@ -158,12 +203,12 @@ func (r *folderRepo) BatchDeleteTree(folderIDs, bookmarkIDs []string) error {
 	defer tx.Rollback()
 
 	for _, id := range folderIDs {
-		if _, err := tx.Exec(`UPDATE folder SET deleted_at=datetime('now') WHERE id=?`, id); err != nil {
+		if _, err := tx.Exec(`UPDATE folder SET deleted_at=datetime('now'), version=version+1, updated_at=datetime('now') WHERE id=?`, id); err != nil {
 			return err
 		}
 	}
 	for _, id := range bookmarkIDs {
-		if _, err := tx.Exec(`UPDATE bookmark SET deleted_at=datetime('now') WHERE id=?`, id); err != nil {
+		if _, err := tx.Exec(`UPDATE bookmark SET deleted_at=datetime('now'), version=version+1, updated_at=datetime('now') WHERE id=?`, id); err != nil {
 			return err
 		}
 	}

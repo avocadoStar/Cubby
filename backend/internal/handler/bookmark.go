@@ -193,4 +193,3 @@ func (h *BookmarkHandler) BatchDelete(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
-

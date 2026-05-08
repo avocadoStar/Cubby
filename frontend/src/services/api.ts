@@ -34,7 +34,7 @@ async function request<T>(url: string, options?: RequestOptions): Promise<T> {
     throw new Error('Unauthorized')
   }
   if (res.status === 409) {
-    throw new ConflictError()
+    throw new ConflictError(await readErrorMessage(res))
   }
   if (!res.ok) {
     const text = await res.text()
@@ -47,9 +47,21 @@ async function request<T>(url: string, options?: RequestOptions): Promise<T> {
 }
 
 export class ConflictError extends Error {
-  constructor() {
-    super('conflict')
+  constructor(message = 'conflict') {
+    super(message)
   }
+}
+
+async function readErrorMessage(res: Response): Promise<string> {
+  const text = await res.text()
+  if (!text) return 'conflict'
+  try {
+    const data = JSON.parse(text) as { error?: unknown }
+    if (typeof data.error === 'string' && data.error) return data.error
+  } catch {
+    // Fall through to the raw response body.
+  }
+  return text
 }
 
 export const api = {
@@ -123,7 +135,16 @@ export const api = {
   batchMove: (items: BatchMoveItem[]) =>
     request<BatchMoveResponse>('/moves/batch', {
       method: 'POST',
-      body: JSON.stringify({ items }),
+      body: JSON.stringify({
+        items: items.map(({ kind, id, parent_id, prev_id, next_id, version }) => ({
+          kind,
+          id,
+          parent_id,
+          prev_id: prev_id ?? null,
+          next_id: next_id ?? null,
+          version,
+        })),
+      }),
     }),
 
   batchDeleteBookmarks: (ids: string[]) =>

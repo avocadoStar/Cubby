@@ -10,3 +10,10 @@ config.yaml
 backend/config.yaml
 docs/
 designs/
+.gitnexus/
+frontend/dist/
+.agents/
+.claude/
+.codex/
+AGENTS.md
+CLAUDE.md

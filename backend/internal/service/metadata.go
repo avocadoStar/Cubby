@@ -27,9 +27,9 @@ var errURLNotAllowed = errors.New("URL not allowed")
 
 // allowedPorts maps explicitly permitted port numbers.
 var allowedPorts = map[string]bool{
-	"":      true, // default port for the scheme
-	"80":    true,
-	"443":   true,
+	"":    true, // default port for the scheme
+	"80":  true,
+	"443": true,
 }
 
 // isPrivateIP reports whether an IP address falls in a private, loopback,

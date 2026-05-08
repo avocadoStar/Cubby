@@ -172,7 +172,6 @@ func (r *bookmarkRepo) Rebalance(updates []SortKeyUpdate) error {
 	return tx.Commit()
 }
 
-
 func (r *bookmarkRepo) SearchBoth(query string) ([]model.SearchResult, error) {
 	q := "%" + query + "%"
 	rows, err := r.DB.Query(`

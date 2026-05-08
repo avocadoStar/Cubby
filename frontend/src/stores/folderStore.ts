@@ -262,7 +262,7 @@ export const useFolderStore = create<FolderState>((set, get) => ({
       set(snapshot)
       useToastStore.getState().show({
         message: e instanceof ConflictError
-          ? '数据已变更，请刷新后重试'
+          ? e.message
           : '移动失败，请重试',
       })
       throw e

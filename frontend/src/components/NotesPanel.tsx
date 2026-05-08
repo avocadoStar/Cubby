@@ -17,10 +17,12 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
   bookmarkRef.current = bookmark
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const open = bookmark !== null
+  const bookmarkId = bookmark?.id
+  const bookmarkNotes = bookmark?.notes || ''
 
   useEffect(() => {
-    if (bookmark) { setNotes(bookmark.notes || ''); notesRef.current = bookmark.notes || ''; setSaved(false) }
-  }, [bookmark?.id])
+    if (bookmarkId) { setNotes(bookmarkNotes); notesRef.current = bookmarkNotes; setSaved(false) }
+  }, [bookmarkId, bookmarkNotes])
 
   const save = useCallback((value: string) => {
     const bm = bookmarkRef.current

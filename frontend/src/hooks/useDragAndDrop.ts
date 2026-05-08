@@ -228,12 +228,12 @@ export function useDragAndDrop(
         if (selId.startsWith('bookmark:')) {
           const bookmark = currentBookmarks.find((bk) => bk.id === strippedId)
           if (bookmark) {
-            batchItems.push({ kind: 'bookmark', id: strippedId, parent_id: dp, sort_key: sortKey, version: bookmark.version })
+            batchItems.push({ kind: 'bookmark', id: strippedId, parent_id: dp, prev_id: prevId, next_id: nextId, optimistic_sort_key: sortKey, version: bookmark.version })
           }
         } else {
           const folder = folderStore.folderMap.get(strippedId)
           if (folder) {
-            batchItems.push({ kind: 'folder', id: strippedId, parent_id: dp, sort_key: sortKey, version: folder.version })
+            batchItems.push({ kind: 'folder', id: strippedId, parent_id: dp, prev_id: prevId, next_id: nextId, optimistic_sort_key: sortKey, version: folder.version })
           }
         }
         if (sortKey) localSortKeys.set(strippedId, sortKey)
@@ -245,9 +245,9 @@ export function useDragAndDrop(
       useBookmarkStore.getState().clearSelection()
     } else if (isDraggedFolder) {
       const draggedFolder = draggedItem.folder
-      let newParentId: string | null = null
-      let prevId: string | null = null
-      let nextId: string | null = null
+      let newParentId: string | null
+      let prevId: string | null
+      let nextId: string | null
       if (!targetItem) {
         newParentId = selectedId; const s = siblingsOf(selectedId); ({ prevId, nextId } = computePlacement(s, s.length))
       } else if (targetItem.kind === 'folder' && dropPosition === 'inside') {
@@ -268,8 +268,8 @@ export function useDragAndDrop(
     } else {
       const draggedBookmark = currentBookmarks.find((b) => b.id === itemDragId) ?? draggedItem.bookmark
       let newFolderId: string | null = selectedId
-      let prevId: string | null = null
-      let nextId: string | null = null
+      let prevId: string | null
+      let nextId: string | null
 
       if (!targetItem) {
         const s = siblingsOf(selectedId); ({ prevId, nextId } = computePlacement(s, s.length))
