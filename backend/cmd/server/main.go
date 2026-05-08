@@ -30,6 +30,7 @@ func main() {
 
 	folderRepo := repository.NewFolderRepo(database)
 	bookmarkRepo := repository.NewBookmarkRepo(database)
+	moveRepo := repository.NewMoveRepo(database)
 	settingRepo := repository.NewSettingRepo(database)
 
 	sortKeySvc := service.NewSortKeyService(bookmarkRepo, folderRepo)
@@ -40,6 +41,7 @@ func main() {
 	}
 	folderSvc := service.NewFolderService(folderRepo, bookmarkRepo, sortKeySvc)
 	bookmarkSvc := service.NewBookmarkService(bookmarkRepo, sortKeySvc)
+	moveSvc := service.NewMoveService(moveRepo, folderSvc)
 	searchSvc := service.NewSearchService(bookmarkRepo)
 	importSvc := service.NewImportService(folderRepo, bookmarkRepo)
 	metadataSvc := service.NewMetadataService()
@@ -90,7 +92,7 @@ func main() {
 		c.Next()
 	})
 
-	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, metadataSvc, cfg)
+	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, metadataSvc, moveSvc, cfg)
 
 	// Serve frontend static files in production
 	r.Static("/assets", "./cmd/server/static/assets")

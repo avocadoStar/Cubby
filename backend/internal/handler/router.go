@@ -17,6 +17,7 @@ func SetupRoutes(
 	searchSvc *service.SearchService,
 	importSvc *service.ImportService,
 	metadataSvc *service.MetadataService,
+	moveSvc *service.MoveService,
 	cfg *config.Config,
 ) {
 	authH := NewAuthHandler(authSvc)
@@ -25,6 +26,7 @@ func SetupRoutes(
 	searchH := NewSearchHandler(searchSvc)
 	importExportH := NewImportExportHandler(importSvc, folderSvc, bookmarkSvc)
 	metadataH := NewMetadataHandler(metadataSvc)
+	moveH := NewMoveHandler(moveSvc)
 
 	api := r.Group("/api")
 
@@ -43,6 +45,9 @@ func SetupRoutes(
 		protected.PUT("/folders/:id/restore", folderH.Restore)
 		protected.POST("/folders/move", folderH.Move)
 		protected.POST("/folders/batch-delete", folderH.BatchDelete)
+
+		// Moves
+		protected.POST("/moves/batch", moveH.BatchMove)
 
 		// Bookmarks
 		protected.GET("/bookmarks", bookmarkH.List)

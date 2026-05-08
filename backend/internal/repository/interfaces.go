@@ -6,6 +6,19 @@ type SortKeyUpdate struct {
 	ID, SortKey string
 }
 
+type BatchMoveItem struct {
+	Kind     string
+	ID       string
+	ParentID *string
+	SortKey  string
+	Version  int
+}
+
+type BatchMoveResult struct {
+	Folders   []model.Folder   `json:"folders"`
+	Bookmarks []model.Bookmark `json:"bookmarks"`
+}
+
 type BookmarkRepo interface {
 	List(folderID *string) ([]model.Bookmark, error)
 	GetByID(id string) (*model.Bookmark, error)
@@ -30,6 +43,10 @@ type FolderRepo interface {
 	Rebalance(updates []SortKeyUpdate) error
 	Move(id string, parentID *string, sortKey string, version int) (*model.Folder, error)
 	BatchDeleteTree(folderIDs []string, bookmarkIDs []string) error
+}
+
+type MoveRepo interface {
+	BatchMove(items []BatchMoveItem) (*BatchMoveResult, error)
 }
 
 type SettingRepo interface {

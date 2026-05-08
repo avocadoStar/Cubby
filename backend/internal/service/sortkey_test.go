@@ -48,14 +48,14 @@ func (r *stubBookmarkRepo) Create(title, url string, folderID *string, sortKey s
 func (r *stubBookmarkRepo) Update(id, title, url string, version int) (*model.Bookmark, error) {
 	return nil, nil
 }
-func (r *stubBookmarkRepo) SoftDelete(id string) error            { return nil }
+func (r *stubBookmarkRepo) SoftDelete(id string) error                 { return nil }
 func (r *stubBookmarkRepo) Restore(id string) (*model.Bookmark, error) { return nil, nil }
-func (r *stubBookmarkRepo) BatchSoftDelete(ids []string) error    { return nil }
+func (r *stubBookmarkRepo) BatchSoftDelete(ids []string) error         { return nil }
 func (r *stubBookmarkRepo) Move(id string, folderID *string, sortKey string, version int) (*model.Bookmark, error) {
 	return nil, nil
 }
 func (r *stubBookmarkRepo) SearchBoth(query string) ([]model.SearchResult, error) { return nil, nil }
-func (r *stubBookmarkRepo) UpdateNotes(id, notes string) error                     { return nil }
+func (r *stubBookmarkRepo) UpdateNotes(id, notes string) error                    { return nil }
 func (r *stubBookmarkRepo) Rebalance(updates []repository.SortKeyUpdate) error {
 	for _, u := range updates {
 		b := r.items[u.ID]
@@ -117,6 +117,7 @@ func (r *stubFolderRepo) Rebalance(updates []repository.SortKeyUpdate) error {
 func (r *stubFolderRepo) Move(id string, parentID *string, sortKey string, version int) (*model.Folder, error) {
 	return nil, nil
 }
+func (r *stubFolderRepo) BatchDeleteTree(folderIDs []string, bookmarkIDs []string) error { return nil }
 
 func TestResolveSortKey_Bookmark(t *testing.T) {
 	br := newStubBookmarkRepo()

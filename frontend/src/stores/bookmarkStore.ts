@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import type { Bookmark } from '../types'
+import type { BatchMoveItem, Bookmark } from '../types'
 import { api, ConflictError } from '../services/api'
+import { computeSortKeyFromNeighbors } from '../lib/sortKeys'
 import { useFolderStore } from './folderStore'
 import { useToastStore } from './toastStore'
 
@@ -20,6 +21,7 @@ interface BookmarkState {
   deleteSelected: () => Promise<void>
   deleteOne: (id: string) => void
   move: (id: string, folderId: string | null, prevId: string | null, nextId: string | null, version: number, sortKey?: string) => Promise<void>
+  batchMove: (items: BatchMoveItem[]) => Promise<void>
 }
 
 export const useBookmarkStore = create<BookmarkState>((set, get) => ({
@@ -157,43 +159,210 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   },
 
   move: async (id, folderId, prevId, nextId, version, sortKey) => {
-    const doMove = async (ver: number) => {
-      await api.moveBookmark({ id, folder_id: folderId, prev_id: prevId, next_id: nextId, sort_key: sortKey ?? null, version: ver })
-      const { selectedId } = useFolderStore.getState()
-      await get().load(selectedId)
+    const folderStore = useFolderStore.getState()
+    const viewFolderId = folderStore.selectedId
+    const snapshot = get().bookmarks
+    const moving = snapshot.find((b) => b.id === id)
+    const keyFor = (itemId: string | null) => {
+      if (!itemId) return ''
+      return folderStore.folderMap.get(itemId)?.sort_key
+        ?? snapshot.find((b) => b.id === itemId)?.sort_key
+        ?? ''
+    }
+    const optimisticSortKey = sortKey
+      ?? computeSortKeyFromNeighbors(keyFor(prevId), keyFor(nextId))
+
+    if (moving && optimisticSortKey) {
+      const optimisticBookmark = {
+        ...moving,
+        folder_id: folderId,
+        sort_key: optimisticSortKey,
+        version,
+      }
+      set((state) => {
+        const next = state.bookmarks
+          .filter((b) => b.id !== id)
+          .concat(folderId === viewFolderId ? [optimisticBookmark] : [])
+          .sort((a, b) => a.sort_key < b.sort_key ? -1 : a.sort_key > b.sort_key ? 1 : a.id.localeCompare(b.id))
+        const selectedIds = new Set(state.selectedIds)
+        if (folderId !== viewFolderId) selectedIds.delete(id)
+        return { bookmarks: next, selectedIds }
+      })
     }
 
     try {
-      await doMove(version)
+      const moved = await api.moveBookmark({
+        id,
+        folder_id: folderId,
+        prev_id: prevId,
+        next_id: nextId,
+        sort_key: optimisticSortKey || null,
+        version,
+      })
+      if (useFolderStore.getState().selectedId !== viewFolderId) return
+      set((state) => {
+        if (moved.folder_id !== viewFolderId) {
+          return { bookmarks: state.bookmarks.filter((b) => b.id !== id) }
+        }
+        const exists = state.bookmarks.some((b) => b.id === id)
+        const next = (exists
+          ? state.bookmarks.map((b) => b.id === id ? { ...b, ...moved } : b)
+          : [...state.bookmarks, moved]
+        ).sort((a, b) => a.sort_key < b.sort_key ? -1 : a.sort_key > b.sort_key ? 1 : a.id.localeCompare(b.id))
+        return { bookmarks: next }
+      })
     } catch (e) {
-      if (e instanceof ConflictError) {
-        const current = get().bookmarks.find(b => b.id === id)
-        const sourceFolderId = current?.folder_id ?? null
-
-        const { selectedId } = useFolderStore.getState()
-        const reloadOrder: Array<string | null> = []
-        const pushFolder = (fid: string | null) => {
-          const existingIdx = reloadOrder.findIndex((existing) => existing === fid)
-          if (existingIdx >= 0) {
-            reloadOrder.splice(existingIdx, 1)
-          }
-          reloadOrder.push(fid)
-        }
-
-        pushFolder(folderId)
-        pushFolder(selectedId)
-        pushFolder(sourceFolderId)
-
-        for (const fid of reloadOrder) {
-          await get().load(fid)
-        }
-
-        const fresh = get().bookmarks.find(b => b.id === id)
-        if (fresh) {
-          await doMove(fresh.version)
-          return
-        }
+      if (useFolderStore.getState().selectedId === viewFolderId) {
+        set({ bookmarks: snapshot })
       }
+      useToastStore.getState().show({
+        message: e instanceof ConflictError
+          ? '数据已变更，请刷新后重试'
+          : '移动失败，请重试',
+      })
+      throw e
+    }
+  },
+
+  batchMove: async (items) => {
+    if (items.length === 0) return
+
+    const folderStore = useFolderStore.getState()
+    const viewFolderId = folderStore.selectedId
+    const bookmarkSnapshot = {
+      bookmarks: get().bookmarks,
+      selectedIds: new Set(get().selectedIds),
+      selectedFolderIds: new Set(get().selectedFolderIds),
+    }
+    const folderSnapshot = {
+      folderMap: new Map(folderStore.folderMap),
+      childrenMap: new Map(folderStore.childrenMap),
+      expandedIds: new Set(folderStore.expandedIds),
+      visibleNodes: folderStore.visibleNodes,
+    }
+
+    const bookmarkMoves = items.filter((item) => item.kind === 'bookmark')
+    const folderMoves = items.filter((item) => item.kind === 'folder')
+    const bookmarkMoveIds = new Set(bookmarkMoves.map((item) => item.id))
+    const folderMoveIds = new Set(folderMoves.map((item) => item.id))
+
+    set((state) => {
+      const originalById = new Map(bookmarkSnapshot.bookmarks.map((bookmark) => [bookmark.id, bookmark]))
+      const movedIntoView = bookmarkMoves
+        .filter((item) => item.parent_id === viewFolderId)
+        .map((item) => {
+          const original = originalById.get(item.id)
+          return original
+            ? { ...original, folder_id: item.parent_id, sort_key: item.sort_key, version: item.version }
+            : null
+        })
+        .filter((bookmark): bookmark is Bookmark => Boolean(bookmark))
+      const selectedIds = new Set(state.selectedIds)
+      const selectedFolderIds = new Set(state.selectedFolderIds)
+      bookmarkMoveIds.forEach((id) => selectedIds.delete(id))
+      folderMoveIds.forEach((id) => selectedFolderIds.delete(id))
+      const bookmarks = state.bookmarks
+        .filter((bookmark) => !bookmarkMoveIds.has(bookmark.id))
+        .concat(movedIntoView)
+        .sort((a, b) => a.sort_key < b.sort_key ? -1 : a.sort_key > b.sort_key ? 1 : a.id.localeCompare(b.id))
+      return { bookmarks, selectedIds, selectedFolderIds }
+    })
+
+    if (folderMoves.length > 0) {
+      useFolderStore.setState((state) => {
+        const folderMap = new Map(state.folderMap)
+        const childrenMap = new Map(state.childrenMap)
+
+        for (const item of folderMoves) {
+          const original = folderSnapshot.folderMap.get(item.id)
+          if (!original) continue
+          const oldParentId = original.parent_id
+          folderMap.set(item.id, { ...original, parent_id: item.parent_id, sort_key: item.sort_key, version: item.version })
+
+          if (childrenMap.has(oldParentId)) {
+            childrenMap.set(oldParentId, (childrenMap.get(oldParentId) ?? []).filter((childId) => childId !== item.id))
+          }
+          if (childrenMap.has(item.parent_id)) {
+            const siblings = (childrenMap.get(item.parent_id) ?? []).filter((childId) => childId !== item.id)
+            let insertAt = siblings.length
+            const previousBatchItemIndex = folderMoves.findIndex((candidate) => candidate.id === item.id) - 1
+            const previousBatchItem = previousBatchItemIndex >= 0 ? folderMoves[previousBatchItemIndex] : null
+            if (previousBatchItem && previousBatchItem.parent_id === item.parent_id && siblings.includes(previousBatchItem.id)) {
+              insertAt = siblings.indexOf(previousBatchItem.id) + 1
+            }
+            const nextSiblings = [...siblings]
+            nextSiblings.splice(insertAt, 0, item.id)
+            childrenMap.set(item.parent_id, nextSiblings)
+          }
+        }
+
+        const touchedParents = new Set<string | null>()
+        for (const item of folderMoves) {
+          touchedParents.add(folderSnapshot.folderMap.get(item.id)?.parent_id ?? null)
+          touchedParents.add(item.parent_id)
+        }
+        touchedParents.forEach((parentId) => {
+          if (childrenMap.has(parentId)) {
+            childrenMap.set(parentId, [...(childrenMap.get(parentId) ?? [])].sort((a, b) => {
+              const af = folderMap.get(a)
+              const bf = folderMap.get(b)
+              if (!af || !bf) return a.localeCompare(b)
+              if (af.sort_key < bf.sort_key) return -1
+              if (af.sort_key > bf.sort_key) return 1
+              return af.id.localeCompare(bf.id)
+            }))
+          }
+          if (parentId === null || !childrenMap.has(parentId)) return
+          const parent = folderMap.get(parentId)
+          if (parent) {
+            folderMap.set(parentId, { ...parent, has_children: (childrenMap.get(parentId) ?? []).length > 0 })
+          }
+        })
+        for (const item of folderMoves) {
+          if (item.parent_id === null || childrenMap.has(item.parent_id)) continue
+          const parent = folderMap.get(item.parent_id)
+          if (parent) {
+            folderMap.set(item.parent_id, { ...parent, has_children: true })
+          }
+        }
+
+        return { folderMap, childrenMap }
+      })
+      useFolderStore.getState().rebuildVisible()
+    }
+
+    try {
+      const result = await api.batchMove(items)
+      if (useFolderStore.getState().selectedId === viewFolderId) {
+        set((state) => {
+          let bookmarks = state.bookmarks.filter((bookmark) => !bookmarkMoveIds.has(bookmark.id))
+          const returnedInView = result.bookmarks.filter((bookmark) => bookmark.folder_id === viewFolderId)
+          bookmarks = bookmarks
+            .concat(returnedInView)
+            .sort((a, b) => a.sort_key < b.sort_key ? -1 : a.sort_key > b.sort_key ? 1 : a.id.localeCompare(b.id))
+          return { bookmarks }
+        })
+      }
+      if (result.folders.length > 0) {
+        useFolderStore.setState((state) => {
+          const folderMap = new Map(state.folderMap)
+          for (const folder of result.folders) {
+            folderMap.set(folder.id, folder)
+          }
+          return { folderMap }
+        })
+        useFolderStore.getState().rebuildVisible()
+      }
+    } catch (e) {
+      if (useFolderStore.getState().selectedId === viewFolderId) {
+        set(bookmarkSnapshot)
+      }
+      useFolderStore.setState(folderSnapshot)
+      useToastStore.getState().show({
+        message: e instanceof ConflictError
+          ? '数据已变更，请刷新后重试'
+          : '移动失败，请重试',
+      })
       throw e
     }
   },

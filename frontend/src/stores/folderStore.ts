@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Folder } from '../types'
 import { api, ConflictError } from '../services/api'
+import { computeSortKeyFromNeighbors } from '../lib/sortKeys'
 import { useToastStore } from './toastStore'
 
 interface FolderState {
@@ -189,38 +190,81 @@ export const useFolderStore = create<FolderState>((set, get) => ({
   },
 
   moveFolder: async (id, newParentId, prevId, nextId, version, sortKey) => {
-    const doMove = async (ver: number) => {
-      await api.moveFolder({ id, parent_id: newParentId, prev_id: prevId, next_id: nextId, sort_key: sortKey ?? null, version: ver })
+    const snapshot = {
+      folderMap: new Map(get().folderMap),
+      childrenMap: new Map(get().childrenMap),
+      expandedIds: new Set(get().expandedIds),
+      visibleNodes: get().visibleNodes,
+    }
+    const folder = snapshot.folderMap.get(id)
+    const oldParentId = folder?.parent_id ?? null
+    const keyFor = (itemId: string | null) => itemId ? snapshot.folderMap.get(itemId)?.sort_key ?? '' : ''
+    const optimisticSortKey = sortKey
+      ?? computeSortKeyFromNeighbors(keyFor(prevId), keyFor(nextId))
 
-      const { folderMap } = get()
-      const folder = folderMap.get(id)
-      const oldParentId = folder?.parent_id ?? null
+    if (folder && optimisticSortKey) {
+      set((state) => {
+        const folderMap = new Map(state.folderMap)
+        const childrenMap = new Map(state.childrenMap)
+        const movedFolder = { ...folder, parent_id: newParentId, sort_key: optimisticSortKey, version }
+        folderMap.set(id, movedFolder)
 
-      if (oldParentId !== newParentId) {
-        await get().loadChildren(oldParentId)
-      }
-      await get().loadChildren(newParentId)
+        if (childrenMap.has(oldParentId)) {
+          childrenMap.set(oldParentId, (childrenMap.get(oldParentId) ?? []).filter((childId) => childId !== id))
+        }
+        if (childrenMap.has(newParentId)) {
+          const siblings = (childrenMap.get(newParentId) ?? []).filter((childId) => childId !== id)
+          let insertAt = siblings.length
+          if (prevId && siblings.includes(prevId)) {
+            insertAt = siblings.indexOf(prevId) + 1
+          } else if (nextId && siblings.includes(nextId)) {
+            insertAt = siblings.indexOf(nextId)
+          }
+          const nextSiblings = [...siblings]
+          nextSiblings.splice(insertAt, 0, id)
+          childrenMap.set(newParentId, nextSiblings)
+        }
+
+        if (oldParentId !== null) {
+          const oldParent = folderMap.get(oldParentId)
+          if (oldParent && childrenMap.has(oldParentId)) {
+            folderMap.set(oldParentId, { ...oldParent, has_children: (childrenMap.get(oldParentId) ?? []).length > 0 })
+          }
+        }
+        if (newParentId !== null) {
+          const newParent = folderMap.get(newParentId)
+          if (newParent) {
+            folderMap.set(newParentId, { ...newParent, has_children: true })
+          }
+        }
+
+        return { folderMap, childrenMap }
+      })
       get().rebuildVisible()
     }
 
     try {
-      await doMove(version)
+      const moved = await api.moveFolder({
+        id,
+        parent_id: newParentId,
+        prev_id: prevId,
+        next_id: nextId,
+        sort_key: optimisticSortKey || null,
+        version,
+      })
+      set((state) => {
+        const folderMap = new Map(state.folderMap)
+        folderMap.set(id, moved)
+        return { folderMap }
+      })
+      get().rebuildVisible()
     } catch (e) {
-      if (e instanceof ConflictError) {
-        // Reload to get fresh versions, then retry once
-        const { selectedId } = get()
-        await get().loadChildren(selectedId)
-        if (newParentId !== selectedId) {
-          await get().loadChildren(newParentId)
-        }
-        get().rebuildVisible()
-
-        const freshFolder = get().folderMap.get(id)
-        if (freshFolder) {
-          await doMove(freshFolder.version)
-          return
-        }
-      }
+      set(snapshot)
+      useToastStore.getState().show({
+        message: e instanceof ConflictError
+          ? '数据已变更，请刷新后重试'
+          : '移动失败，请重试',
+      })
       throw e
     }
   },

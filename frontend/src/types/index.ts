@@ -40,3 +40,16 @@ export interface MoveRequest {
   version: number
 }
 
+export interface BatchMoveItem {
+  kind: 'bookmark' | 'folder'
+  id: string
+  parent_id: string | null
+  sort_key: string
+  version: number
+}
+
+export interface BatchMoveResponse {
+  folders: Folder[]
+  bookmarks: Bookmark[]
+}
+
