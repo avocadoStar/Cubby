@@ -36,7 +36,7 @@ const FolderRowComponent = memo(function FolderRowComponent({
         border: 'var(--card-border)',
         margin: '0 45px var(--card-gap) 45px',
         opacity: isDragging ? 0.3 : 1,
-        boxShadow: hovered ? 'var(--card-shadow-hover)' : 'var(--row-shadow)',
+        boxShadow: isFolderSelected || isInside ? 'var(--input-shadow)' : hovered ? 'var(--card-shadow-hover)' : 'var(--row-shadow)',
         background: isInside ? 'var(--accent-light)' : isFolderSelected ? 'var(--accent-light)' : hovered ? 'var(--app-hover)' : 'var(--app-card)',
         outline: isInside ? '1px solid var(--app-accent)' : undefined,
         outlineOffset: -1,

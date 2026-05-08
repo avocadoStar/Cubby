@@ -28,6 +28,8 @@ function AllBookmarksDroppable({
       style={{
         margin: '0 4px',
         background: isSelected ? 'var(--accent-light)' : 'transparent',
+        borderRadius: 'var(--card-radius)',
+        boxShadow: isSelected ? 'var(--input-shadow)' : 'none',
       }}
       onClick={onSelect}
     >
@@ -130,7 +132,7 @@ export default function Sidebar() {
         </div>
 
         <div className="px-4 pb-2">
-          <div className="flex items-center h-8 rounded px-2 gap-1.5" style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)' }}>
+          <div className="flex items-center h-8 px-2 gap-1.5" style={{ border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)' }}>
             <Search size={14} stroke="var(--app-text2)" />
             <input
               className="flex-1 border-none outline-none text-body bg-transparent"

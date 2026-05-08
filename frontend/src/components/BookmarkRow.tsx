@@ -43,7 +43,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         overflow: 'hidden',
         borderRadius: 'var(--card-radius)',
         border: highlight ? 'var(--card-border-hover)' : 'var(--card-border)',
-        boxShadow: hovered ? 'var(--card-shadow-hover)' : 'var(--row-shadow)',
+        boxShadow: isSelected || isOverInside ? 'var(--input-shadow)' : hovered ? 'var(--card-shadow-hover)' : 'var(--row-shadow)',
         transition: isDeleting ? 'opacity 0.2s ease-out, height 0.2s ease-out, margin 0.2s ease-out' : 'border-color 0.15s, box-shadow 0.15s',
         background: isOverInside ? 'var(--accent-light)'
           : isSelected ? 'var(--accent-light)'

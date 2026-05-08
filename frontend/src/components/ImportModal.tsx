@@ -42,12 +42,12 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--overlay)' }} onClick={onClose}>
-      <div className="rounded-lg shadow-xl p-6 w-96" style={{ background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
+      <div className="p-6 w-96" style={{ background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }} onClick={(e) => e.stopPropagation()}>
         <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--app-text)' }}>导入收藏夹</h3>
 
         {status === 'idle' && (
           <label className="flex flex-col items-center gap-3 p-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-200"
-            style={{ borderColor: 'var(--app-border)', color: 'var(--app-text2)' }}
+            style={{ borderColor: 'var(--app-border)', color: 'var(--app-text2)', background: 'var(--app-card)', boxShadow: 'var(--shadow)' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--app-accent)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--app-border)' }}
           >
@@ -85,7 +85,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
               {(result?.folders ?? 0) > 0 && `, ${result!.folders} 个文件夹`}
             </p>
             <button onClick={handleDone} className="mt-4 h-8 px-6 border-none rounded text-white text-body font-medium cursor-default"
-              style={{ background: 'var(--app-accent)' }}>
+              style={{ background: 'var(--app-accent)', boxShadow: 'var(--shadow)' }}>
               完成
             </button>
           </div>
@@ -102,11 +102,11 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
             <p className="text-xs mb-4 max-h-16 overflow-auto" style={{ color: 'var(--app-text2)' }}>{error}</p>
             <div className="flex justify-center gap-2">
               <button onClick={onClose} className="h-8 px-4 rounded text-body cursor-default"
-                style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)', color: 'var(--app-text)' }}>
+                style={{ border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', color: 'var(--app-text)' }}>
                 取消
               </button>
               <button onClick={handleRetry} className="h-8 px-4 border-none rounded text-white text-body font-medium cursor-default"
-                style={{ background: 'var(--app-accent)' }}>
+                style={{ background: 'var(--app-accent)', boxShadow: 'var(--shadow)' }}>
                 重试
               </button>
             </div>

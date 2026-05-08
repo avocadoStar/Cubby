@@ -133,8 +133,8 @@ export default function ContextMenu() {
       {menu && (
         <div
           ref={menuRef}
-          className="fixed z-[100] rounded-lg shadow-lg p-1 min-w-[200px]"
-          style={{ left: menu.x, top: menu.y, background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }}
+          className="fixed z-[100] p-1 min-w-[200px]"
+          style={{ left: menu.x, top: menu.y, background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }}
         >
           {isBookmark && (
             <>
@@ -218,7 +218,7 @@ export default function ContextMenu() {
       {/* Rename Folder Modal */}
       {renamingFolder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--overlay)' }} onClick={() => setRenamingFolder(null)}>
-          <div className="rounded-lg shadow-xl p-6 w-80" style={{ background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+          <div className="p-6 w-80" style={{ background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--app-text)' }}>重命名文件夹</h3>
             <input
               autoFocus
@@ -230,9 +230,9 @@ export default function ContextMenu() {
             />
             <div className="flex justify-end gap-2">
               <button onClick={() => setRenamingFolder(null)} className="h-8 px-4 rounded text-body cursor-default"
-                style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)', color: 'var(--app-text)' }}>取消</button>
+                style={{ border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', color: 'var(--app-text)' }}>取消</button>
               <button onClick={submitRename} disabled={!folderName.trim()} className="h-8 px-4 border-none rounded text-white text-body font-medium cursor-default disabled:opacity-50"
-                style={{ background: 'var(--app-accent)' }}>保存</button>
+                style={{ background: 'var(--app-accent)', boxShadow: 'var(--shadow)' }}>保存</button>
             </div>
           </div>
         </div>

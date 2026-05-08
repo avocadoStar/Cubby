@@ -113,7 +113,11 @@ export default function LoginPage() {
       className="flex min-h-screen items-center justify-center"
       style={{ background: 'var(--app-bg)' }}
     >
-      <form onSubmit={handleSubmit} className="flex w-80 flex-col gap-4 p-8">
+      <form
+        onSubmit={handleSubmit}
+        className="flex w-80 flex-col gap-4 p-8"
+        style={{ background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }}
+      >
         <h1
           className="flex items-center justify-center gap-2 text-center text-2xl font-semibold"
           style={{ color: 'var(--app-text)' }}
@@ -147,7 +151,7 @@ export default function LoginPage() {
             style={{
               border: showInputError ? '1px solid var(--app-danger)' : 'var(--input-border)',
               boxShadow: showInputError
-                ? '0 0 0 2px rgba(204, 51, 51, 0.1)'
+                ? 'var(--input-shadow), 0 0 0 2px rgba(179, 75, 75, 0.16)'
                 : 'var(--input-shadow)',
               background: 'var(--input-bg)',
               color: 'var(--app-text)',
@@ -180,7 +184,7 @@ export default function LoginPage() {
           className="h-9 rounded border-none text-sm font-medium text-white transition-[opacity,filter,box-shadow] disabled:cursor-not-allowed disabled:opacity-50"
           style={{
             background: 'var(--app-accent)',
-            boxShadow: loading || !password ? 'none' : '0 1px 0 rgba(0, 0, 0, 0.08)',
+            boxShadow: loading || !password ? 'var(--input-shadow)' : 'var(--shadow)',
             filter: loading || !password ? 'saturate(0.85)' : 'none',
           }}
         >

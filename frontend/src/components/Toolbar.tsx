@@ -73,7 +73,7 @@ export default function Toolbar() {
 
   return (
     <>
-      <div className="flex items-center gap-1 px-5 py-2" style={{ height: 48, borderBottom: '1px solid var(--divider-color)' }}>
+      <div className="flex items-center gap-1 px-5 py-2" style={{ height: 48, background: 'var(--app-card)', borderBottom: '1px solid var(--divider-color)', boxShadow: 'var(--shadow)' }}>
         <Breadcrumb />
         <div className="flex-1" />
         <button
@@ -136,8 +136,8 @@ export default function Toolbar() {
           {showTheme && (
             <div
               ref={themeRef}
-              className="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-lg p-3"
-              style={{ width: 200, background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }}
+              className="absolute right-0 top-full mt-2 z-50 p-3"
+              style={{ width: 200, background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }}
             >
               <div className="text-body font-medium mb-2" style={{ color: 'var(--app-text)' }}>主题</div>
               {themes.map(t => (
@@ -155,7 +155,7 @@ export default function Toolbar() {
                       width: 14, height: 14,
                       background: t.vars['--bg'],
                       boxShadow: t.id === 'neumorphism'
-                        ? '-2px -2px 4px #ffffff, 2px 2px 4px #b0b0b0'
+                        ? '-2px -2px 4px #ffffff, 2px 2px 4px #bebebe'
                         : `0 0 0 1px ${t.vars['--border']}`,
                     }}
                   />
@@ -190,7 +190,7 @@ export default function Toolbar() {
       {/* Add Bookmark Modal */}
       {showAddBookmark && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--overlay)' }} onClick={() => setShowAddBookmark(false)}>
-          <div className="rounded-lg shadow-xl p-6 w-96" style={{ background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
+          <div className="p-6 w-96" style={{ background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
             <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--app-text)' }}>添加收藏夹</h3>
             <input
               autoFocus
@@ -221,12 +221,12 @@ export default function Toolbar() {
             <div className="flex justify-end gap-2">
               <button onClick={() => setShowAddBookmark(false)}
                 className="h-8 px-4 rounded text-body cursor-default"
-                style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)', color: 'var(--app-text)' }}>
+                style={{ border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', color: 'var(--app-text)' }}>
                 取消
               </button>
               <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()}
                 className="h-8 px-4 border-none rounded text-white text-body font-medium cursor-default disabled:opacity-50"
-                style={{ background: 'var(--app-accent)' }}>
+                style={{ background: 'var(--app-accent)', boxShadow: 'var(--shadow)' }}>
                 添加
               </button>
             </div>

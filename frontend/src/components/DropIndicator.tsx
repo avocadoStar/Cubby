@@ -13,7 +13,7 @@ export default function DropIndicator() {
         left: indicatorRect.left,
         width: indicatorRect.width,
         height: 3,
-        backgroundColor: '#0078D4',
+        backgroundColor: 'var(--app-accent)',
         borderRadius: 1.5,
         zIndex: 9999,
         pointerEvents: 'none',

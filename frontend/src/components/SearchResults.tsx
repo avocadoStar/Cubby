@@ -20,9 +20,15 @@ export default function SearchResults({ query, results }: SearchResultsProps) {
             <div
               key={`${r.kind}-${r.id}`}
               className="flex items-center mx-1 px-2 rounded select-none cursor-default"
-              style={{ height: 32 }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--app-hover)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              style={{ height: 32, borderRadius: 'var(--card-radius)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--app-hover)'
+                e.currentTarget.style.boxShadow = 'var(--tree-hover-shadow)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
               onClick={() => {
                 if (r.kind === 'folder') {
                   useSearchStore.getState().clearSearch()

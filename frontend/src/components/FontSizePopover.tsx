@@ -29,8 +29,8 @@ export default function FontSizePopover({ onClose }: { onClose: () => void }) {
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-1 z-50 rounded-lg shadow-lg p-4"
-      style={{ width: 240, background: 'var(--app-card)', border: 'var(--input-border)', boxShadow: 'var(--shadow-lg)' }}
+      className="absolute right-0 top-full mt-2 z-50 p-4"
+      style={{ width: 240, background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }}
     >
       <div className="text-body font-medium mb-3" style={{ color: 'var(--app-text)' }}>字体大小</div>
 
@@ -58,6 +58,7 @@ export default function FontSizePopover({ onClose }: { onClose: () => void }) {
               borderColor: preset === p.key ? 'var(--app-accent)' : 'var(--app-border)',
               background: preset === p.key ? 'var(--accent-light)' : 'var(--app-bg)',
               color: preset === p.key ? 'var(--app-accent)' : 'var(--app-text)',
+              boxShadow: preset === p.key ? 'var(--input-shadow)' : 'var(--shadow)',
               fontWeight: preset === p.key ? 600 : 400,
             }}
             onClick={() => setPreset(p.key)}

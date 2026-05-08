@@ -65,6 +65,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
         paddingRight: 8,
         margin: '0 4px',
         opacity: isDragging ? 0.3 : 1,
+        borderRadius: 'var(--card-radius)',
         background: isInside
           ? 'var(--accent-light)'
           : isSelected
@@ -72,7 +73,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
             : hovered
               ? 'var(--tree-hover-bg)'
               : 'transparent',
-        boxShadow: hovered && !isSelected && !isInside ? 'var(--tree-hover-shadow)' : 'none',
+        boxShadow: isSelected || isInside ? 'var(--input-shadow)' : hovered ? 'var(--tree-hover-shadow)' : 'none',
         outline: isInside ? '1px solid var(--app-accent)' : undefined,
         outlineOffset: -1,
         touchAction: 'none',

@@ -189,7 +189,8 @@ export default function MainLayout() {
               paddingRight: 8,
               opacity: 0.85,
               background: 'var(--app-card, #FFFFFF)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              boxShadow: 'var(--shadow-lg)',
+              borderRadius: 'var(--card-radius)',
               transform: 'scale(1.02)',
             }}
           >
