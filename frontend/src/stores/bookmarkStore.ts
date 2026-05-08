@@ -196,7 +196,6 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
         folder_id: folderId,
         prev_id: prevId,
         next_id: nextId,
-        sort_key: optimisticSortKey || null,
         version,
       })
       if (useFolderStore.getState().selectedId !== viewFolderId) return

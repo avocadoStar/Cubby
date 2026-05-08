@@ -13,10 +13,11 @@ import (
 	"time"
 )
 
-type MetadataService struct{}
-
 func NewMetadataService() *MetadataService {
-	return &MetadataService{}
+	return &MetadataService{
+		resolver:      defaultResolver{},
+		clientFactory: newMetadataHTTPClient,
+	}
 }
 
 type Metadata struct {
@@ -25,6 +26,23 @@ type Metadata struct {
 
 var errURLNotAllowed = errors.New("URL not allowed")
 
+type ipResolver interface {
+	LookupIP(host string) ([]net.IP, error)
+}
+
+type defaultResolver struct{}
+
+func (defaultResolver) LookupIP(host string) ([]net.IP, error) {
+	return net.LookupIP(host)
+}
+
+type metadataHTTPClientFactory func(targetIP string) *http.Client
+
+type MetadataService struct {
+	resolver      ipResolver
+	clientFactory metadataHTTPClientFactory
+}
+
 // allowedPorts maps explicitly permitted port numbers.
 var allowedPorts = map[string]bool{
 	"":    true, // default port for the scheme
@@ -32,9 +50,9 @@ var allowedPorts = map[string]bool{
 	"443": true,
 }
 
-// isPrivateIP reports whether an IP address falls in a private, loopback,
-// or link-local range.
-func isPrivateIP(ip net.IP) bool {
+// isBlockedIP reports whether an IP address falls in a private, loopback,
+// link-local, multicast, or otherwise non-public range.
+func isBlockedIP(ip net.IP) bool {
 	privateRanges := []struct {
 		network *net.IPNet
 	}{
@@ -53,6 +71,11 @@ func isPrivateIP(ip net.IP) bool {
 		{mustParseCIDR("0.0.0.0/8")},
 		{mustParseCIDR("::/128")},
 		{mustParseCIDR("::ffff:0:0/96")},
+		// carrier-grade NAT
+		{mustParseCIDR("100.64.0.0/10")},
+		// multicast
+		{mustParseCIDR("224.0.0.0/4")},
+		{mustParseCIDR("ff00::/8")},
 	}
 	for _, r := range privateRanges {
 		if r.network.Contains(ip) {
@@ -72,42 +95,51 @@ func mustParseCIDR(s string) *net.IPNet {
 
 // validateURL performs SSRF protection checks on the provided URL.
 func validateURL(rawURL string) error {
+	_, _, err := validateURLWithResolver(rawURL, defaultResolver{})
+	return err
+}
+
+func validateURLWithResolver(rawURL string, resolver ipResolver) (*url.URL, []net.IP, error) {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
-		return errURLNotAllowed
+		return nil, nil, errURLNotAllowed
 	}
 
 	// Only allow http and https schemes.
 	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return errURLNotAllowed
+		return nil, nil, errURLNotAllowed
 	}
 
 	host := parsed.Hostname()
 	if host == "" {
-		return errURLNotAllowed
+		return nil, nil, errURLNotAllowed
 	}
 
 	// Restrict ports.
 	port := parsed.Port()
 	if !allowedPorts[port] {
-		return errURLNotAllowed
+		return nil, nil, errURLNotAllowed
 	}
 
-	// Resolve hostname and check resolved IPs.
-	ips, err := net.LookupIP(host)
-	if err != nil {
-		return errURLNotAllowed
-	}
-	if len(ips) == 0 {
-		return errURLNotAllowed
+	ips := []net.IP{}
+	if ip := net.ParseIP(host); ip != nil {
+		ips = append(ips, ip)
+	} else {
+		ips, err = resolver.LookupIP(host)
+		if err != nil {
+			return nil, nil, errURLNotAllowed
+		}
+		if len(ips) == 0 {
+			return nil, nil, errURLNotAllowed
+		}
 	}
 	for _, ip := range ips {
-		if isPrivateIP(ip) {
-			return errURLNotAllowed
+		if ip == nil || isBlockedIP(ip) {
+			return nil, nil, errURLNotAllowed
 		}
 	}
 
-	return nil
+	return parsed, ips, nil
 }
 
 func (s *MetadataService) FetchTitle(rawURL string) (*Metadata, error) {
@@ -115,30 +147,14 @@ func (s *MetadataService) FetchTitle(rawURL string) (*Metadata, error) {
 		rawURL = "https://" + rawURL
 	}
 
-	if err := validateURL(rawURL); err != nil {
+	parsed, ips, err := validateURLWithResolver(rawURL, s.resolver)
+	if err != nil {
 		return nil, err
 	}
 
-	parsed, _ := url.Parse(rawURL)
 	host := parsed.Hostname()
-
-	// Resolve DNS once, then dial the validated IP directly to prevent DNS rebinding.
-	ips, err := net.LookupIP(host)
-	if err != nil || len(ips) == 0 {
-		return nil, errURLNotAllowed
-	}
 	resolvedIP := ips[0].String()
-
-	// Custom transport that dials the validated IP, not re-resolving via DNS.
-	transport := &http.Transport{
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			_, port, _ := net.SplitHostPort(addr)
-			target := net.JoinHostPort(resolvedIP, port)
-			dialer := &net.Dialer{Timeout: 5 * time.Second}
-			return dialer.DialContext(ctx, network, target)
-		},
-	}
-	client := &http.Client{Timeout: 8 * time.Second, Transport: transport}
+	client := s.clientFactory(resolvedIP)
 
 	req, err := http.NewRequest("GET", rawURL, nil)
 	if err != nil {
@@ -153,6 +169,12 @@ func (s *MetadataService) FetchTitle(rawURL string) (*Metadata, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode >= http.StatusMultipleChoices && resp.StatusCode < http.StatusBadRequest {
+		return nil, errURLNotAllowed
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("metadata fetch failed: %s", resp.Status)
+	}
 
 	// Read up to 512KB to find </title>
 	var buf strings.Builder
@@ -177,6 +199,24 @@ func (s *MetadataService) FetchTitle(rawURL string) (*Metadata, error) {
 		title = rawURL
 	}
 	return &Metadata{Title: title}, nil
+}
+
+func newMetadataHTTPClient(targetIP string) *http.Client {
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			_, port, _ := net.SplitHostPort(addr)
+			target := net.JoinHostPort(targetIP, port)
+			dialer := &net.Dialer{Timeout: 5 * time.Second}
+			return dialer.DialContext(ctx, network, target)
+		},
+	}
+	return &http.Client{
+		Timeout:   8 * time.Second,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 }
 
 var titleRe = regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)

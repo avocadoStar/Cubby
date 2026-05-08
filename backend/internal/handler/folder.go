@@ -129,14 +129,13 @@ func (h *FolderHandler) Move(c *gin.Context) {
 		ParentID *string `json:"parent_id"`
 		PrevID   *string `json:"prev_id"`
 		NextID   *string `json:"next_id"`
-		SortKey  *string `json:"sort_key"`
 		Version  int     `json:"version"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	f, err := h.svc.Move(req.ID, req.ParentID, req.PrevID, req.NextID, req.SortKey, req.Version)
+	f, err := h.svc.Move(req.ID, req.ParentID, req.PrevID, req.NextID, nil, req.Version)
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return

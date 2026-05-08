@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -119,7 +120,7 @@ func getRateLimiter(name string, max int, window time.Duration) *rateLimiter {
 // RateLimit returns a Gin middleware that limits requests per client IP
 // using a sliding window. Exceeding the limit returns 429 with a Retry-After header.
 func RateLimit(max int, window time.Duration) gin.HandlerFunc {
-	rl := getRateLimiter("global", max, window)
+	rl := getRateLimiter(fmt.Sprintf("%d:%s", max, window), max, window)
 
 	return func(c *gin.Context) {
 		key := c.ClientIP()

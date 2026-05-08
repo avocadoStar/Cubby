@@ -101,20 +101,7 @@ func needsRebalance(prev, next string) bool {
 	if prev >= next {
 		return true
 	}
-	minLen := len(prev)
-	if len(next) < minLen {
-		minLen = len(next)
-	}
-	for i := 0; i < minLen; i++ {
-		diff := int(next[i]) - int(prev[i])
-		if diff > 1 {
-			return false
-		}
-		if diff < 0 {
-			return true
-		}
-	}
-	return true
+	return between(prev, next) == ""
 }
 
 // rebalanceKeys generates evenly-spaced, ASCII-safe sort keys for n children.

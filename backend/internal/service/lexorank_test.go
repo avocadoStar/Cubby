@@ -48,8 +48,11 @@ func TestNeedsRebalance(t *testing.T) {
 	if needsRebalance("a", "d") {
 		t.Error("gap 3 should not trigger rebalance")
 	}
-	if !needsRebalance("a", "b") {
-		t.Error("adjacent chars should trigger rebalance")
+	if needsRebalance("a", "b") {
+		t.Error("adjacent chars with a generated midpoint should not trigger rebalance")
+	}
+	if !needsRebalance("b", "a") {
+		t.Error("reversed keys should trigger rebalance")
 	}
 }
 

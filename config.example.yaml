@@ -16,3 +16,9 @@ jwt_secret: "change-me-in-production"
 # 登录密码（明文，启动时自动加密存储）
 # - 最少 8 个字符
 password: "your-password"
+
+# CORS 允许来源。留空表示仅允许同源请求。
+allowed_origins: []
+
+# Gin 可信代理。留空时不信任 X-Forwarded-For 等转发头。
+trusted_proxies: []

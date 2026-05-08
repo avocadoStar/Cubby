@@ -98,7 +98,7 @@ export const api = {
   moveFolder: (req: MoveRequest) =>
     request<Folder>('/folders/move', {
       method: 'POST',
-      body: JSON.stringify(req),
+      body: JSON.stringify(stripClientSortKey(req)),
     }),
 
   // Bookmarks
@@ -129,7 +129,7 @@ export const api = {
   moveBookmark: (req: MoveRequest) =>
     request<Bookmark>('/bookmarks/move', {
       method: 'POST',
-      body: JSON.stringify(req),
+      body: JSON.stringify(stripClientSortKey(req)),
     }),
 
   batchMove: (items: BatchMoveItem[]) =>
@@ -172,4 +172,9 @@ export const api = {
     form.append('file', file)
     return request<{ bookmarks: number; folders: number }>('/import', { method: 'POST', body: form })
   },
+}
+
+function stripClientSortKey(req: MoveRequest): MoveRequest {
+  const { id, parent_id, folder_id, prev_id, next_id, version } = req
+  return { id, parent_id, folder_id, prev_id, next_id, version }
 }

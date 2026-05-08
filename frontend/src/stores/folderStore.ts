@@ -249,7 +249,6 @@ export const useFolderStore = create<FolderState>((set, get) => ({
         parent_id: newParentId,
         prev_id: prevId,
         next_id: nextId,
-        sort_key: optimisticSortKey || null,
         version,
       })
       set((state) => {

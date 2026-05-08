@@ -21,6 +21,7 @@ type Config struct {
 	JWTSecret      string   `yaml:"jwt_secret"`
 	Password       string   `yaml:"password"`
 	AllowedOrigins []string `yaml:"allowed_origins"`
+	TrustedProxies []string `yaml:"trusted_proxies"`
 }
 
 func Load() (*Config, error) {

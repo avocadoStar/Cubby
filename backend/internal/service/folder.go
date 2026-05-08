@@ -25,31 +25,9 @@ func (s *FolderService) List(parentID *string) ([]model.Folder, error) {
 }
 
 func (s *FolderService) Create(name string, parentID *string) (*model.Folder, error) {
-	children, err := s.repo.List(parentID)
+	sortKey, err := s.sortKey.ComputeFolderSortKey(parentID, nil, nil, "")
 	if err != nil {
-		return nil, fmt.Errorf("list siblings: %w", err)
-	}
-	sortKey := after("")
-	if len(children) > 0 {
-		lastKey := children[len(children)-1].SortKey
-		sortKey = after(lastKey)
-		if sortKey == "" {
-			if err := s.rebalanceChildren(parentID, ""); err != nil {
-				return nil, fmt.Errorf("rebalance failed during create: %w", err)
-			}
-			children, err = s.repo.List(parentID)
-			if err != nil {
-				return nil, fmt.Errorf("list siblings after rebalance: %w", err)
-			}
-			if len(children) == 0 {
-				sortKey = after("")
-			} else {
-				sortKey = after(children[len(children)-1].SortKey)
-			}
-		}
-	}
-	if sortKey == "" {
-		return nil, ErrConflict
+		return nil, err
 	}
 	for i := 0; i < 3; i++ {
 		f, err := s.repo.Create(name, parentID, sortKey)
@@ -82,9 +60,6 @@ func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string
 		if isDesc {
 			return nil, fmt.Errorf("cannot move folder into itself or its descendants")
 		}
-	}
-	if sortKeyOverride != nil && *sortKeyOverride != "" {
-		return s.repo.Move(id, parentID, *sortKeyOverride, version)
 	}
 	sortKey, err := s.sortKey.ComputeFolderSortKey(parentID, prevID, nextID, id)
 	if err != nil {

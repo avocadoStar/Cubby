@@ -47,6 +47,13 @@ func main() {
 	metadataSvc := service.NewMetadataService()
 
 	r := gin.Default()
+	if len(cfg.TrustedProxies) == 0 {
+		if err := r.SetTrustedProxies(nil); err != nil {
+			log.Fatalf("configure trusted proxies: %v", err)
+		}
+	} else if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		log.Fatalf("configure trusted proxies: %v", err)
+	}
 
 	// Task 1.5: Limit request body size to 10MB.
 	r.Use(func(c *gin.Context) {

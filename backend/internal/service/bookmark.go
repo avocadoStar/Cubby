@@ -1,8 +1,6 @@
 package service
 
 import (
-	"fmt"
-
 	"cubby/internal/model"
 	"cubby/internal/repository"
 )
@@ -21,13 +19,9 @@ func (s *BookmarkService) List(folderID *string) ([]model.Bookmark, error) {
 }
 
 func (s *BookmarkService) Create(title, url string, folderID *string) (*model.Bookmark, error) {
-	children, err := s.repo.List(folderID)
+	sortKey, err := s.sortKey.ComputeBookmarkSortKey(folderID, nil, nil, "")
 	if err != nil {
-		return nil, fmt.Errorf("list siblings: %w", err)
-	}
-	sortKey := "n"
-	if len(children) > 0 {
-		sortKey = after(children[len(children)-1].SortKey)
+		return nil, err
 	}
 	for i := 0; i < 3; i++ {
 		b, err := s.repo.Create(title, url, folderID, sortKey)
@@ -48,9 +42,6 @@ func (s *BookmarkService) Delete(id string) error {
 }
 
 func (s *BookmarkService) Move(id string, folderID *string, prevID, nextID, sortKeyOverride *string, version int) (*model.Bookmark, error) {
-	if sortKeyOverride != nil && *sortKeyOverride != "" {
-		return s.repo.Move(id, folderID, *sortKeyOverride, version)
-	}
 	sortKey, err := s.sortKey.ComputeBookmarkSortKey(folderID, prevID, nextID, id)
 	if err != nil {
 		return nil, err

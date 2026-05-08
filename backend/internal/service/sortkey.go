@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"sort"
 
 	"cubby/internal/repository"
 )
@@ -17,78 +18,61 @@ func NewSortKeyService(br repository.BookmarkRepo, fr repository.FolderRepo) *So
 
 // ResolveSortKey looks up the sort key for any item, trying bookmark first then folder.
 func (s *SortKeyService) ResolveSortKey(id string) (string, *string, error) {
+	item, err := s.ResolveSortItem(id)
+	if err != nil {
+		return "", nil, err
+	}
+	return item.SortKey, item.ParentID, nil
+}
+
+func (s *SortKeyService) ResolveSortItem(id string) (repository.SortableSibling, error) {
 	b, err := s.bookmarkRepo.GetByID(id)
 	if err == nil {
-		return b.SortKey, b.FolderID, nil
+		return repository.SortableSibling{Kind: "bookmark", ID: b.ID, ParentID: b.FolderID, SortKey: b.SortKey}, nil
 	}
 	f, err := s.folderRepo.Get(id)
 	if err == nil {
-		return f.SortKey, f.ParentID, nil
+		return repository.SortableSibling{Kind: "folder", ID: f.ID, ParentID: f.ParentID, SortKey: f.SortKey}, nil
 	}
-	return "", nil, fmt.Errorf("sort key not found for id: %s", id)
+	return repository.SortableSibling{}, fmt.Errorf("sort key not found for id: %s", id)
 }
 
 // ComputeBookmarkSortKey computes a sort key for moving a bookmark.
 func (s *SortKeyService) ComputeBookmarkSortKey(parentID, prevID, nextID *string, excludeID string) (string, error) {
-	return s.computeSortKey(parentID, prevID, nextID, excludeID, func() ([]string, error) {
-		children, err := s.bookmarkRepo.List(parentID)
-		if err != nil {
-			return nil, err
-		}
-		keys := make([]string, 0, len(children))
-		for _, c := range children {
-			if c.ID != excludeID {
-				keys = append(keys, c.SortKey)
-			}
-		}
-		return keys, nil
-	}, func() error {
-		return s.rebalanceBookmarks(parentID, excludeID)
-	})
+	return s.computeSortKey(parentID, prevID, nextID, excludeID, nil)
 }
 
 // ComputeFolderSortKey computes a sort key for moving a folder.
 func (s *SortKeyService) ComputeFolderSortKey(parentID, prevID, nextID *string, excludeID string) (string, error) {
-	return s.computeSortKey(parentID, prevID, nextID, excludeID, func() ([]string, error) {
-		children, err := s.folderRepo.List(parentID)
-		if err != nil {
-			return nil, err
-		}
-		keys := make([]string, 0, len(children))
-		for _, c := range children {
-			if c.ID != excludeID {
-				keys = append(keys, c.SortKey)
-			}
-		}
-		return keys, nil
-	}, func() error {
-		return s.rebalanceFolders(parentID, excludeID)
-	})
+	return s.computeSortKey(parentID, prevID, nextID, excludeID, nil)
+}
+
+func (s *SortKeyService) ComputeBatchSortKey(parentID, prevID, nextID *string, excludeID string, pending []repository.SortableSibling) (string, error) {
+	return s.computeSortKey(parentID, prevID, nextID, excludeID, pending)
 }
 
 func (s *SortKeyService) computeSortKey(
 	parentID, prevID, nextID *string,
 	excludeID string,
-	listSiblingKeys func() ([]string, error),
-	rebalance func() error,
+	pending []repository.SortableSibling,
 ) (string, error) {
 	switch {
 	case prevID == nil && nextID == nil:
-		return s.computeTailKey(listSiblingKeys, rebalance)
+		return s.computeTailKey(parentID, excludeID, pending)
 
 	case prevID == nil:
-		return s.computeHeadKey(nextID, rebalance)
+		return s.computeHeadKey(parentID, nextID, excludeID, pending)
 
 	case nextID == nil:
-		return s.computeTailAfterKey(prevID, rebalance)
+		return s.computeTailAfterKey(parentID, prevID, excludeID, pending)
 
 	default:
-		return s.computeBetweenKey(prevID, nextID, rebalance)
+		return s.computeBetweenKey(parentID, prevID, nextID, excludeID, pending)
 	}
 }
 
-func (s *SortKeyService) computeTailKey(listSiblingKeys func() ([]string, error), rebalance func() error) (string, error) {
-	siblingKeys, err := listSiblingKeys()
+func (s *SortKeyService) computeTailKey(parentID *string, excludeID string, pending []repository.SortableSibling) (string, error) {
+	siblingKeys, err := s.siblingKeys(parentID, excludeID, pending)
 	if err != nil {
 		return "", err
 	}
@@ -99,10 +83,10 @@ func (s *SortKeyService) computeTailKey(listSiblingKeys func() ([]string, error)
 	if sortKey != "" {
 		return sortKey, nil
 	}
-	if err := rebalance(); err != nil {
+	if err := s.rebalanceSiblings(parentID, excludeID); err != nil {
 		return "", fmt.Errorf("rebalance failed: %w", err)
 	}
-	siblingKeys, err = listSiblingKeys()
+	siblingKeys, err = s.siblingKeys(parentID, excludeID, pending)
 	if err != nil {
 		return "", err
 	}
@@ -116,16 +100,22 @@ func (s *SortKeyService) computeTailKey(listSiblingKeys func() ([]string, error)
 	return sortKey, nil
 }
 
-func (s *SortKeyService) computeHeadKey(nextID *string, rebalance func() error) (string, error) {
-	nextKey := s.mustResolve(nextID)
+func (s *SortKeyService) computeHeadKey(parentID, nextID *string, excludeID string, pending []repository.SortableSibling) (string, error) {
+	nextKey, err := s.resolveNeighborKey(parentID, nextID, excludeID, pending)
+	if err != nil {
+		return "", err
+	}
 	sortKey := before(nextKey)
 	if sortKey != "" && sortKey < nextKey {
 		return sortKey, nil
 	}
-	if err := rebalance(); err != nil {
+	if err := s.rebalanceSiblings(parentID, excludeID); err != nil {
 		return "", fmt.Errorf("rebalance failed: %w", err)
 	}
-	nextKey = s.mustResolve(nextID)
+	nextKey, err = s.resolveNeighborKey(parentID, nextID, excludeID, pending)
+	if err != nil {
+		return "", err
+	}
 	sortKey = before(nextKey)
 	if sortKey == "" || sortKey >= nextKey {
 		return "", fmt.Errorf("could not generate head sort key after rebalance")
@@ -133,16 +123,22 @@ func (s *SortKeyService) computeHeadKey(nextID *string, rebalance func() error) 
 	return sortKey, nil
 }
 
-func (s *SortKeyService) computeTailAfterKey(prevID *string, rebalance func() error) (string, error) {
-	prevKey := s.mustResolve(prevID)
+func (s *SortKeyService) computeTailAfterKey(parentID, prevID *string, excludeID string, pending []repository.SortableSibling) (string, error) {
+	prevKey, err := s.resolveNeighborKey(parentID, prevID, excludeID, pending)
+	if err != nil {
+		return "", err
+	}
 	sortKey := after(prevKey)
 	if sortKey != "" && sortKey > prevKey {
 		return sortKey, nil
 	}
-	if err := rebalance(); err != nil {
+	if err := s.rebalanceSiblings(parentID, excludeID); err != nil {
 		return "", fmt.Errorf("rebalance failed: %w", err)
 	}
-	prevKey = s.mustResolve(prevID)
+	prevKey, err = s.resolveNeighborKey(parentID, prevID, excludeID, pending)
+	if err != nil {
+		return "", err
+	}
 	sortKey = after(prevKey)
 	if sortKey == "" || sortKey <= prevKey {
 		return "", fmt.Errorf("could not generate tail sort key after rebalance")
@@ -150,16 +146,28 @@ func (s *SortKeyService) computeTailAfterKey(prevID *string, rebalance func() er
 	return sortKey, nil
 }
 
-func (s *SortKeyService) computeBetweenKey(prevID, nextID *string, rebalance func() error) (string, error) {
-	prevKey := s.mustResolve(prevID)
-	nextKey := s.mustResolve(nextID)
+func (s *SortKeyService) computeBetweenKey(parentID, prevID, nextID *string, excludeID string, pending []repository.SortableSibling) (string, error) {
+	prevKey, err := s.resolveNeighborKey(parentID, prevID, excludeID, pending)
+	if err != nil {
+		return "", err
+	}
+	nextKey, err := s.resolveNeighborKey(parentID, nextID, excludeID, pending)
+	if err != nil {
+		return "", err
+	}
 
 	if needsRebalance(prevKey, nextKey) {
-		if err := rebalance(); err != nil {
+		if err := s.rebalanceSiblings(parentID, excludeID); err != nil {
 			return "", fmt.Errorf("rebalance failed: %w", err)
 		}
-		prevKey = s.mustResolve(prevID)
-		nextKey = s.mustResolve(nextID)
+		prevKey, err = s.resolveNeighborKey(parentID, prevID, excludeID, pending)
+		if err != nil {
+			return "", err
+		}
+		nextKey, err = s.resolveNeighborKey(parentID, nextID, excludeID, pending)
+		if err != nil {
+			return "", err
+		}
 	}
 	sortKey := between(prevKey, nextKey)
 	if sortKey == "" || sortKey <= prevKey || sortKey >= nextKey {
@@ -168,55 +176,118 @@ func (s *SortKeyService) computeBetweenKey(prevID, nextID *string, rebalance fun
 	return sortKey, nil
 }
 
-func (s *SortKeyService) mustResolve(id *string) string {
+func (s *SortKeyService) resolveNeighborKey(parentID, id *string, excludeID string, pending []repository.SortableSibling) (string, error) {
 	if id == nil {
-		return ""
+		return "", fmt.Errorf("neighbor id required")
 	}
-	key, _, err := s.ResolveSortKey(*id)
+	if *id == excludeID {
+		return "", fmt.Errorf("neighbor cannot be the moving item")
+	}
+	for i := len(pending) - 1; i >= 0; i-- {
+		item := pending[i]
+		if item.ID != *id {
+			continue
+		}
+		if !repository.SameParent(item.ParentID, parentID) {
+			return "", fmt.Errorf("neighbor %s is not in destination parent", *id)
+		}
+		if item.SortKey == "" {
+			return "", fmt.Errorf("neighbor %s has empty sort key", *id)
+		}
+		return item.SortKey, nil
+	}
+	item, err := s.ResolveSortItem(*id)
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return key
+	if !repository.SameParent(item.ParentID, parentID) {
+		return "", fmt.Errorf("neighbor %s is not in destination parent", *id)
+	}
+	if item.SortKey == "" {
+		return "", fmt.Errorf("neighbor %s has empty sort key", *id)
+	}
+	return item.SortKey, nil
 }
 
-func (s *SortKeyService) rebalanceBookmarks(parentID *string, excludeID string) error {
-	children, err := s.bookmarkRepo.List(parentID)
+func (s *SortKeyService) siblingKeys(parentID *string, excludeID string, pending []repository.SortableSibling) ([]string, error) {
+	siblings, err := s.siblings(parentID, excludeID, pending)
+	if err != nil {
+		return nil, err
+	}
+	keys := make([]string, 0, len(siblings))
+	for _, sibling := range siblings {
+		keys = append(keys, sibling.SortKey)
+	}
+	return keys, nil
+}
+
+func (s *SortKeyService) siblings(parentID *string, excludeID string, pending []repository.SortableSibling) ([]repository.SortableSibling, error) {
+	folders, err := s.folderRepo.List(parentID)
+	if err != nil {
+		return nil, err
+	}
+	bookmarks, err := s.bookmarkRepo.List(parentID)
+	if err != nil {
+		return nil, err
+	}
+	items := repository.MergeSortableSiblings(folders, bookmarks)
+	overridden := map[string]bool{}
+	for _, item := range pending {
+		overridden[item.ID] = true
+	}
+	filtered := make([]repository.SortableSibling, 0, len(items)+len(pending))
+	for _, item := range items {
+		if item.ID == excludeID || overridden[item.ID] {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	for _, item := range pending {
+		if item.ID == excludeID || !repository.SameParent(item.ParentID, parentID) {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	sort.SliceStable(filtered, func(i, j int) bool {
+		if filtered[i].SortKey != filtered[j].SortKey {
+			return filtered[i].SortKey < filtered[j].SortKey
+		}
+		if filtered[i].Kind != filtered[j].Kind {
+			return filtered[i].Kind < filtered[j].Kind
+		}
+		return filtered[i].ID < filtered[j].ID
+	})
+	return filtered, nil
+}
+
+func (s *SortKeyService) rebalanceSiblings(parentID *string, excludeID string) error {
+	siblings, err := s.siblings(parentID, excludeID, nil)
 	if err != nil {
 		return err
 	}
-	filtered := make([]repository.SortKeyUpdate, 0, len(children))
-	for _, c := range children {
-		if c.ID != excludeID {
-			filtered = append(filtered, repository.SortKeyUpdate{ID: c.ID, SortKey: ""})
-		}
-	}
-	if len(filtered) == 0 {
+	if len(siblings) == 0 {
 		return nil
 	}
-	keys := rebalanceKeys(len(filtered))
-	for i := range filtered {
-		filtered[i].SortKey = keys[i]
-	}
-	return s.bookmarkRepo.Rebalance(filtered)
-}
-
-func (s *SortKeyService) rebalanceFolders(parentID *string, excludeID string) error {
-	children, err := s.folderRepo.List(parentID)
-	if err != nil {
-		return err
-	}
-	filtered := make([]repository.SortKeyUpdate, 0, len(children))
-	for _, c := range children {
-		if c.ID != excludeID {
-			filtered = append(filtered, repository.SortKeyUpdate{ID: c.ID, SortKey: ""})
+	keys := rebalanceKeys(len(siblings))
+	folderUpdates := make([]repository.SortKeyUpdate, 0)
+	bookmarkUpdates := make([]repository.SortKeyUpdate, 0)
+	for i, sibling := range siblings {
+		update := repository.SortKeyUpdate{ID: sibling.ID, SortKey: keys[i]}
+		if sibling.Kind == "folder" {
+			folderUpdates = append(folderUpdates, update)
+		} else {
+			bookmarkUpdates = append(bookmarkUpdates, update)
 		}
 	}
-	if len(filtered) == 0 {
-		return nil
+	if len(folderUpdates) > 0 {
+		if err := s.folderRepo.Rebalance(folderUpdates); err != nil {
+			return err
+		}
 	}
-	keys := rebalanceKeys(len(filtered))
-	for i := range filtered {
-		filtered[i].SortKey = keys[i]
+	if len(bookmarkUpdates) > 0 {
+		if err := s.bookmarkRepo.Rebalance(bookmarkUpdates); err != nil {
+			return err
+		}
 	}
-	return s.folderRepo.Rebalance(filtered)
+	return nil
 }
