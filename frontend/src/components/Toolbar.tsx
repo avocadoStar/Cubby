@@ -93,6 +93,14 @@ export default function Toolbar() {
     closeAddBookmarkModal()
   }
 
+  const selectTheme = (id: string, currentTarget: HTMLElement, clientX: number, clientY: number) => {
+    const rect = currentTarget.getBoundingClientRect()
+    const x = clientX || rect.left + rect.width / 2
+    const y = clientY || rect.top + rect.height / 2
+    setTheme(id, { x, y })
+    setShowTheme(false)
+  }
+
   return (
     <>
       <div className="flex items-center gap-1 px-5 py-2 h-12 bg-app-card shadow-app-base z-10 relative">
@@ -153,7 +161,7 @@ export default function Toolbar() {
                 <button
                   key={t.id}
                   className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-body cursor-default border-none bg-transparent text-app-text hover:bg-app-hover"
-                  onClick={() => { setTheme(t.id); setShowTheme(false) }}
+                  onClick={(e) => selectTheme(t.id, e.currentTarget, e.clientX, e.clientY)}
                 >
                   <span
                     className="flex-shrink-0 rounded-full"
