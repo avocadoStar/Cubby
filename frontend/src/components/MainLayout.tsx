@@ -122,7 +122,7 @@ export default function MainLayout() {
           <>
           <div className="flex-1" ref={scrollRef} style={{ overflow: 'auto' }}>
             {loading && items.length === 0 ? (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200, color: 'var(--app-text3)', fontSize: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200, color: 'var(--app-text3)', fontSize: 'var(--fs--1)' }}>
                 加载中...
               </div>
             ) : (
@@ -188,7 +188,7 @@ export default function MainLayout() {
               paddingLeft: 8,
               paddingRight: 8,
               opacity: 0.85,
-              background: 'var(--app-card, #FFFFFF)',
+              background: 'var(--app-card)',
               boxShadow: 'var(--shadow-lg)',
               borderRadius: 'var(--card-radius)',
               transform: 'scale(1.02)',
@@ -196,20 +196,20 @@ export default function MainLayout() {
           >
             {activeItem.kind === 'bookmark' ? (
               <div className="flex-shrink-0 rounded-sm flex items-center justify-center text-small"
-                style={{ width: 16, height: 16, background: 'var(--app-hover, #e8e8e8)', color: 'var(--app-text2, #666)' }}>
+                style={{ width: 16, height: 16, background: 'var(--app-hover)', color: 'var(--app-text2)' }}>
                 {(activeItem.title).charAt(0)}
               </div>
             ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--folder-icon-fill, #F0C54F)" stroke="var(--folder-icon-stroke, #D4A830)" strokeWidth="0.6">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--folder-icon-fill)" stroke="var(--folder-icon-stroke)" strokeWidth="0.6">
                 <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
               </svg>
             )}
-            <span className="ml-2 truncate text-body" style={{ color: 'var(--app-text, #1a1a1a)' }}>
+            <span className="ml-2 truncate text-body" style={{ color: 'var(--app-text)' }}>
               {activeItem.title}
             </span>
             {multiDragRef.current.length > 1 && (
-              <span className="ml-2 flex-shrink-0 rounded-full text-white text-[10px] px-1.5 py-0.5 leading-none"
-                style={{ minWidth: 18, textAlign: 'center', background: 'var(--app-accent, #0078D4)' }}>
+              <span className="ml-2 flex-shrink-0 rounded-full text-caption px-1.5 py-0.5 leading-none"
+                style={{ minWidth: 18, textAlign: 'center', background: 'var(--app-accent)', color: 'var(--text-on-accent)' }}>
                 {multiDragRef.current.length}
               </span>
             )}

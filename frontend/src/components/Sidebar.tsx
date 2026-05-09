@@ -145,7 +145,7 @@ export default function Sidebar() {
             {query && (
               <div
                 className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full cursor-default"
-                style={{ background: 'var(--app-text3)', color: '#fff' }}
+                style={{ background: 'var(--app-text3)', color: 'var(--text-on-accent)' }}
                 onClick={() => {
                   setQuery('')
                   clearSearch()

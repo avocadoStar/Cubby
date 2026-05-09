@@ -151,7 +151,7 @@ export default function LoginPage() {
             style={{
               border: showInputError ? '1px solid var(--app-danger)' : 'var(--input-border)',
               boxShadow: showInputError
-                ? 'var(--input-shadow), 0 0 0 2px rgba(179, 75, 75, 0.16)'
+                ? 'var(--input-shadow), 0 0 0 3px var(--danger-bg)'
                 : 'var(--input-shadow)',
               background: 'var(--input-bg)',
               color: 'var(--app-text)',
@@ -181,10 +181,11 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading || !password}
-          className="h-9 rounded border-none text-sm font-medium text-white transition-[opacity,filter,box-shadow] disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-9 rounded border-none text-sm font-medium transition-[opacity,filter,box-shadow] disabled:cursor-not-allowed disabled:opacity-50"
           style={{
             background: 'var(--app-accent)',
             boxShadow: loading || !password ? 'var(--input-shadow)' : 'var(--shadow)',
+            color: 'var(--text-on-accent)',
             filter: loading || !password ? 'saturate(0.85)' : 'none',
           }}
         >

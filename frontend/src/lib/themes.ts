@@ -7,10 +7,13 @@ export interface ThemeVars {
   '--hover': string
   '--accent': string
   '--accent-light': string
+  '--text-on-accent': string
   '--text-primary': string
   '--text-secondary': string
   '--text-tertiary': string
   '--danger': string
+  '--danger-bg': string
+  '--success-bg': string
   '--note-hover': string
   '--note-bg': string
   '--shadow': string
@@ -24,7 +27,7 @@ export interface ThemeVars {
   '--card-border': string
   '--card-border-hover': string
   '--card-shadow-hover': string
-  // style variables (border vs shadow glyph)
+  // style variables
   '--row-shadow': string
   '--input-bg': string
   '--input-border': string
@@ -84,103 +87,96 @@ function createVars(base: Partial<Record<keyof ThemeVars, string>>): ThemeVars {
 }
 
 export const themes: Theme[] = [
-  // ---- Fluent · Card ----
   {
     id: 'fluent-card',
-    name: 'Fluent · Card',
+    name: 'Fluent Card',
     vars: createVars({
-      '--bg': '#FAFAFA',
+      '--bg': '#F7F8FA',
       '--card-bg': '#FFFFFF',
-      '--border': '#E0E0E0',
-      '--border-hover': '#CCCCCC',
-      '--hover': '#F5F5F5',
+      '--border': '#DDE3EA',
+      '--border-hover': '#C9D3DF',
+      '--hover': '#EEF3F8',
       '--accent': '#0078D4',
-      '--accent-light': '#E5F0FF',
-      '--text-primary': '#1a1a1a',
-      '--text-secondary': '#888888',
-      '--text-tertiary': '#AAAAAA',
-      '--danger': '#cc3333',
-      '--note-hover': 'rgba(0,0,0,0.06)',
-      '--note-bg': '#F8F8F8',
-      '--shadow': '0 1px 2px rgba(0,0,0,0.04)',
-      '--shadow-lg': '0 2px 8px rgba(0,0,0,0.1)',
-      '--overlay': 'rgba(0,0,0,0.15)',
-      '--search-highlight': '#FFF2A8',
-      '--folder-icon-fill': '#F0C54F',
-      '--folder-icon-stroke': '#D4A830',
+      '--accent-light': '#E7F2FD',
+      '--text-on-accent': '#FFFFFF',
+      '--text-primary': '#172033',
+      '--text-secondary': '#526173',
+      '--text-tertiary': '#7B8796',
+      '--danger': '#B42318',
+      '--danger-bg': '#FDECE9',
+      '--success-bg': '#E7F2FD',
+      '--note-hover': '#EEF3F8',
+      '--note-bg': '#F2F5F8',
+      '--shadow': 'none',
+      '--shadow-lg': '0 10px 28px rgba(23,32,51,0.10)',
+      '--overlay': 'rgba(23,32,51,0.28)',
+      '--search-highlight': '#DDEEFF',
+      '--folder-icon-fill': '#DCE8F4',
+      '--folder-icon-stroke': '#0078D4',
       '--card-radius': '8px',
       '--card-gap': '3px',
-      '--card-border': '1px solid #E0E0E0',
-      '--card-border-hover': '1px solid #CCCCCC',
-      '--card-shadow-hover': '0 1px 2px rgba(0,0,0,0.04)',
-      // style vars
+      '--card-border': '1px solid #DDE3EA',
+      '--card-border-hover': '1px solid #B7C6D8',
+      '--card-shadow-hover': '0 1px 2px rgba(23,32,51,0.06)',
       '--row-shadow': 'none',
-      '--input-bg': '#FAFAFA',
-      '--input-border': '1px solid #E0E0E0',
+      '--input-bg': '#F2F5F8',
+      '--input-border': '1px solid #DDE3EA',
       '--input-shadow': 'none',
-      '--input-shadow-focus': '0 0 0 3px rgba(0,120,212,.1)',
-      '--sidebar-border': '1px solid #E8E8E8',
-      '--tree-hover-bg': '#F5F5F5',
+      '--input-shadow-focus': '0 0 0 3px rgba(0,120,212,0.14)',
+      '--sidebar-border': '1px solid #DDE3EA',
+      '--tree-hover-bg': '#EEF3F8',
       '--tree-hover-shadow': 'none',
-      '--row-icon-bg': '#E8E8E8',
+      '--row-icon-bg': '#E8EEF5',
       '--row-icon-shadow': 'none',
       '--row-icon-radius': '4px',
-      '--checkbox-border': '2px solid #C0C0C0',
-      '--divider-color': '#E0E0E0',
+      '--checkbox-border': '2px solid #B7C2CE',
+      '--divider-color': '#DDE3EA',
     }),
   },
-
-  // ---- Neumorphism · Pure Neutral Grey ----
   {
     id: 'neumorphism',
-    name: 'Neumorphism',
+    name: 'Soft Grey',
     vars: createVars({
-      // surfaces: classic neutral Soft UI, anchored to neumorphism.io/#e0e0e0
-      '--bg': '#e0e0e0',
-      '--card-bg': '#e6e6e6',
-      '--input-bg': '#d8d8d8',
-      '--note-bg': '#e6e6e6',
-      '--hover': '#ececec',
-      '--note-hover': '#ececec',
-      '--tree-hover-bg': '#e8e8e8',
-      // borders: none, depth from shadows
-      '--border': '1px solid transparent',
-      '--border-hover': '1px solid transparent',
-      '--card-border': '1px solid transparent',
-      '--card-border-hover': '1px solid transparent',
-      '--input-border': '1px solid transparent',
-      '--sidebar-border': '1px solid transparent',
-      '--divider-color': '#c7c7c7',
-      // text
-      '--accent': '#53616f',
-      '--accent-light': '#d3dae2',
-      '--text-primary': '#2f3438',
-      '--text-secondary': '#626a70',
-      '--text-tertiary': '#8e969c',
-      '--danger': '#b34b4b',
-      // neumorphic shadows: REAL grey values, NOT rgba overlays
-      // CONVEX (raised cards): light top-left, dark bottom-right
-      '--shadow': '-8px -8px 16px #ffffff, 8px 8px 16px #bebebe',
-      '--shadow-lg': '-14px -14px 28px #ffffff, 14px 14px 28px #b8b8b8',
-      '--row-shadow': '-6px -6px 12px #ffffff, 6px 6px 12px #bebebe',
-      '--card-shadow-hover': '-10px -10px 20px #ffffff, 10px 10px 20px #b8b8b8',
-      '--tree-hover-shadow': '-4px -4px 8px #ffffff, 4px 4px 8px #bebebe',
-      // CONCAVE (pressed inputs): inset — dark top-left, light bottom-right
-      '--input-shadow': 'inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff',
-      '--input-shadow-focus': 'inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff, 0 0 0 2px rgba(83,97,111,0.25), 0 0 0 6px rgba(83,97,111,0.12)',
-      // raised icon chip
-      '--row-icon-bg': '#e6e6e6',
-      '--row-icon-shadow': '-3px -3px 6px #ffffff, 3px 3px 6px #bebebe',
-      // shape
-      '--row-icon-radius': '10px',
-      '--card-radius': '16px',
-      '--card-gap': '8px',
-      '--checkbox-border': '1px solid #b8b8b8',
-      // misc
-      '--overlay': 'rgba(47,52,56,0.22)',
-      '--search-highlight': 'rgba(83,97,111,0.18)',
-      '--folder-icon-fill': '#cbd2d9',
-      '--folder-icon-stroke': '#53616f',
+      '--bg': '#E7EAEE',
+      '--card-bg': '#EEF1F4',
+      '--border': '#D3D9E1',
+      '--border-hover': '#C2CBD6',
+      '--hover': '#F3F5F7',
+      '--accent': '#516F8F',
+      '--accent-light': '#DCE6F0',
+      '--text-on-accent': '#FFFFFF',
+      '--text-primary': '#26313D',
+      '--text-secondary': '#596675',
+      '--text-tertiary': '#818C99',
+      '--danger': '#9F3A32',
+      '--danger-bg': '#F1DEDC',
+      '--success-bg': '#DCE6F0',
+      '--note-hover': '#F3F5F7',
+      '--note-bg': '#EEF1F4',
+      '--shadow': '-3px -3px 8px #FFFFFF, 3px 3px 8px #C8CDD4',
+      '--shadow-lg': '-8px -8px 20px #FFFFFF, 8px 8px 20px #C4CAD2',
+      '--overlay': 'rgba(38,49,61,0.28)',
+      '--search-highlight': '#DCE6F0',
+      '--folder-icon-fill': '#DCE6F0',
+      '--folder-icon-stroke': '#516F8F',
+      '--card-radius': '12px',
+      '--card-gap': '6px',
+      '--card-border': '1px solid #D3D9E1',
+      '--card-border-hover': '1px solid #C2CBD6',
+      '--card-shadow-hover': '-4px -4px 10px #FFFFFF, 4px 4px 10px #C8CDD4',
+      '--row-shadow': 'none',
+      '--input-bg': '#E4E8ED',
+      '--input-border': '1px solid #D3D9E1',
+      '--input-shadow': 'inset 2px 2px 5px #C8CDD4, inset -2px -2px 5px #FFFFFF',
+      '--input-shadow-focus': 'inset 2px 2px 5px #C8CDD4, inset -2px -2px 5px #FFFFFF, 0 0 0 3px rgba(81,111,143,0.18)',
+      '--sidebar-border': '1px solid #D3D9E1',
+      '--tree-hover-bg': '#F3F5F7',
+      '--tree-hover-shadow': '-2px -2px 6px #FFFFFF, 2px 2px 6px #C8CDD4',
+      '--row-icon-bg': '#E4E8ED',
+      '--row-icon-shadow': 'none',
+      '--row-icon-radius': '8px',
+      '--checkbox-border': '1px solid #AEB8C4',
+      '--divider-color': '#D3D9E1',
     }),
   },
 ]

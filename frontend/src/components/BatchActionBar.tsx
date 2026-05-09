@@ -36,8 +36,8 @@ export default function BatchActionBar() {
         <>
           <span style={{ color: 'var(--app-text)' }}>已选择 {count} 项</span>
           <button
-            className="h-7 px-3.5 border-none rounded text-white text-body font-medium cursor-default"
-            style={{ background: 'var(--app-accent)', boxShadow: 'var(--shadow)' }}
+            className="h-7 px-3.5 border-none rounded text-body font-medium cursor-default"
+            style={{ background: 'var(--app-accent)', boxShadow: 'var(--shadow)', color: 'var(--text-on-accent)' }}
             onClick={handleDelete}
           >
             删除

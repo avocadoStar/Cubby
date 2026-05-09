@@ -1,11 +1,45 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, type CSSProperties, type FocusEvent } from 'react'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
 import { api } from '../services/api'
 import EditBookmarkModal from './EditBookmarkModal'
 
-const MENU_BTN_STYLE: React.CSSProperties = { color: 'var(--app-text)' }
+const MENU_BTN_STYLE: CSSProperties = { color: 'var(--app-text)' }
 const MENU_BTN_HOVER_BG = 'var(--app-hover)'
+const RENAME_MODAL_PANEL_STYLE: CSSProperties = {
+  width: 'min(92vw, 420px)',
+  background: 'var(--app-card)',
+  border: 'var(--input-border)',
+  borderRadius: 'var(--card-radius)',
+  boxShadow: 'var(--shadow-lg)',
+  padding: 28,
+}
+const RENAME_INPUT_STYLE: CSSProperties = {
+  border: 'var(--input-border)',
+  boxShadow: 'var(--input-shadow)',
+  background: 'var(--input-bg)',
+  color: 'var(--app-text)',
+  fontSize: 'var(--fs-body)',
+}
+const RENAME_SECONDARY_BUTTON_STYLE: CSSProperties = {
+  border: 'var(--input-border)',
+  boxShadow: 'var(--shadow)',
+  background: 'var(--app-card)',
+  color: 'var(--app-text)',
+}
+const RENAME_PRIMARY_BUTTON_STYLE: CSSProperties = {
+  background: 'var(--app-accent)',
+  boxShadow: 'var(--shadow)',
+  color: 'var(--text-on-accent)',
+}
+
+function handleRenameInputFocus(e: FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.boxShadow = 'var(--input-shadow-focus)'
+}
+
+function handleRenameInputBlur(e: FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.boxShadow = 'var(--input-shadow)'
+}
 
 interface Target {
   id: string
@@ -217,22 +251,24 @@ export default function ContextMenu() {
 
       {/* Rename Folder Modal */}
       {renamingFolder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--overlay)' }} onClick={() => setRenamingFolder(null)}>
-          <div className="p-6 w-80" style={{ background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--app-text)' }}>重命名文件夹</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay)' }} onClick={() => setRenamingFolder(null)}>
+          <div style={RENAME_MODAL_PANEL_STYLE} onClick={e => e.stopPropagation()}>
+            <h3 className="text-title font-semibold mb-5" style={{ color: 'var(--app-text)' }}>重命名文件夹</h3>
             <input
               autoFocus
               value={folderName}
               onChange={e => setFolderName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && submitRename()}
-              className="w-full h-9 px-3 rounded text-sm outline-none mb-4"
-              style={{ border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)', color: 'var(--app-text)' }}
+              className="w-full h-11 px-4 rounded outline-none mb-5"
+              style={RENAME_INPUT_STYLE}
+              onFocus={handleRenameInputFocus}
+              onBlur={handleRenameInputBlur}
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setRenamingFolder(null)} className="h-8 px-4 rounded text-body cursor-default"
-                style={{ border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', color: 'var(--app-text)' }}>取消</button>
-              <button onClick={submitRename} disabled={!folderName.trim()} className="h-8 px-4 border-none rounded text-white text-body font-medium cursor-default disabled:opacity-50"
-                style={{ background: 'var(--app-accent)', boxShadow: 'var(--shadow)' }}>保存</button>
+              <button onClick={() => setRenamingFolder(null)} className="h-10 px-5 rounded text-body cursor-default"
+                style={RENAME_SECONDARY_BUTTON_STYLE}>取消</button>
+              <button onClick={submitRename} disabled={!folderName.trim()} className="h-10 px-5 border-none rounded text-body font-medium cursor-default disabled:opacity-50"
+                style={RENAME_PRIMARY_BUTTON_STYLE}>保存</button>
             </div>
           </div>
         </div>

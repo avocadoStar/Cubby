@@ -14,11 +14,12 @@ export default function ToastContainer() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="flex items-center gap-3 px-4 py-2.5 text-body text-white"
+          className="flex items-center gap-3 px-4 py-2.5 text-body"
           style={{
-            background: '#323130',
+            background: 'var(--app-text)',
             borderRadius: 'var(--card-radius)',
             boxShadow: 'var(--shadow-lg)',
+            color: 'var(--text-on-accent)',
             animation: 'toast-in 0.2s ease-out',
           }}
         >
@@ -26,7 +27,7 @@ export default function ToastContainer() {
           {toast.onUndo && (
             <button
               className="px-2 py-0.5 rounded text-body font-medium cursor-pointer border-none"
-              style={{ background: 'rgba(255,255,255,0.2)', color: '#69C3FF' }}
+              style={{ background: 'var(--accent-light)', color: 'var(--app-accent)' }}
               onClick={() => {
                 toast.onUndo?.()
                 dismiss(toast.id)

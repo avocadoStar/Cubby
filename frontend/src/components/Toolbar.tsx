@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type CSSProperties, type FocusEvent } from 'react'
 import Breadcrumb from './Breadcrumb'
 import MoreMenu from './MoreMenu'
 import { useFolderStore } from '../stores/folderStore'
@@ -24,6 +24,40 @@ export default function Toolbar() {
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const themeRef = useRef<HTMLDivElement>(null)
+
+  const modalOverlayStyle: CSSProperties = { background: 'var(--overlay)' }
+  const addBookmarkPanelStyle: CSSProperties = {
+    width: 'min(92vw, 480px)',
+    background: 'var(--app-card)',
+    border: 'var(--input-border)',
+    borderRadius: 'var(--card-radius)',
+    boxShadow: 'var(--shadow-lg)',
+    padding: 28,
+  }
+  const modalInputStyle: CSSProperties = {
+    border: 'var(--input-border)',
+    boxShadow: 'var(--input-shadow)',
+    background: 'var(--input-bg)',
+    color: 'var(--app-text)',
+    fontSize: 'var(--fs-body)',
+  }
+  const secondaryModalButtonStyle: CSSProperties = {
+    border: 'var(--input-border)',
+    boxShadow: 'var(--shadow)',
+    background: 'var(--app-card)',
+    color: 'var(--app-text)',
+  }
+  const primaryModalButtonStyle: CSSProperties = {
+    background: 'var(--app-accent)',
+    boxShadow: 'var(--shadow)',
+    color: 'var(--text-on-accent)',
+  }
+  const handleInputFocus = (e: FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.style.boxShadow = 'var(--input-shadow-focus)'
+  }
+  const handleInputBlur = (e: FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.style.boxShadow = 'var(--input-shadow)'
+  }
 
   // Auto-fetch title when URL changes
   useEffect(() => {
@@ -155,7 +189,7 @@ export default function Toolbar() {
                       width: 14, height: 14,
                       background: t.vars['--bg'],
                       boxShadow: t.id === 'neumorphism'
-                        ? '-2px -2px 4px #ffffff, 2px 2px 4px #bebebe'
+                        ? t.vars['--shadow']
                         : `0 0 0 1px ${t.vars['--border']}`,
                     }}
                   />
@@ -189,44 +223,38 @@ export default function Toolbar() {
 
       {/* Add Bookmark Modal */}
       {showAddBookmark && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--overlay)' }} onClick={() => setShowAddBookmark(false)}>
-          <div className="p-6 w-96" style={{ background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--app-text)' }}>添加收藏夹</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={modalOverlayStyle} onClick={() => setShowAddBookmark(false)}>
+          <div style={addBookmarkPanelStyle} onClick={e => e.stopPropagation()}>
+            <h3 className="text-title font-semibold mb-5" style={{ color: 'var(--app-text)' }}>添加收藏夹</h3>
             <input
               autoFocus
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder={fetchingTitle ? "正在获取标题…" : "名称"}
-              className="w-full h-9 px-3 rounded text-sm outline-none mb-3"
-              style={{
-                border: 'var(--input-border)',
-                boxShadow: 'var(--input-shadow)',
-                background: 'var(--input-bg)',
-                color: 'var(--app-text)',
-              }}
+              className="w-full h-11 px-4 rounded outline-none mb-3"
+              style={modalInputStyle}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
             />
             <input
               value={url}
               onChange={e => handleUrlChange(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddBookmark()}
               placeholder="URL"
-              className="w-full h-9 px-3 rounded text-sm outline-none mb-4"
-              style={{
-                border: 'var(--input-border)',
-                boxShadow: 'var(--input-shadow)',
-                background: 'var(--input-bg)',
-                color: 'var(--app-text)',
-              }}
+              className="w-full h-11 px-4 rounded outline-none mb-5"
+              style={modalInputStyle}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
             />
             <div className="flex justify-end gap-2">
               <button onClick={() => setShowAddBookmark(false)}
-                className="h-8 px-4 rounded text-body cursor-default"
-                style={{ border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', color: 'var(--app-text)' }}>
+                className="h-10 px-5 rounded text-body cursor-default"
+                style={secondaryModalButtonStyle}>
                 取消
               </button>
               <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()}
-                className="h-8 px-4 border-none rounded text-white text-body font-medium cursor-default disabled:opacity-50"
-                style={{ background: 'var(--app-accent)', boxShadow: 'var(--shadow)' }}>
+                className="h-10 px-5 border-none rounded text-body font-medium cursor-default disabled:opacity-50"
+                style={primaryModalButtonStyle}>
                 添加
               </button>
             </div>

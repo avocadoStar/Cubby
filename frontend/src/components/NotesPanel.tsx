@@ -64,29 +64,29 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
         {bookmark && (
           <>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.35, wordBreak: 'break-word', paddingRight: 8, color: 'var(--app-text)' }}>{bookmark.title}</div>
-              <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', color: 'var(--app-text2)', cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>✕</button>
+              <div style={{ fontSize: 'var(--fs-0)', fontWeight: 600, lineHeight: 1.35, wordBreak: 'break-word', paddingRight: 8, color: 'var(--app-text)' }}>{bookmark.title}</div>
+              <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', color: 'var(--app-text2)', cursor: 'pointer', fontSize: 'var(--fs-0)', flexShrink: 0 }}>✕</button>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--app-text2)', marginBottom: 12, wordBreak: 'break-all', userSelect: 'all' }}>{bookmark.url}</div>
+            <div style={{ fontSize: 'var(--fs--1)', color: 'var(--app-text2)', marginBottom: 12, wordBreak: 'break-all', userSelect: 'all' }}>{bookmark.url}</div>
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--app-text3)', marginBottom: 4, fontWeight: 500 }}>所在文件夹</div>
-              <div style={{ fontSize: 13, color: 'var(--app-text)' }}>
+              <div style={{ fontSize: 'var(--fs--2)', textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--app-text3)', marginBottom: 4, fontWeight: 500 }}>所在文件夹</div>
+              <div style={{ fontSize: 'var(--fs-body)', color: 'var(--app-text)' }}>
                 {folderPath.length > 0 ? folderPath.join(' › ') : '根目录'}
               </div>
             </div>
             <div style={{ borderTop: '1px solid var(--app-border)', margin: '0 0 16px' }} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--app-text2)' }}>备注 Notes</div>
-              <div style={{ fontSize: 10, color: notes.length > 900 ? '#E4A000' : 'var(--app-text3)' }}>{notes.length} / 1000</div>
+              <div style={{ fontSize: 'var(--fs--1)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--app-text2)' }}>备注 Notes</div>
+              <div style={{ fontSize: 'var(--fs--2)', color: notes.length > 900 ? 'var(--app-danger)' : 'var(--app-text3)' }}>{notes.length} / 1000</div>
             </div>
             <textarea value={notes} onChange={(e) => { setNotes(e.target.value); save(e.target.value) }} maxLength={1000}
-              placeholder="输入备注..." style={{ width: '100%', flex: 1, minHeight: 120, padding: 12, borderRadius: 'var(--card-radius)', border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', fontSize: 13, lineHeight: 1.6, fontFamily: 'inherit', color: 'var(--app-text)', background: 'var(--input-bg)', resize: 'none', outline: 'none' }}
+              placeholder="输入备注..." style={{ width: '100%', flex: 1, minHeight: 120, padding: 12, borderRadius: 'var(--card-radius)', border: 'var(--input-border)', boxShadow: 'var(--input-shadow)', fontSize: 'var(--fs-body)', lineHeight: 1.6, fontFamily: 'inherit', color: 'var(--app-text)', background: 'var(--input-bg)', resize: 'none', outline: 'none' }}
               onFocus={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.boxShadow = 'var(--input-shadow-focus)' }}
               onBlur={(e) => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.boxShadow = 'var(--input-shadow)' }}
             />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-              <span style={{ fontSize: 11, color: 'var(--app-text3)', opacity: saved ? 1 : 0, transition: 'opacity .3s' }}>已自动保存</span>
-              <button onClick={() => { setNotes(''); save('') }} style={{ fontSize: 11, color: 'var(--app-text3)', border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', cursor: 'pointer', padding: '4px 8px', borderRadius: 8 }}>清空备注</button>
+              <span style={{ fontSize: 'var(--fs--1)', color: 'var(--app-text3)', opacity: saved ? 1 : 0, transition: 'opacity .3s' }}>已自动保存</span>
+              <button onClick={() => { setNotes(''); save('') }} style={{ fontSize: 'var(--fs--1)', color: 'var(--app-text3)', border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', cursor: 'pointer', padding: '4px 8px', borderRadius: 8 }}>清空备注</button>
             </div>
             <svg style={{ position: 'absolute', bottom: -10, right: -10, width: 140, height: 200, opacity: 0.04, pointerEvents: 'none' }} viewBox="0 0 100 160">
               <path d="M50 10 C30 30 10 60 8 90 C6 120 15 145 25 150 C35 155 42 150 48 140 C38 130 28 110 30 90 C32 70 40 50 50 35 C55 28 58 22 56 15 Z" fill="var(--app-accent)"/>

@@ -1,9 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --fs-body: 13px;
-  --fs-small: 9px;
-  --text-xs: var(--fs-small);
+  --fs-ratio: 1.25;
+  --fs--2: 10.24px;
+  --fs--1: 12.8px;
+  --fs-0: 16px;
+  --fs-1: 20px;
+  --fs-2: 25px;
+  --fs-3: 31.25px;
+  --fs-body: var(--fs-0);
+  --fs-small: var(--fs--1);
+  --text-xs: var(--fs--2);
+  --text-sm: var(--fs--1);
+  --text-base: var(--fs-0);
+  --text-lg: var(--fs-1);
+  --text-xl: var(--fs-2);
+  --text-2xl: var(--fs-3);
 }
 
 body {
@@ -14,5 +26,7 @@ body {
   margin: 0;
 }
 
-.text-body { font-size: var(--fs-body); }
-.text-small { font-size: var(--fs-small); }
+.text-body { font-size: var(--fs-body); line-height: 1.5; }
+.text-small { font-size: var(--fs-small); line-height: 1.4; }
+.text-caption { font-size: var(--fs--2); line-height: 1.35; }
+.text-title { font-size: var(--fs-1); line-height: 1.25; }

@@ -73,18 +73,19 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         onClick={(e) => { e.stopPropagation(); toggleSelect(bookmark.id) }}
       >
         {isSelected && (
-          <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+          <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-on-accent)" strokeWidth="3">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         )}
       </div>
       <div
-        className="flex-shrink-0 mr-2 rounded-sm flex items-center justify-center text-small text-[#666]"
+        className="flex-shrink-0 mr-2 rounded-sm flex items-center justify-center text-small"
         style={{
           width: 16, height: 16,
           background: 'var(--row-icon-bg)',
           boxShadow: 'var(--row-icon-shadow)',
           borderRadius: 'var(--row-icon-radius)',
+          color: 'var(--app-text2)',
         }}
       >
         {bookmark.title.charAt(0)}
@@ -115,7 +116,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
             style={{
               width: 26, height: 26, opacity: hovered ? 1 : 0.35,
               color: bookmark.notes ? 'var(--app-accent)' : 'var(--app-text3)',
-              fontWeight: bookmark.notes ? 700 : 400, background: 'transparent', fontSize: 12,
+              fontWeight: bookmark.notes ? 700 : 400, background: 'transparent', fontSize: 'var(--fs--1)',
             }}
             onClick={(e) => { e.stopPropagation(); onOpenNotes() }}
           >N</button>

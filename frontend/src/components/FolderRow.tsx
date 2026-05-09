@@ -60,7 +60,7 @@ const FolderRowComponent = memo(function FolderRowComponent({
         onClick={(e) => { e.stopPropagation(); onToggleSelect() }}
       >
         {isFolderSelected && (
-          <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
+          <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-on-accent)" strokeWidth="3">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         )}
