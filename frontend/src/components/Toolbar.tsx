@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type CSSProperties, type FocusEvent } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Breadcrumb from './Breadcrumb'
 import MoreMenu from './MoreMenu'
 import { useFolderStore } from '../stores/folderStore'
@@ -9,6 +9,7 @@ import { themes } from '../lib/themes'
 import { api, ConflictError } from '../services/api'
 import CreateFolderModal from './CreateFolderModal'
 import FontSizePopover from './FontSizePopover'
+import ModalBase from './ModalBase'
 
 export default function Toolbar() {
   const { selectedId } = useFolderStore()
@@ -26,40 +27,6 @@ export default function Toolbar() {
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const themeRef = useRef<HTMLDivElement>(null)
-
-  const modalOverlayStyle: CSSProperties = { background: 'var(--overlay)' }
-  const addBookmarkPanelStyle: CSSProperties = {
-    width: 'min(92vw, 480px)',
-    background: 'var(--app-card)',
-    border: 'var(--input-border)',
-    borderRadius: 'var(--card-radius)',
-    boxShadow: 'var(--shadow-lg)',
-    padding: 28,
-  }
-  const modalInputStyle: CSSProperties = {
-    border: 'var(--input-border)',
-    boxShadow: 'var(--input-shadow)',
-    background: 'var(--input-bg)',
-    color: 'var(--app-text)',
-    fontSize: 'var(--fs-body)',
-  }
-  const secondaryModalButtonStyle: CSSProperties = {
-    border: 'var(--input-border)',
-    boxShadow: 'var(--shadow)',
-    background: 'var(--app-card)',
-    color: 'var(--app-text)',
-  }
-  const primaryModalButtonStyle: CSSProperties = {
-    background: 'var(--app-accent)',
-    boxShadow: 'var(--shadow)',
-    color: 'var(--text-on-accent)',
-  }
-  const handleInputFocus = (e: FocusEvent<HTMLInputElement>) => {
-    e.currentTarget.style.boxShadow = 'var(--input-shadow-focus)'
-  }
-  const handleInputBlur = (e: FocusEvent<HTMLInputElement>) => {
-    e.currentTarget.style.boxShadow = 'var(--input-shadow)'
-  }
 
   const closeAddBookmarkModal = () => {
     clearTimeout(urlTimer.current)
@@ -128,14 +95,11 @@ export default function Toolbar() {
 
   return (
     <>
-      <div className="flex items-center gap-1 px-5 py-2" style={{ height: 48, background: 'var(--app-card)', borderBottom: '1px solid var(--divider-color)', boxShadow: 'var(--shadow)' }}>
+      <div className="flex items-center gap-1 px-5 py-2 h-12 bg-app-card border-b border-divider-color shadow-app-base z-10 relative">
         <Breadcrumb />
         <div className="flex-1" />
         <button
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default"
-          style={{ color: 'var(--app-text)' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default text-app-text hover:bg-app-hover"
           onClick={() => setShowAddBookmark(true)}
         >
           <svg aria-hidden="true" fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
@@ -145,10 +109,7 @@ export default function Toolbar() {
           <span>添加收藏夹</span>
         </button>
         <button
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default"
-          style={{ color: 'var(--app-text)' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default text-app-text hover:bg-app-hover"
           onClick={() => setShowCreateFolder(true)}
         >
           <svg aria-hidden="true" fill="currentColor" width="20" height="20" viewBox="0 0 20 20">
@@ -158,10 +119,7 @@ export default function Toolbar() {
         </button>
         <div style={{ position: 'relative' }}>
           <button
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default"
-            style={{ color: 'var(--app-text)' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default text-app-text hover:bg-app-hover"
             onClick={() => setShowFontSize(!showFontSize)}
           >
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -174,10 +132,7 @@ export default function Toolbar() {
         </div>
         <div style={{ position: 'relative' }}>
           <button
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default"
-            style={{ color: 'var(--app-text)' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default text-app-text hover:bg-app-hover"
             onClick={() => setShowTheme(!showTheme)}
           >
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -191,17 +146,13 @@ export default function Toolbar() {
           {showTheme && (
             <div
               ref={themeRef}
-              className="absolute right-0 top-full mt-2 z-50 p-3"
-              style={{ width: 200, background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }}
+              className="absolute right-0 top-full mt-2 z-50 p-3 bg-app-card border border-app-border rounded-card shadow-app-lg w-[200px]"
             >
-              <div className="text-body font-medium mb-2" style={{ color: 'var(--app-text)' }}>主题</div>
+              <div className="text-body font-medium mb-2 text-app-text">主题</div>
               {themes.map(t => (
                 <button
                   key={t.id}
-                  className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-body cursor-default border-none bg-transparent"
-                  style={{ color: 'var(--app-text)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                  className="flex items-center gap-2 w-full h-9 px-2.5 rounded text-body cursor-default border-none bg-transparent text-app-text hover:bg-app-hover"
                   onClick={() => { setTheme(t.id); setShowTheme(false) }}
                 >
                   <span
@@ -226,10 +177,7 @@ export default function Toolbar() {
           )}
         </div>
         <button
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default"
-          style={{ color: 'var(--app-text)' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+          className="inline-flex items-center gap-1.5 h-8 px-2.5 border-none rounded bg-transparent text-body cursor-default text-app-text hover:bg-app-hover"
           onClick={logout}
         >
           <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -242,55 +190,42 @@ export default function Toolbar() {
         <MoreMenu />
       </div>
 
-      {/* Add Bookmark Modal */}
       {showAddBookmark && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={modalOverlayStyle} onClick={closeAddBookmarkModal}>
-          <div style={addBookmarkPanelStyle} onClick={e => e.stopPropagation()}>
-            <div className="mb-5">
-              <h3 className="text-title font-semibold" style={{ color: 'var(--app-text)' }}>添加收藏夹</h3>
+        <ModalBase title="添加收藏夹" onClose={closeAddBookmarkModal} width="360px">
+          <input
+            autoFocus
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder={fetchingTitle ? "正在获取标题…" : "名称"}
+            className="w-full h-9 px-3 rounded outline-none mb-3 bg-input-bg border border-input-border text-app-text shadow-input-base focus:shadow-input-focus transition-shadow text-sm"
+          />
+          <input
+            value={url}
+            onChange={e => handleUrlChange(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAddBookmark()}
+            placeholder="URL"
+            className={`w-full h-9 px-3 rounded outline-none ${duplicateUrlError ? 'mb-2' : 'mb-4'} bg-input-bg border border-input-border text-app-text shadow-input-base focus:shadow-input-focus transition-shadow text-sm`}
+          />
+          {duplicateUrlError && (
+            <div className="text-sm mb-4 text-app-danger">
+              {duplicateUrlError}
             </div>
-            <input
-              autoFocus
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder={fetchingTitle ? "正在获取标题…" : "名称"}
-              className="w-full h-11 px-4 rounded outline-none mb-3"
-              style={modalInputStyle}
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
-            />
-            <input
-              value={url}
-              onChange={e => handleUrlChange(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddBookmark()}
-              placeholder="URL"
-              className={`w-full h-11 px-4 rounded outline-none ${duplicateUrlError ? 'mb-2' : 'mb-5'}`}
-              style={modalInputStyle}
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
-            />
-            {duplicateUrlError && (
-              <div className="text-small mb-5" style={{ color: 'var(--app-danger)' }}>
-                {duplicateUrlError}
-              </div>
-            )}
-            <div className="flex justify-end gap-2">
-              <button onClick={closeAddBookmarkModal}
-                className="h-10 px-5 rounded text-body cursor-default"
-                style={secondaryModalButtonStyle}>
-                取消
-              </button>
-              <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()}
-                className="h-10 px-5 border-none rounded text-body font-medium cursor-default disabled:opacity-50"
-                style={primaryModalButtonStyle}>
-                添加
-              </button>
-            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <button onClick={closeAddBookmarkModal}
+              className="h-8 px-4 rounded text-sm cursor-default bg-app-card border border-input-border text-app-text shadow-app-base">
+              取消
+            </button>
+            <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()}
+              className="h-8 px-4 border-none rounded text-sm font-medium cursor-default disabled:opacity-50 bg-app-accent text-text-on-accent shadow-app-base">
+              添加
+            </button>
           </div>
-        </div>
+        </ModalBase>
       )}
 
       {showCreateFolder && <CreateFolderModal parentId={selectedId} onClose={() => setShowCreateFolder(false)} />}
     </>
   )
 }
+
