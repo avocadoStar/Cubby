@@ -59,6 +59,14 @@ export default function Toolbar() {
     e.currentTarget.style.boxShadow = 'var(--input-shadow)'
   }
 
+  const closeAddBookmarkModal = () => {
+    clearTimeout(urlTimer.current)
+    setShowAddBookmark(false)
+    setTitle('')
+    setUrl('')
+    setFetchingTitle(false)
+  }
+
   // Auto-fetch title when URL changes
   useEffect(() => {
     if (!url.trim() || !/^https?:\/\//i.test(url.trim())) return
@@ -100,9 +108,7 @@ export default function Toolbar() {
     }
     await api.createBookmark(title.trim(), normalizedUrl, selectedId)
     await load(selectedId)
-    setShowAddBookmark(false)
-    setTitle('')
-    setUrl('')
+    closeAddBookmarkModal()
   }
 
   return (
@@ -223,9 +229,22 @@ export default function Toolbar() {
 
       {/* Add Bookmark Modal */}
       {showAddBookmark && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={modalOverlayStyle} onClick={() => setShowAddBookmark(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={modalOverlayStyle} onClick={closeAddBookmarkModal}>
           <div style={addBookmarkPanelStyle} onClick={e => e.stopPropagation()}>
-            <h3 className="text-title font-semibold mb-5" style={{ color: 'var(--app-text)' }}>添加收藏夹</h3>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-title font-semibold" style={{ color: 'var(--app-text)' }}>添加收藏夹</h3>
+              <button
+                aria-label="关闭"
+                className="inline-flex items-center justify-center border-none rounded cursor-default"
+                style={{ width: 32, height: 32, background: 'var(--app-card)', color: 'var(--app-text2)', boxShadow: 'var(--shadow)' }}
+                onClick={closeAddBookmarkModal}
+              >
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
             <input
               autoFocus
               value={title}
@@ -247,7 +266,7 @@ export default function Toolbar() {
               onBlur={handleInputBlur}
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowAddBookmark(false)}
+              <button onClick={closeAddBookmarkModal}
                 className="h-10 px-5 rounded text-body cursor-default"
                 style={secondaryModalButtonStyle}>
                 取消

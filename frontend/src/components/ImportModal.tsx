@@ -44,6 +44,15 @@ const primaryButtonStyle: CSSProperties = {
   color: 'var(--text-on-accent)',
 }
 
+const closeButtonStyle: CSSProperties = {
+  width: 32,
+  height: 32,
+  background: 'var(--app-card)',
+  border: 'var(--input-border)',
+  boxShadow: 'var(--shadow)',
+  color: 'var(--app-text2)',
+}
+
 export default function ImportModal({ onClose }: { onClose: () => void }) {
   const [status, setStatus] = useState<Status>('idle')
   const [result, setResult] = useState<ImportResult | null>(null)
@@ -75,9 +84,22 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay)' }} onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--overlay)' }}>
       <div style={panelStyle} onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-title font-semibold mb-5" style={{ color: 'var(--app-text)' }}>导入收藏夹</h3>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-title font-semibold" style={{ color: 'var(--app-text)' }}>导入收藏夹</h3>
+          <button
+            aria-label="关闭"
+            className="inline-flex items-center justify-center rounded cursor-default"
+            style={closeButtonStyle}
+            onClick={onClose}
+          >
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
 
         {status === 'idle' && (
           <label className="flex flex-col items-center justify-center gap-3 p-7 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-200"
