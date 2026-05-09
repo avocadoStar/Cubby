@@ -15,6 +15,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
   const [status, setStatus] = useState<Status>('idle')
   const [result, setResult] = useState<ImportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const isImporting = status === 'importing'
 
   const handleFile = async (file: File) => {
     setStatus('importing')
@@ -41,10 +42,21 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
     setResult(null)
   }
 
+  const handleClose = () => {
+    if (status === 'done') return handleDone()
+    onClose()
+  }
+
   return (
-    <ModalBase title="导入收藏夹" onClose={onClose}>
+    <ModalBase
+      title="导入收藏夹"
+      onClose={handleClose}
+      width="440px"
+      closeOnEscape={!isImporting}
+      closeOnOverlayClick={!isImporting}
+    >
       {status === 'idle' && (
-        <label className="flex flex-col items-center justify-center gap-3 p-7 min-h-[188px] border-2 border-dashed border-app-border rounded-lg cursor-pointer transition-colors duration-200 bg-input-bg shadow-app-base hover:border-app-accent hover:bg-accent-light text-app-text2">
+        <label className="flex flex-col items-center justify-center gap-3 p-8 min-h-[240px] border-2 border-dashed border-app-border rounded-lg cursor-pointer transition-colors duration-200 bg-input-bg shadow-app-base hover:border-app-accent hover:bg-accent-light text-app-text2">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--app-accent)" strokeWidth="1.6">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
@@ -60,14 +72,14 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
       )}
 
       {status === 'importing' && (
-        <div className="flex flex-col items-center justify-center gap-4 py-8 min-h-[188px]">
+        <div className="flex flex-col items-center justify-center gap-4 py-8 min-h-[240px]">
           <div className="w-10 h-10 border-2 border-t-transparent border-app-accent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
           <p className="text-body text-app-text2">正在导入…</p>
         </div>
       )}
 
       {status === 'done' && (
-        <div className="flex flex-col items-center justify-center text-center py-4 min-h-[188px]">
+        <div className="flex flex-col items-center justify-center text-center py-6 min-h-[240px]">
           <div className="w-10 h-10 mx-auto mb-4 rounded-full flex items-center justify-center bg-[var(--success-bg)]">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--app-accent)" strokeWidth="2.5">
               <polyline points="20 6 9 17 4 12"/>
@@ -85,7 +97,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
       )}
 
       {status === 'error' && (
-        <div className="flex flex-col items-center justify-center text-center py-4 min-h-[188px]">
+        <div className="flex flex-col items-center justify-center text-center py-6 min-h-[240px]">
           <div className="w-10 h-10 mx-auto mb-4 rounded-full flex items-center justify-center bg-[var(--danger-bg)]">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--app-danger)" strokeWidth="2.5">
               <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
@@ -94,7 +106,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
           <p className="text-body font-medium mb-2 text-app-danger">导入失败</p>
           <p className="text-caption mb-5 max-h-16 overflow-auto text-app-text2">{error}</p>
           <div className="flex justify-center gap-2">
-            <button onClick={onClose} className="h-10 px-5 rounded text-body cursor-default bg-app-card border border-input-border text-app-text shadow-app-base">
+            <button onClick={handleClose} className="h-10 px-5 rounded text-body cursor-default bg-app-card border border-input-border text-app-text shadow-app-base">
               取消
             </button>
             <button onClick={handleRetry} className="h-10 px-5 border-none rounded text-body font-medium cursor-default bg-app-accent text-text-on-accent shadow-app-base">

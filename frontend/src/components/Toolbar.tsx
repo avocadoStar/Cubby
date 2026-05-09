@@ -191,20 +191,24 @@ export default function Toolbar() {
       </div>
 
       {showAddBookmark && (
-        <ModalBase title="添加收藏夹" onClose={closeAddBookmarkModal} width="360px">
+        <ModalBase title="添加收藏夹" onClose={closeAddBookmarkModal} width="360px" closeOnEscape>
           <input
             autoFocus
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder={fetchingTitle ? "正在获取标题…" : "名称"}
-            className="w-full h-9 px-3 rounded outline-none mb-3 bg-input-bg border border-input-border text-app-text shadow-input-base focus:shadow-input-focus transition-shadow text-sm"
+            aria-label="收藏夹名称"
+            className="w-full h-9 px-3 rounded outline-none mb-3 bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]"
+            style={{ border: 'var(--input-border)' }}
           />
           <input
             value={url}
             onChange={e => handleUrlChange(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAddBookmark()}
             placeholder="URL"
-            className={`w-full h-9 px-3 rounded outline-none ${duplicateUrlError ? 'mb-2' : 'mb-4'} bg-input-bg border border-input-border text-app-text shadow-input-base focus:shadow-input-focus transition-shadow text-sm`}
+            aria-label="收藏夹 URL"
+            className={`w-full h-9 px-3 rounded outline-none ${duplicateUrlError ? 'mb-2' : 'mb-4'} bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]`}
+            style={{ border: 'var(--input-border)' }}
           />
           {duplicateUrlError && (
             <div className="text-sm mb-4 text-app-danger">
@@ -213,7 +217,8 @@ export default function Toolbar() {
           )}
           <div className="flex justify-end gap-2">
             <button onClick={closeAddBookmarkModal}
-              className="h-8 px-4 rounded text-sm cursor-default bg-app-card border border-input-border text-app-text shadow-app-base">
+              className="h-8 px-4 rounded text-sm cursor-default bg-app-card text-app-text shadow-app-base"
+              style={{ border: 'var(--input-border)' }}>
               取消
             </button>
             <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()}

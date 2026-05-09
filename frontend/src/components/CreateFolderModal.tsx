@@ -13,17 +13,19 @@ export default function CreateFolderModal({ parentId, onClose }: { parentId: str
   }
 
   return (
-    <ModalBase title="新建文件夹" onClose={onClose} width="320px">
+    <ModalBase title="新建文件夹" onClose={onClose} width="320px" closeOnEscape>
       <input
         autoFocus
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
         placeholder="文件夹名称"
-        className="w-full h-9 px-3 rounded outline-none mb-4 bg-input-bg border border-input-border text-app-text shadow-input-base focus:shadow-input-focus transition-shadow text-sm"
+        aria-label="文件夹名称"
+        className="w-full h-9 px-3 rounded outline-none mb-4 bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]"
+        style={{ border: 'var(--input-border)' }}
       />
       <div className="flex justify-end gap-2">
-        <button onClick={onClose} className="h-8 px-4 rounded text-sm cursor-default bg-app-card border border-input-border text-app-text shadow-app-base">
+        <button onClick={onClose} className="h-8 px-4 rounded text-sm cursor-default bg-app-card text-app-text shadow-app-base" style={{ border: 'var(--input-border)' }}>
           取消
         </button>
         <button onClick={handleSubmit} disabled={!name.trim()} className="h-8 px-4 border-none rounded text-sm font-medium cursor-default disabled:opacity-50 bg-app-accent text-text-on-accent shadow-app-base">
