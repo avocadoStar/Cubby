@@ -39,6 +39,15 @@ func (r *stubBookmarkRepo) GetByID(id string) (*model.Bookmark, error) {
 	return &b, nil
 }
 
+func (r *stubBookmarkRepo) ExistsActiveURL(url string) (bool, error) {
+	for _, b := range r.items {
+		if b.URL == url && b.DeletedAt == nil {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (r *stubBookmarkRepo) Create(title, url string, folderID *string, sortKey string, icon ...string) (*model.Bookmark, error) {
 	iconValue := ""
 	if len(icon) > 0 {

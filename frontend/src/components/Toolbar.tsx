@@ -6,7 +6,7 @@ import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useAuthStore } from '../stores/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { themes } from '../lib/themes'
-import { api } from '../services/api'
+import { api, ConflictError } from '../services/api'
 import CreateFolderModal from './CreateFolderModal'
 import FontSizePopover from './FontSizePopover'
 
@@ -22,6 +22,7 @@ export default function Toolbar() {
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [icon, setIcon] = useState('')
+  const [duplicateUrlError, setDuplicateUrlError] = useState('')
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const themeRef = useRef<HTMLDivElement>(null)
@@ -66,6 +67,7 @@ export default function Toolbar() {
     setTitle('')
     setUrl('')
     setIcon('')
+    setDuplicateUrlError('')
     setFetchingTitle(false)
   }
 
@@ -97,6 +99,7 @@ export default function Toolbar() {
 
   const handleUrlChange = (value: string) => {
     setIcon('')
+    setDuplicateUrlError('')
     setUrl(value)
     if (value && !/^https?:\/\//i.test(value) && value.includes('.')) {
       setUrl('https://' + value)
@@ -110,7 +113,15 @@ export default function Toolbar() {
     if (!/^https?:\/\//i.test(normalizedUrl)) {
       normalizedUrl = 'https://' + normalizedUrl
     }
-    await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
+    try {
+      await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
+    } catch (e) {
+      if (e instanceof ConflictError && e.message === '已存在') {
+        setDuplicateUrlError('已存在')
+        return
+      }
+      throw e
+    }
     await load(selectedId)
     closeAddBookmarkModal()
   }
@@ -235,19 +246,8 @@ export default function Toolbar() {
       {showAddBookmark && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={modalOverlayStyle} onClick={closeAddBookmarkModal}>
           <div style={addBookmarkPanelStyle} onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
+            <div className="mb-5">
               <h3 className="text-title font-semibold" style={{ color: 'var(--app-text)' }}>添加收藏夹</h3>
-              <button
-                aria-label="关闭"
-                className="inline-flex items-center justify-center border-none rounded cursor-default"
-                style={{ width: 32, height: 32, background: 'var(--app-card)', color: 'var(--app-text2)', boxShadow: 'var(--shadow)' }}
-                onClick={closeAddBookmarkModal}
-              >
-                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
             </div>
             <input
               autoFocus
@@ -264,11 +264,16 @@ export default function Toolbar() {
               onChange={e => handleUrlChange(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddBookmark()}
               placeholder="URL"
-              className="w-full h-11 px-4 rounded outline-none mb-5"
+              className={`w-full h-11 px-4 rounded outline-none ${duplicateUrlError ? 'mb-2' : 'mb-5'}`}
               style={modalInputStyle}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
             />
+            {duplicateUrlError && (
+              <div className="text-small mb-5" style={{ color: 'var(--app-danger)' }}>
+                {duplicateUrlError}
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <button onClick={closeAddBookmarkModal}
                 className="h-10 px-5 rounded text-body cursor-default"

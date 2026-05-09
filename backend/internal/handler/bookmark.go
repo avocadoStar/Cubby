@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -79,6 +80,10 @@ func (h *BookmarkHandler) Create(c *gin.Context) {
 
 	b, err := h.svc.Create(req.Title, req.URL, req.FolderID, req.Icon)
 	if err != nil {
+		if errors.Is(err, service.ErrBookmarkExists) {
+			c.JSON(http.StatusConflict, gin.H{"error": "已存在"})
+			return
+		}
 		internalError(c, err)
 		return
 	}

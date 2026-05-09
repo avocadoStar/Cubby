@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 
@@ -9,6 +10,8 @@ import (
 )
 
 const maxBookmarkIconLength = 128 * 1024
+
+var ErrBookmarkExists = errors.New("bookmark already exists")
 
 var bookmarkIconRe = regexp.MustCompile(`^data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/]+={0,2}$`)
 
@@ -26,6 +29,14 @@ func (s *BookmarkService) List(folderID *string) ([]model.Bookmark, error) {
 }
 
 func (s *BookmarkService) Create(title, url string, folderID *string, icon ...string) (*model.Bookmark, error) {
+	exists, err := s.repo.ExistsActiveURL(url)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, ErrBookmarkExists
+	}
+
 	sortKey, err := s.sortKey.ComputeBookmarkSortKey(folderID, nil, nil, "")
 	if err != nil {
 		return nil, err

@@ -52,6 +52,15 @@ func (r *bookmarkRepo) GetByID(id string) (*model.Bookmark, error) {
 	return &b, nil
 }
 
+func (r *bookmarkRepo) ExistsActiveURL(url string) (bool, error) {
+	var exists bool
+	err := r.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM bookmark WHERE url=? AND deleted_at IS NULL)`, url).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 func (r *bookmarkRepo) Create(title, url string, folderID *string, sortKey string, icon ...string) (*model.Bookmark, error) {
 	id := uuid.New().String()
 	iconValue := ""

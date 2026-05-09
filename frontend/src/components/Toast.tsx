@@ -16,10 +16,11 @@ export default function ToastContainer() {
           key={toast.id}
           className="flex items-center gap-3 px-4 py-2.5 text-body"
           style={{
-            background: 'var(--app-text)',
+            background: 'var(--app-card)',
+            border: 'var(--input-border)',
             borderRadius: 'var(--card-radius)',
             boxShadow: 'var(--shadow-lg)',
-            color: 'var(--text-on-accent)',
+            color: 'var(--app-text)',
             animation: 'toast-in 0.2s ease-out',
           }}
         >
