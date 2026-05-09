@@ -41,6 +41,9 @@ export interface ThemeVars {
   '--row-icon-radius': string
   '--checkbox-border': string
   '--divider-color': string
+  '--scrollbar-track': string
+  '--scrollbar-thumb': string
+  '--scrollbar-thumb-hover': string
   // app aliases
   '--app-bg': string
   '--app-card': string
@@ -131,6 +134,9 @@ export const themes: Theme[] = [
       '--row-icon-radius': '6px',
       '--checkbox-border': '2px solid #D1D5DB',
       '--divider-color': '#E5E7EB',
+      '--scrollbar-track': '#F3F4F6',
+      '--scrollbar-thumb': '#CBD5E1',
+      '--scrollbar-thumb-hover': '#94A3B8',
     }),
   },
   {
@@ -177,6 +183,9 @@ export const themes: Theme[] = [
       '--row-icon-radius': '10px',
       '--checkbox-border': '2px solid rgba(163, 177, 198, 0.8)',
       '--divider-color': 'rgba(163, 177, 198, 0.3)',
+      '--scrollbar-track': '#E0E5EC',
+      '--scrollbar-thumb': 'rgba(113, 128, 150, 0.36)',
+      '--scrollbar-thumb-hover': 'rgba(74, 144, 226, 0.48)',
     }),
   },
 ]

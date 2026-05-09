@@ -165,7 +165,7 @@ export default function Sidebar() {
         />
 
         {/* Virtualized folder tree */}
-        <div ref={scrollRef} className="flex-1 overflow-auto">
+        <div ref={scrollRef} className="flex-1 overflow-auto theme-scrollbar">
           <div
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
