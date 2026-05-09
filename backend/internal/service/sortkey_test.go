@@ -39,8 +39,12 @@ func (r *stubBookmarkRepo) GetByID(id string) (*model.Bookmark, error) {
 	return &b, nil
 }
 
-func (r *stubBookmarkRepo) Create(title, url string, folderID *string, sortKey string) (*model.Bookmark, error) {
-	b := model.Bookmark{ID: "new-" + sortKey, Title: title, URL: url, FolderID: folderID, SortKey: sortKey}
+func (r *stubBookmarkRepo) Create(title, url string, folderID *string, sortKey string, icon ...string) (*model.Bookmark, error) {
+	iconValue := ""
+	if len(icon) > 0 {
+		iconValue = icon[0]
+	}
+	b := model.Bookmark{ID: "new-" + sortKey, Title: title, URL: url, Icon: iconValue, FolderID: folderID, SortKey: sortKey}
 	r.items[b.ID] = b
 	return &b, nil
 }

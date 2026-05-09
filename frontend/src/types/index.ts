@@ -13,6 +13,7 @@ export interface Bookmark {
   id: string
   title: string
   url: string
+  icon: string
   folder_id: string | null
   sort_key: string
   version: number

@@ -22,7 +22,7 @@ type BatchMoveResult struct {
 type BookmarkRepo interface {
 	List(folderID *string) ([]model.Bookmark, error)
 	GetByID(id string) (*model.Bookmark, error)
-	Create(title, url string, folderID *string, sortKey string) (*model.Bookmark, error)
+	Create(title, url string, folderID *string, sortKey string, icon ...string) (*model.Bookmark, error)
 	Update(id, title, url string, version int) (*model.Bookmark, error)
 	SoftDelete(id string) error
 	Restore(id string) (*model.Bookmark, error)

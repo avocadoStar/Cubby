@@ -23,6 +23,7 @@ describe('api move requests', () => {
       id: 'b1',
       title: 'Bookmark',
       url: 'https://example.com',
+      icon: '',
       folder_id: null,
       sort_key: 'n',
       version: 2,

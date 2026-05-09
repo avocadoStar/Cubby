@@ -3,6 +3,7 @@ package service
 import (
 	"cubby/internal/repository"
 	"fmt"
+	"html"
 	"io"
 	"net/url"
 	"regexp"
@@ -11,7 +12,7 @@ import (
 
 var stripTagsRe = regexp.MustCompile(`<[^>]*>`)
 var h3Re = regexp.MustCompile(`(?i)<H3[^>]*>(.*?)</H3>`)
-var aRe = regexp.MustCompile(`(?i)<A[^>]*HREF="([^"]*)"[^>]*>(.*?)</A>`)
+var aRe = regexp.MustCompile(`(?i)<A\b([^>]*)>(.*?)</A>`)
 var dlEndRe = regexp.MustCompile(`(?i)</DL>`)
 
 type ImportService struct {
@@ -82,7 +83,12 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 		}
 
 		if aMatch := aRe.FindStringSubmatch(line); aMatch != nil {
-			href := strings.TrimSpace(aMatch[1])
+			attrs := parseTagAttrs(aMatch[1])
+			href := strings.TrimSpace(html.UnescapeString(attrs["href"]))
+			if href == "" {
+				result.Errors++
+				continue
+			}
 			title := stripTags(strings.TrimSpace(aMatch[2]))
 			if title == "" {
 				title = href
@@ -103,7 +109,8 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 			sortKey := after(lastKey)
 			nextBookmarkSortKey[sk] = sortKey
 
-			_, err := s.bookmarkRepo.Create(title, href, folderID, sortKey)
+			icon := sanitizeBookmarkIcon(html.UnescapeString(attrs["icon"]))
+			_, err := s.bookmarkRepo.Create(title, href, folderID, sortKey, icon)
 			if err != nil {
 				result.Errors++
 				continue

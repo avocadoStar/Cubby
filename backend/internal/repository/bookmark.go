@@ -17,10 +17,10 @@ func (r *bookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 	var rows *sql.Rows
 	var err error
 	if folderID == nil {
-		rows, err = r.DB.Query(`SELECT id,title,url,folder_id,sort_key,version,notes,created_at,updated_at
+		rows, err = r.DB.Query(`SELECT id,title,url,icon,folder_id,sort_key,version,notes,created_at,updated_at
 			FROM bookmark WHERE folder_id IS NULL AND deleted_at IS NULL ORDER BY sort_key`)
 	} else {
-		rows, err = r.DB.Query(`SELECT id,title,url,folder_id,sort_key,version,notes,created_at,updated_at
+		rows, err = r.DB.Query(`SELECT id,title,url,icon,folder_id,sort_key,version,notes,created_at,updated_at
 			FROM bookmark WHERE folder_id=? AND deleted_at IS NULL ORDER BY sort_key`, *folderID)
 	}
 	if err != nil {
@@ -30,7 +30,7 @@ func (r *bookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 	var bookmarks []model.Bookmark
 	for rows.Next() {
 		var b model.Bookmark
-		if err := rows.Scan(&b.ID, &b.Title, &b.URL, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt); err != nil {
+		if err := rows.Scan(&b.ID, &b.Title, &b.URL, &b.Icon, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt); err != nil {
 			return nil, err
 		}
 		bookmarks = append(bookmarks, b)
@@ -43,19 +43,23 @@ func (r *bookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 
 func (r *bookmarkRepo) GetByID(id string) (*model.Bookmark, error) {
 	var b model.Bookmark
-	err := r.DB.QueryRow(`SELECT id,title,url,folder_id,sort_key,version,notes,created_at,updated_at
+	err := r.DB.QueryRow(`SELECT id,title,url,icon,folder_id,sort_key,version,notes,created_at,updated_at
 		FROM bookmark WHERE id=? AND deleted_at IS NULL`, id).
-		Scan(&b.ID, &b.Title, &b.URL, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt)
+		Scan(&b.ID, &b.Title, &b.URL, &b.Icon, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 	return &b, nil
 }
 
-func (r *bookmarkRepo) Create(title, url string, folderID *string, sortKey string) (*model.Bookmark, error) {
+func (r *bookmarkRepo) Create(title, url string, folderID *string, sortKey string, icon ...string) (*model.Bookmark, error) {
 	id := uuid.New().String()
-	_, err := r.DB.Exec(`INSERT INTO bookmark (id,title,url,folder_id,sort_key) VALUES (?,?,?,?,?)`,
-		id, title, url, folderID, sortKey)
+	iconValue := ""
+	if len(icon) > 0 {
+		iconValue = icon[0]
+	}
+	_, err := r.DB.Exec(`INSERT INTO bookmark (id,title,url,icon,folder_id,sort_key) VALUES (?,?,?,?,?,?)`,
+		id, title, url, iconValue, folderID, sortKey)
 	if err != nil {
 		return nil, err
 	}

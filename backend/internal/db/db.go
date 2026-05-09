@@ -40,6 +40,7 @@ func migrate(db *sql.DB) {
 			id         TEXT PRIMARY KEY,
 			title      TEXT NOT NULL,
 			url        TEXT NOT NULL,
+			icon       TEXT NOT NULL DEFAULT '',
 			folder_id  TEXT REFERENCES folder(id) ON DELETE SET NULL,
 			sort_key   TEXT NOT NULL,
 			version    INTEGER NOT NULL DEFAULT 1,
@@ -59,6 +60,11 @@ func migrate(db *sql.DB) {
 		panic(err)
 	}
 	if _, err := db.Exec(`ALTER TABLE bookmark ADD COLUMN notes TEXT NOT NULL DEFAULT ''`); err != nil {
+		if !strings.Contains(err.Error(), "duplicate column name") {
+			panic(err)
+		}
+	}
+	if _, err := db.Exec(`ALTER TABLE bookmark ADD COLUMN icon TEXT NOT NULL DEFAULT ''`); err != nil {
 		if !strings.Contains(err.Error(), "duplicate column name") {
 			panic(err)
 		}

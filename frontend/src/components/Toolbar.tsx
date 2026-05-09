@@ -21,6 +21,7 @@ export default function Toolbar() {
   const [showAddBookmark, setShowAddBookmark] = useState(false)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
+  const [icon, setIcon] = useState('')
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const themeRef = useRef<HTMLDivElement>(null)
@@ -64,6 +65,7 @@ export default function Toolbar() {
     setShowAddBookmark(false)
     setTitle('')
     setUrl('')
+    setIcon('')
     setFetchingTitle(false)
   }
 
@@ -76,6 +78,7 @@ export default function Toolbar() {
       try {
         const meta = await api.fetchMetadata(url.trim())
         setTitle(prev => prev ? prev : meta.title)
+        setIcon(meta.icon ?? '')
       } catch { /* ignore fetch errors */ }
       setFetchingTitle(false)
     }, 600)
@@ -93,6 +96,7 @@ export default function Toolbar() {
   }, [showTheme])
 
   const handleUrlChange = (value: string) => {
+    setIcon('')
     setUrl(value)
     if (value && !/^https?:\/\//i.test(value) && value.includes('.')) {
       setUrl('https://' + value)
@@ -106,7 +110,7 @@ export default function Toolbar() {
     if (!/^https?:\/\//i.test(normalizedUrl)) {
       normalizedUrl = 'https://' + normalizedUrl
     }
-    await api.createBookmark(title.trim(), normalizedUrl, selectedId)
+    await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
     await load(selectedId)
     closeAddBookmarkModal()
   }

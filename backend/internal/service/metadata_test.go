@@ -54,3 +54,44 @@ func TestFetchTitleRejectsRedirects(t *testing.T) {
 		t.Fatal("expected redirect response to be rejected")
 	}
 }
+
+func TestFetchTitleReturnsLinkedIcon(t *testing.T) {
+	svc := NewMetadataService()
+	svc.resolver = staticResolver{"example.test": {"93.184.216.34"}}
+	svc.clientFactory = func(targetIP string) *http.Client {
+		return &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				switch req.URL.Path {
+				case "":
+					fallthrough
+				case "/":
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       io.NopCloser(strings.NewReader(`<html><head><title>Example</title><link rel="icon" href="/favicon.png"></head></html>`)),
+						Request:    req,
+					}, nil
+				case "/favicon.png":
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Header:     http.Header{"Content-Type": []string{"image/png"}},
+						Body:       io.NopCloser(strings.NewReader("icon")),
+						Request:    req,
+					}, nil
+				default:
+					return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader("")), Request: req}, nil
+				}
+			}),
+		}
+	}
+
+	meta, err := svc.FetchTitle("http://example.test")
+	if err != nil {
+		t.Fatalf("fetch title: %v", err)
+	}
+	if meta.Title != "Example" {
+		t.Fatalf("expected title Example, got %q", meta.Title)
+	}
+	if meta.Icon != "data:image/png;base64,aWNvbg==" {
+		t.Fatalf("expected favicon data URI, got %q", meta.Icon)
+	}
+}

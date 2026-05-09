@@ -34,3 +34,12 @@ func TestMigrateAllowsLegacyDatabasesWithNotesColumn(t *testing.T) {
 		t.Fatalf("notes column should exist after migration: %v", err)
 	}
 }
+
+func TestMigrateAddsBookmarkIconColumn(t *testing.T) {
+	database := MustOpen(filepath.Join(t.TempDir(), "cubby.db"))
+	defer database.Close()
+
+	if err := database.QueryRow(`SELECT icon FROM bookmark LIMIT 1`).Scan(new(string)); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("icon column should exist after migration: %v", err)
+	}
+}

@@ -96,9 +96,9 @@ func getFolderTx(tx *sql.Tx, id string) (*model.Folder, error) {
 
 func getBookmarkTx(tx *sql.Tx, id string) (*model.Bookmark, error) {
 	var b model.Bookmark
-	err := tx.QueryRow(`SELECT id,title,url,folder_id,sort_key,version,notes,created_at,updated_at
+	err := tx.QueryRow(`SELECT id,title,url,icon,folder_id,sort_key,version,notes,created_at,updated_at
 		FROM bookmark WHERE id=? AND deleted_at IS NULL`, id).
-		Scan(&b.ID, &b.Title, &b.URL, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt)
+		Scan(&b.ID, &b.Title, &b.URL, &b.Icon, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}

@@ -105,10 +105,10 @@ export const api = {
   getBookmarks: (folderId?: string | null, signal?: AbortSignal) =>
     request<Bookmark[]>(`/bookmarks${folderId ? `?folder_id=${folderId}` : ''}`, { signal }),
 
-  createBookmark: (title: string, url: string, folderId?: string | null) =>
+  createBookmark: (title: string, url: string, folderId?: string | null, icon?: string) =>
     request<Bookmark>('/bookmarks', {
       method: 'POST',
-      body: JSON.stringify({ title, url, folder_id: folderId }),
+      body: JSON.stringify({ title, url, folder_id: folderId, icon }),
     }),
 
   updateBookmark: (id: string, title: string, url: string, version: number) =>
@@ -165,7 +165,7 @@ export const api = {
 
   // Import
   fetchMetadata: (url: string) =>
-    request<{ title: string }>(`/metadata?url=${encodeURIComponent(url)}`),
+    request<{ title: string; icon: string }>(`/metadata?url=${encodeURIComponent(url)}`),
 
   importBookmarks: (file: File) => {
     const form = new FormData()

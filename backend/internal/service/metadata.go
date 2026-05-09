@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"net/http"
@@ -22,6 +24,7 @@ func NewMetadataService() *MetadataService {
 
 type Metadata struct {
 	Title string `json:"title"`
+	Icon  string `json:"icon"`
 }
 
 var errURLNotAllowed = errors.New("URL not allowed")
@@ -53,31 +56,43 @@ var allowedPorts = map[string]bool{
 // isBlockedIP reports whether an IP address falls in a private, loopback,
 // link-local, multicast, or otherwise non-public range.
 func isBlockedIP(ip net.IP) bool {
-	privateRanges := []struct {
+	ipv4Ranges := []struct {
 		network *net.IPNet
 	}{
 		// loopback
 		{mustParseCIDR("127.0.0.0/8")},
-		{mustParseCIDR("::1/128")},
 		// private (RFC 1918 + IPv6 unique local)
 		{mustParseCIDR("10.0.0.0/8")},
 		{mustParseCIDR("172.16.0.0/12")},
 		{mustParseCIDR("192.168.0.0/16")},
-		{mustParseCIDR("fc00::/7")},
 		// link-local
 		{mustParseCIDR("169.254.0.0/16")},
-		{mustParseCIDR("fe80::/10")},
 		// unspecified / multicast
 		{mustParseCIDR("0.0.0.0/8")},
-		{mustParseCIDR("::/128")},
-		{mustParseCIDR("::ffff:0:0/96")},
 		// carrier-grade NAT
 		{mustParseCIDR("100.64.0.0/10")},
 		// multicast
 		{mustParseCIDR("224.0.0.0/4")},
+	}
+	ipv6Ranges := []struct {
+		network *net.IPNet
+	}{
+		// loopback
+		{mustParseCIDR("::1/128")},
+		// private (IPv6 unique local)
+		{mustParseCIDR("fc00::/7")},
+		// link-local
+		{mustParseCIDR("fe80::/10")},
+		// unspecified / IPv4-mapped / multicast
+		{mustParseCIDR("::/128")},
+		{mustParseCIDR("::ffff:0:0/96")},
 		{mustParseCIDR("ff00::/8")},
 	}
-	for _, r := range privateRanges {
+	ranges := ipv6Ranges
+	if ip.To4() != nil {
+		ranges = ipv4Ranges
+	}
+	for _, r := range ranges {
 		if r.network.Contains(ip) {
 			return true
 		}
@@ -176,7 +191,7 @@ func (s *MetadataService) FetchTitle(rawURL string) (*Metadata, error) {
 		return nil, fmt.Errorf("metadata fetch failed: %s", resp.Status)
 	}
 
-	// Read up to 512KB to find </title>
+	// Read up to 512KB to find metadata in the document head.
 	var buf strings.Builder
 	limited := io.LimitReader(resp.Body, 512*1024)
 	chunk := make([]byte, 4096)
@@ -184,7 +199,7 @@ func (s *MetadataService) FetchTitle(rawURL string) (*Metadata, error) {
 		n, err := limited.Read(chunk)
 		if n > 0 {
 			buf.Write(chunk[:n])
-			if strings.Contains(buf.String(), "</title>") {
+			if strings.Contains(strings.ToLower(buf.String()), "</head>") {
 				break
 			}
 		}
@@ -198,7 +213,8 @@ func (s *MetadataService) FetchTitle(rawURL string) (*Metadata, error) {
 	if title == "" {
 		title = rawURL
 	}
-	return &Metadata{Title: title}, nil
+	icon := s.fetchIcon(parsed, html)
+	return &Metadata{Title: title, Icon: icon}, nil
 }
 
 func newMetadataHTTPClient(targetIP string) *http.Client {
@@ -220,6 +236,8 @@ func newMetadataHTTPClient(targetIP string) *http.Client {
 }
 
 var titleRe = regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
+var linkTagRe = regexp.MustCompile(`(?is)<link\b[^>]*>`)
+var attrRe = regexp.MustCompile(`(?is)\s([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)`)
 
 func extractTitle(html string) string {
 	match := titleRe.FindStringSubmatch(html)
@@ -227,4 +245,126 @@ func extractTitle(html string) string {
 		return strings.TrimSpace(match[1])
 	}
 	return ""
+}
+
+func (s *MetadataService) fetchIcon(baseURL *url.URL, htmlText string) string {
+	for _, candidate := range iconCandidates(baseURL, htmlText) {
+		if strings.HasPrefix(candidate, "data:image/") {
+			if icon := sanitizeBookmarkIcon(candidate); icon != "" {
+				return icon
+			}
+			continue
+		}
+		icon, err := s.fetchRemoteIcon(candidate)
+		if err == nil && icon != "" {
+			return icon
+		}
+	}
+	return ""
+}
+
+func iconCandidates(baseURL *url.URL, htmlText string) []string {
+	seen := make(map[string]bool)
+	var candidates []string
+	add := func(raw string) {
+		raw = strings.TrimSpace(html.UnescapeString(raw))
+		if raw == "" {
+			return
+		}
+		if strings.HasPrefix(raw, "data:image/") {
+			if !seen[raw] {
+				seen[raw] = true
+				candidates = append(candidates, raw)
+			}
+			return
+		}
+		parsed, err := url.Parse(raw)
+		if err != nil {
+			return
+		}
+		resolved := baseURL.ResolveReference(parsed).String()
+		if !seen[resolved] {
+			seen[resolved] = true
+			candidates = append(candidates, resolved)
+		}
+	}
+
+	for _, tag := range linkTagRe.FindAllString(htmlText, -1) {
+		attrs := parseTagAttrs(tag)
+		rel := strings.ToLower(attrs["rel"])
+		if !strings.Contains(rel, "icon") {
+			continue
+		}
+		add(attrs["href"])
+	}
+
+	fallback := (&url.URL{Scheme: baseURL.Scheme, Host: baseURL.Host, Path: "/favicon.ico"}).String()
+	if !seen[fallback] {
+		candidates = append(candidates, fallback)
+	}
+	return candidates
+}
+
+func parseTagAttrs(tag string) map[string]string {
+	attrs := make(map[string]string)
+	for _, match := range attrRe.FindAllStringSubmatch(tag, -1) {
+		if len(match) < 3 {
+			continue
+		}
+		key := strings.ToLower(match[1])
+		value := strings.Trim(match[2], `"'`)
+		attrs[key] = value
+	}
+	return attrs
+}
+
+func (s *MetadataService) fetchRemoteIcon(rawURL string) (string, error) {
+	parsed, ips, err := validateURLWithResolver(rawURL, s.resolver)
+	if err != nil {
+		return "", err
+	}
+
+	client := s.clientFactory(ips[0].String())
+	req, err := http.NewRequest("GET", parsed.String(), nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36")
+	req.Host = parsed.Hostname()
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= http.StatusMultipleChoices && resp.StatusCode < http.StatusBadRequest {
+		return "", errURLNotAllowed
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return "", fmt.Errorf("icon fetch failed: %s", resp.Status)
+	}
+
+	maxBytes := int64((maxBookmarkIconLength * 3) / 4)
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes+1))
+	if err != nil {
+		return "", err
+	}
+	if int64(len(data)) > maxBytes {
+		return "", fmt.Errorf("icon exceeds maximum size")
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" || !strings.HasPrefix(strings.ToLower(contentType), "image/") {
+		contentType = http.DetectContentType(data)
+	}
+	if idx := strings.Index(contentType, ";"); idx >= 0 {
+		contentType = contentType[:idx]
+	}
+	contentType = strings.ToLower(strings.TrimSpace(contentType))
+	if !strings.HasPrefix(contentType, "image/") {
+		return "", fmt.Errorf("icon response is not an image")
+	}
+
+	icon := "data:" + contentType + ";base64," + base64.StdEncoding.EncodeToString(data)
+	return sanitizeBookmarkIcon(icon), nil
 }

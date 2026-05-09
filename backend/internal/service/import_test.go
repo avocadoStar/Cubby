@@ -34,3 +34,27 @@ func TestImportHTMLSkipsNonHTTPAbsoluteURLs(t *testing.T) {
 		}
 	}
 }
+
+func TestImportHTMLStoresDataIcon(t *testing.T) {
+	folderRepo := newStubFolderRepo()
+	bookmarkRepo := newStubBookmarkRepo()
+	svc := NewImportService(folderRepo, bookmarkRepo)
+
+	icon := "data:image/png;base64,aWNvbg=="
+	input := `<DL><p>
+<DT><A HREF="https://example.com/ok" ICON="` + icon + `">OK</A>
+</DL><p>`
+
+	result, err := svc.ImportHTML(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("import html: %v", err)
+	}
+	if result.Bookmarks != 1 {
+		t.Fatalf("expected 1 imported bookmark, got %d", result.Bookmarks)
+	}
+	for _, bookmark := range bookmarkRepo.items {
+		if bookmark.Icon != icon {
+			t.Fatalf("expected imported icon %q, got %q", icon, bookmark.Icon)
+		}
+	}
+}

@@ -43,7 +43,7 @@ func (h *ImportExportHandler) exportFolder(b *strings.Builder, parentID *string,
 		b.WriteString("<DT><H3>" + html.EscapeString(f.Name) + "</H3>\n")
 		b.WriteString("<DL><p>\n")
 		for _, bm := range bookmarks[f.ID] {
-			b.WriteString("<DT><A HREF=\"" + html.EscapeString(bm.URL) + "\">" + html.EscapeString(bm.Title) + "</A>\n")
+			writeBookmarkHTML(b, bm)
 		}
 		h.exportFolder(b, &f.ID, folders, bookmarks)
 		b.WriteString("</DL><p>\n")
@@ -117,7 +117,7 @@ func (h *ImportExportHandler) Export(c *gin.Context) {
 
 	// Export root bookmarks
 	for _, bm := range bookmarkMap["__root__"] {
-		b.WriteString("<DT><A HREF=\"" + html.EscapeString(bm.URL) + "\">" + html.EscapeString(bm.Title) + "</A>\n")
+		writeBookmarkHTML(&b, bm)
 	}
 
 	// Export folder tree recursively
@@ -125,4 +125,12 @@ func (h *ImportExportHandler) Export(c *gin.Context) {
 
 	b.WriteString("</DL><p>\n")
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(b.String()))
+}
+
+func writeBookmarkHTML(b *strings.Builder, bm model.Bookmark) {
+	b.WriteString("<DT><A HREF=\"" + html.EscapeString(bm.URL) + "\"")
+	if bm.Icon != "" {
+		b.WriteString(" ICON=\"" + html.EscapeString(bm.Icon) + "\"")
+	}
+	b.WriteString(">" + html.EscapeString(bm.Title) + "</A>\n")
 }

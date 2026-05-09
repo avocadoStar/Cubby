@@ -86,9 +86,19 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
           boxShadow: 'var(--row-icon-shadow)',
           borderRadius: 'var(--row-icon-radius)',
           color: 'var(--app-text2)',
+          overflow: 'hidden',
         }}
       >
-        {bookmark.title.charAt(0)}
+        {bookmark.icon ? (
+          <img
+            src={bookmark.icon}
+            alt=""
+            aria-hidden="true"
+            style={{ width: 16, height: 16, display: 'block', objectFit: 'contain' }}
+          />
+        ) : (
+          bookmark.title.charAt(0)
+        )}
       </div>
       <span className="flex-1 truncate text-body" style={{ color: 'var(--app-text)' }}>{bookmark.title}</span>
       <span className="flex-shrink-0 truncate text-xs mr-8" style={{ width: 320, color: 'var(--app-text2)' }}>

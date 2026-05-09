@@ -46,6 +46,7 @@ func (h *BookmarkHandler) Create(c *gin.Context) {
 	var req struct {
 		Title    string  `json:"title"`
 		URL      string  `json:"url"`
+		Icon     string  `json:"icon"`
 		FolderID *string `json:"folder_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -76,7 +77,7 @@ func (h *BookmarkHandler) Create(c *gin.Context) {
 	}
 	req.URL = parsed.String()
 
-	b, err := h.svc.Create(req.Title, req.URL, req.FolderID)
+	b, err := h.svc.Create(req.Title, req.URL, req.FolderID, req.Icon)
 	if err != nil {
 		internalError(c, err)
 		return
