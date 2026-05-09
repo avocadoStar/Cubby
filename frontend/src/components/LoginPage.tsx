@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
+import LoginSunnyBackground from './LoginSunnyBackground'
 
 const ERROR_PERSIST_MS = 2500
 const ERROR_FADE_IN_DELAY_MS = 200
@@ -110,22 +111,29 @@ export default function LoginPage() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ background: 'var(--app-bg)' }}
+      className="login-sunny-page flex min-h-screen items-center justify-center px-4"
+      style={{ background: '#f2efe9' }}
     >
+      <LoginSunnyBackground />
       <form
         onSubmit={handleSubmit}
-        className="flex w-80 flex-col gap-4 p-8"
-        style={{ background: 'var(--app-card)', border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--shadow-lg)' }}
+        className="relative z-10 flex w-80 flex-col gap-4 p-8"
+        style={{
+          background: 'rgba(250, 247, 241, 0.88)',
+          border: '1px solid rgba(216, 213, 207, 0.92)',
+          borderRadius: 12,
+          boxShadow: '0 18px 34px rgba(72, 56, 34, 0.13), 0 4px 10px rgba(72, 56, 34, 0.07)',
+          backdropFilter: 'blur(8px)',
+        }}
       >
         <h1
           className="flex items-center justify-center gap-2 text-center text-2xl font-semibold"
-          style={{ color: 'var(--app-text)' }}
+          style={{ color: '#1a1a1a' }}
         >
           <img src="/favicon.svg" alt="" className="h-7 w-7" />
           Cubby
         </h1>
-        <p className="text-center text-sm" style={{ color: 'var(--app-text2)' }}>
+        <p className="text-center text-sm" style={{ color: '#66615b' }}>
           {'\u8f93\u5165\u5bc6\u7801\u4ee5\u8bbf\u95ee\u6536\u85cf\u5939'}
         </p>
         <div
@@ -149,12 +157,12 @@ export default function LoginPage() {
             aria-invalid={showInputError}
             className="h-9 rounded px-3 text-sm outline-none"
             style={{
-              border: showInputError ? '1px solid var(--app-danger)' : 'var(--input-border)',
+              border: showInputError ? '1px solid #B94B36' : '1px solid rgba(216, 213, 207, 0.92)',
               boxShadow: showInputError
-                ? 'var(--input-shadow), 0 0 0 3px var(--danger-bg)'
-                : 'var(--input-shadow)',
-              background: 'var(--input-bg)',
-              color: 'var(--app-text)',
+                ? 'inset 0 1px 2px rgba(72, 56, 34, 0.06), 0 0 0 3px rgba(185, 75, 54, 0.14)'
+                : 'inset 0 1px 2px rgba(72, 56, 34, 0.06)',
+              background: 'rgba(255, 252, 246, 0.92)',
+              color: '#1a1a1a',
               transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
             }}
           />
@@ -168,7 +176,7 @@ export default function LoginPage() {
             <p
               className="text-sm"
               style={{
-                color: 'var(--app-danger)',
+                color: '#B94B36',
                 opacity: visibleError && showErrorText ? 1 : 0,
                 transform: visibleError && showErrorText ? 'translateY(0)' : 'translateY(-4px)',
                 transition: 'opacity 0.25s ease, transform 0.25s ease',
@@ -183,9 +191,11 @@ export default function LoginPage() {
           disabled={loading || !password}
           className="h-9 rounded border-none text-sm font-medium transition-[opacity,filter,box-shadow] disabled:cursor-not-allowed disabled:opacity-50"
           style={{
-            background: 'var(--app-accent)',
-            boxShadow: loading || !password ? 'var(--input-shadow)' : 'var(--shadow)',
-            color: 'var(--text-on-accent)',
+            background: '#8b7355',
+            boxShadow: loading || !password
+              ? 'inset 0 1px 2px rgba(72, 56, 34, 0.06)'
+              : '0 2px 8px rgba(72, 56, 34, 0.16)',
+            color: '#ffffff',
             filter: loading || !password ? 'saturate(0.85)' : 'none',
           }}
         >
