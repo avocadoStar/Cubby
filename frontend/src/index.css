@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+@theme {
+  --color-app-bg: var(--app-bg);
+  --color-app-card: var(--app-card);
+  --color-app-border: var(--app-border);
+  --color-app-hover: var(--app-hover);
+  --color-app-accent: var(--app-accent);
+  --color-app-text: var(--app-text);
+  --color-app-text2: var(--app-text2);
+  --color-input-bg: var(--input-bg);
+  --color-input-border: var(--input-border);
+  --color-overlay: var(--overlay);
+
+  --radius-card: var(--card-radius);
+
+  --shadow-app-base: var(--shadow);
+  --shadow-app-lg: var(--shadow-lg);
+  --shadow-input-base: var(--input-shadow);
+  --shadow-input-focus: var(--input-shadow-focus);
+}
+
 :root {
   --fs-ratio: 1.25;
   --fs--2: 10.24px;
