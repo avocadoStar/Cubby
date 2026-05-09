@@ -95,7 +95,7 @@ export default function Toolbar() {
 
   return (
     <>
-      <div className="flex items-center gap-1 px-5 py-2 h-12 bg-app-card border-b border-divider-color shadow-app-base z-10 relative">
+      <div className="flex items-center gap-1 px-5 py-2 h-12 bg-app-card shadow-app-base z-10 relative">
         <Breadcrumb />
         <div className="flex-1" />
         <button

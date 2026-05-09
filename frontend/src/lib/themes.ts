@@ -175,7 +175,7 @@ export const themes: Theme[] = [
       '--row-icon-bg': '#E0E5EC',
       '--row-icon-shadow': '3px 3px 6px rgba(163, 177, 198, 0.5), -3px -3px 6px rgba(255, 255, 255, 0.5)',
       '--row-icon-radius': '10px',
-      '--checkbox-border': 'none',
+      '--checkbox-border': '2px solid rgba(163, 177, 198, 0.8)',
       '--divider-color': 'rgba(163, 177, 198, 0.3)',
     }),
   },
