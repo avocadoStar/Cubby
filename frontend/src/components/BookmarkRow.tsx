@@ -4,6 +4,11 @@ import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useDndStore } from '../stores/dndStore'
 import { useDraggable } from '@dnd-kit/core'
 
+function openExternalURL(url: string) {
+  const opened = window.open(url, '_blank', 'noopener,noreferrer')
+  if (opened) opened.opener = null
+}
+
 const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpenNotes?: () => void }) => {
   const isSelected = useBookmarkStore(s => s.selectedIds.has(bookmark.id))
   const isDeleting = useBookmarkStore(s => s.deletingIds.has(bookmark.id))
@@ -55,7 +60,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => window.open(bookmark.url, '_blank')}
+      onClick={() => openExternalURL(bookmark.url)}
       {...listeners}
       {...attributes}
     >

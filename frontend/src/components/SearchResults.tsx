@@ -3,6 +3,11 @@ import { useSearchStore } from '../stores/searchStore'
 import { useFolderStore } from '../stores/folderStore'
 import type { SearchResultItem } from '../types'
 
+function openExternalURL(url: string) {
+  const opened = window.open(url, '_blank', 'noopener,noreferrer')
+  if (opened) opened.opener = null
+}
+
 interface SearchResultsProps {
   query: string
   results: SearchResultItem[]
@@ -34,7 +39,7 @@ export default function SearchResults({ query, results }: SearchResultsProps) {
                   useSearchStore.getState().clearSearch()
                   useFolderStore.getState().select(r.id)
                 } else {
-                  window.open(r.url!, '_blank')
+                  openExternalURL(r.url!)
                 }
               }}
             >

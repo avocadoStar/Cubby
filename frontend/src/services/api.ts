@@ -172,6 +172,25 @@ export const api = {
     form.append('file', file)
     return request<{ bookmarks: number; folders: number }>('/import', { method: 'POST', body: form })
   },
+
+  exportBookmarks: async () => {
+    const headers: Record<string, string> = {}
+    const t = token()
+    if (t) {
+      headers['Authorization'] = `Bearer ${t}`
+    }
+
+    const res = await fetch(`${BASE}/export`, { headers })
+    if (res.status === 401) {
+      localStorage.removeItem('token')
+      window.location.reload()
+      throw new Error('Unauthorized')
+    }
+    if (!res.ok) {
+      throw new Error(await readErrorMessage(res))
+    }
+    return res.blob()
+  },
 }
 
 function stripClientSortKey(req: MoveRequest): MoveRequest {

@@ -45,3 +45,23 @@ describe('api move requests', () => {
     expect(body.sort_key).toBeUndefined()
   })
 })
+
+describe('api export requests', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    storage.clear()
+  })
+
+  it('rejects failed export responses without reading a blob', async () => {
+    const blob = vi.fn()
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: () => Promise.resolve(JSON.stringify({ error: 'export failed' })),
+      blob,
+    } as unknown as Response)
+
+    await expect(api.exportBookmarks()).rejects.toThrow('export failed')
+    expect(blob).not.toHaveBeenCalled()
+  })
+})

@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"database/sql"
+	"errors"
 	"log"
 	"net/http"
 
@@ -16,4 +18,12 @@ func errorResponse(c *gin.Context, status int, publicMsg string, err error) {
 
 func internalError(c *gin.Context, err error) {
 	errorResponse(c, http.StatusInternalServerError, "internal error", err)
+}
+
+func notFoundOrInternal(c *gin.Context, err error) {
+	if errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	internalError(c, err)
 }

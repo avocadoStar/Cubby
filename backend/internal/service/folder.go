@@ -44,6 +44,9 @@ func (s *FolderService) Update(id, name string, version int) (*model.Folder, err
 }
 
 func (s *FolderService) Delete(id string) error {
+	if _, err := s.repo.Get(id); err != nil {
+		return err
+	}
 	return s.BatchDelete([]string{id})
 }
 

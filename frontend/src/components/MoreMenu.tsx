@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ImportModal from './ImportModal'
+import { api } from '../services/api'
+import { useToastStore } from '../stores/toastStore'
 
 export default function MoreMenu() {
   const [open, setOpen] = useState(false)
@@ -47,13 +49,17 @@ export default function MoreMenu() {
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--app-hover)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
               onClick={async () => {
-                const token = localStorage.getItem('token')
-                const res = await fetch('/api/export', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-                const blob = await res.blob()
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url; a.download = 'bookmarks.html'; a.click()
-                URL.revokeObjectURL(url); setOpen(false)
+                try {
+                  const blob = await api.exportBookmarks()
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url; a.download = 'bookmarks.html'; a.click()
+                  URL.revokeObjectURL(url); setOpen(false)
+                } catch (e) {
+                  useToastStore.getState().show({
+                    message: e instanceof Error && e.message ? e.message : 'Export failed, please try again',
+                  })
+                }
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>

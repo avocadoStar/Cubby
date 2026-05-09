@@ -12,43 +12,49 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
   const [notes, setNotes] = useState('')
   const [saved, setSaved] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const notesRef = useRef('')
-  const bookmarkRef = useRef(bookmark)
-  bookmarkRef.current = bookmark
+  const pendingSaveRef = useRef<{ bookmarkId: string; value: string; originalNotes: string } | null>(null)
+  const currentBookmarkIdRef = useRef<string | undefined>(undefined)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const open = bookmark !== null
   const bookmarkId = bookmark?.id
   const bookmarkNotes = bookmark?.notes || ''
+  currentBookmarkIdRef.current = bookmarkId
 
   useEffect(() => {
-    if (bookmarkId) { setNotes(bookmarkNotes); notesRef.current = bookmarkNotes; setSaved(false) }
+    if (bookmarkId) { setNotes(bookmarkNotes); setSaved(false) }
   }, [bookmarkId, bookmarkNotes])
 
   const save = useCallback((value: string) => {
-    const bm = bookmarkRef.current
-    if (!bm) return
+    if (!bookmarkId) return
     clearTimeout(timerRef.current)
-    notesRef.current = value
+    const pending = { bookmarkId, value, originalNotes: bookmarkNotes }
+    pendingSaveRef.current = pending
     timerRef.current = setTimeout(async () => {
+      timerRef.current = undefined
       try {
-        await api.updateNotes(bm.id, value)
-        setSaved(true)
-        clearTimeout(savedTimerRef.current)
-        savedTimerRef.current = setTimeout(() => setSaved(false), 1500)
+        await api.updateNotes(pending.bookmarkId, pending.value)
+        if (currentBookmarkIdRef.current === pending.bookmarkId) {
+          setSaved(true)
+          clearTimeout(savedTimerRef.current)
+          savedTimerRef.current = setTimeout(() => setSaved(false), 1500)
+        }
       } catch { /* ignore */ }
+      if (pendingSaveRef.current === pending) pendingSaveRef.current = null
     }, 500)
-  }, []) // no dependency on bookmark since we use bookmarkRef
+  }, [bookmarkId, bookmarkNotes])
 
   // Flush pending save on unmount or bookmark change
   useEffect(() => () => {
     const timer = timerRef.current
-    const bm = bookmarkRef.current
+    const pending = pendingSaveRef.current
     clearTimeout(savedTimerRef.current)
-    if (timer && bm && notesRef.current !== bm.notes) {
+    if (timer && pending && pending.value !== pending.originalNotes) {
       clearTimeout(timer)
-      api.updateNotes(bm.id, notesRef.current).catch(() => {})
+      timerRef.current = undefined
+      pendingSaveRef.current = null
+      api.updateNotes(pending.bookmarkId, pending.value).catch(() => {})
     }
-  }, [bookmark?.id])
+  }, [bookmarkId])
 
   const folderPath = bookmark ? (() => {
     const { folderMap } = useFolderStore.getState()

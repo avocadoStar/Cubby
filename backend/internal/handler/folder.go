@@ -93,7 +93,7 @@ func (h *FolderHandler) Update(c *gin.Context) {
 
 func (h *FolderHandler) Delete(c *gin.Context) {
 	if err := h.svc.Delete(c.Param("id")); err != nil {
-		internalError(c, err)
+		notFoundOrInternal(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -102,7 +102,7 @@ func (h *FolderHandler) Delete(c *gin.Context) {
 func (h *FolderHandler) Restore(c *gin.Context) {
 	f, err := h.svc.Restore(c.Param("id"))
 	if err != nil {
-		internalError(c, err)
+		notFoundOrInternal(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, f)

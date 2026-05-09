@@ -134,7 +134,7 @@ func (h *BookmarkHandler) Update(c *gin.Context) {
 
 func (h *BookmarkHandler) Delete(c *gin.Context) {
 	if err := h.svc.Delete(c.Param("id")); err != nil {
-		internalError(c, err)
+		notFoundOrInternal(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
@@ -143,7 +143,7 @@ func (h *BookmarkHandler) Delete(c *gin.Context) {
 func (h *BookmarkHandler) Restore(c *gin.Context) {
 	b, err := h.svc.Restore(c.Param("id"))
 	if err != nil {
-		internalError(c, err)
+		notFoundOrInternal(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, b)
@@ -158,7 +158,7 @@ func (h *BookmarkHandler) UpdateNotes(c *gin.Context) {
 		return
 	}
 	if err := h.svc.UpdateNotes(c.Param("id"), req.Notes); err != nil {
-		internalError(c, err)
+		notFoundOrInternal(c, err)
 		return
 	}
 	c.Status(http.StatusNoContent)
