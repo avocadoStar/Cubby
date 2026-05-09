@@ -193,7 +193,6 @@ export default function Toolbar() {
       {showAddBookmark && (
         <ModalBase title="添加收藏夹" onClose={closeAddBookmarkModal} width="360px" closeOnEscape>
           <input
-            autoFocus
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder={fetchingTitle ? "正在获取标题…" : "名称"}

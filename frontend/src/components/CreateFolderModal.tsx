@@ -15,7 +15,6 @@ export default function CreateFolderModal({ parentId, onClose }: { parentId: str
   return (
     <ModalBase title="新建文件夹" onClose={onClose} width="320px" closeOnEscape>
       <input
-        autoFocus
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
