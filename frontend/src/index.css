@@ -6,6 +6,8 @@
   --color-app-border: var(--app-border);
   --color-app-hover: var(--app-hover);
   --color-app-accent: var(--app-accent);
+  --color-accent-light: var(--accent-light);
+  --color-text-on-accent: var(--text-on-accent);
   --color-app-text: var(--app-text);
   --color-app-text2: var(--app-text2);
   --color-input-bg: var(--input-bg);

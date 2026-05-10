@@ -90,7 +90,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
             共导入 {result?.bookmarks ?? 0} 条书签
             {(result?.folders ?? 0) > 0 && `, ${result!.folders} 个文件夹`}
           </p>
-          <button onClick={handleDone} className="mt-5 h-10 px-6 border-none rounded text-body font-medium cursor-default bg-app-accent text-text-on-accent shadow-app-base">
+          <button onClick={handleDone} className="mt-5 h-10 px-6 rounded text-body font-medium cursor-default border border-app-accent text-app-accent shadow-app-base hover:bg-accent-light transition-colors duration-150">
             完成
           </button>
         </div>
