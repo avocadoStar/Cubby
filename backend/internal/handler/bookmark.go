@@ -3,7 +3,6 @@ package handler
 import (
 	"errors"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"cubby/internal/model"
@@ -51,37 +50,33 @@ func (h *BookmarkHandler) Create(c *gin.Context) {
 		FolderID *string `json:"folder_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		badRequest(c, "invalid request")
 		return
 	}
 	if req.Title == "" || req.URL == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "title and url required"})
+		badRequest(c, "title and url required")
 		return
 	}
 
 	req.Title = strings.TrimSpace(req.Title)
 	req.URL = strings.TrimSpace(req.URL)
 
-	if len(req.URL) > maxURLLength {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "url exceeds maximum length of 2048 characters"})
-		return
-	}
 	if len(req.Title) > maxTitleLength {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "title exceeds maximum length of 500 characters"})
+		badRequest(c, "title exceeds maximum length of 500 characters")
 		return
 	}
 
-	parsed, err := url.Parse(req.URL)
-	if err != nil || !parsed.IsAbs() || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "url must be a valid absolute URL with http or https scheme"})
+	validatedURL, errMsg, ok := validateURL(req.URL)
+	if !ok {
+		badRequest(c, errMsg)
 		return
 	}
-	req.URL = parsed.String()
+	req.URL = validatedURL
 
 	b, err := h.svc.Create(req.Title, req.URL, req.FolderID, req.Icon)
 	if err != nil {
 		if errors.Is(err, service.ErrBookmarkExists) {
-			c.JSON(http.StatusConflict, gin.H{"error": "已存在"})
+			conflictError(c, "已存在")
 			return
 		}
 		internalError(c, err)
@@ -97,36 +92,32 @@ func (h *BookmarkHandler) Update(c *gin.Context) {
 		Version int    `json:"version"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		badRequest(c, "invalid request")
 		return
 	}
 	if req.Title == "" || req.URL == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "title and url required"})
+		badRequest(c, "title and url required")
 		return
 	}
 
 	req.Title = strings.TrimSpace(req.Title)
 	req.URL = strings.TrimSpace(req.URL)
 
-	if len(req.URL) > maxURLLength {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "url exceeds maximum length of 2048 characters"})
-		return
-	}
 	if len(req.Title) > maxTitleLength {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "title exceeds maximum length of 500 characters"})
+		badRequest(c, "title exceeds maximum length of 500 characters")
 		return
 	}
 
-	parsed, err := url.Parse(req.URL)
-	if err != nil || !parsed.IsAbs() || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "url must be a valid absolute URL with http or https scheme"})
+	validatedURL, errMsg, ok := validateURL(req.URL)
+	if !ok {
+		badRequest(c, errMsg)
 		return
 	}
-	req.URL = parsed.String()
+	req.URL = validatedURL
 
 	b, err := h.svc.Update(c.Param("id"), req.Title, req.URL, req.Version)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		conflictError(c, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, b)
@@ -154,7 +145,7 @@ func (h *BookmarkHandler) UpdateNotes(c *gin.Context) {
 		Notes string `json:"notes"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		badRequest(c, "invalid request")
 		return
 	}
 	if err := h.svc.UpdateNotes(c.Param("id"), req.Notes); err != nil {
@@ -173,12 +164,12 @@ func (h *BookmarkHandler) Move(c *gin.Context) {
 		Version  int     `json:"version"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		badRequest(c, "invalid request")
 		return
 	}
 	b, err := h.svc.Move(req.ID, req.FolderID, req.PrevID, req.NextID, nil, req.Version)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		conflictError(c, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, b)
@@ -189,7 +180,7 @@ func (h *BookmarkHandler) BatchDelete(c *gin.Context) {
 		IDs []string `json:"ids"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		badRequest(c, "invalid request")
 		return
 	}
 	if err := h.svc.BatchDelete(req.IDs); err != nil {

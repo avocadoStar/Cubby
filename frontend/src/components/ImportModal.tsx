@@ -21,7 +21,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
     setStatus('importing')
     setError(null)
     try {
-      const data = await api.importBookmarks(file) as unknown as ImportResult
+      const data = await api.importBookmarks(file)
       setResult(data)
       setStatus('done')
     } catch (e) {

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cubby/internal/lexorank"
 	"cubby/internal/repository"
 	"fmt"
 	"html"
@@ -69,7 +70,7 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 
 			sk := scopeKey(parentID)
 			lastKey := nextFolderSortKey[sk]
-			sortKey := after(lastKey)
+			sortKey := lexorank.After(lastKey)
 			nextFolderSortKey[sk] = sortKey
 
 			folder, err := s.folderRepo.Create(name, parentID, sortKey)
@@ -106,7 +107,7 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 
 			sk := scopeKey(folderID)
 			lastKey := nextBookmarkSortKey[sk]
-			sortKey := after(lastKey)
+			sortKey := lexorank.After(lastKey)
 			nextBookmarkSortKey[sk] = sortKey
 
 			icon := sanitizeBookmarkIcon(html.UnescapeString(attrs["icon"]))

@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import type { Folder } from '../types'
-import { api, ConflictError } from '../services/api'
+import { api } from '../services/api'
 import { computeSortKeyFromNeighbors } from '../lib/sortKeys'
+import { buildVisibleNodes, getAncestorChain, rebuildChildrenMapAfterMove } from '../lib/folderTree'
+import { showMoveError } from '../lib/errorHandler'
 import { useToastStore } from './toastStore'
 
 interface FolderState {
@@ -78,15 +80,7 @@ export const useFolderStore = create<FolderState>((set, get) => ({
     if (id) {
       const { folderMap, expandedIds, childrenMap } = get()
       const newExpanded = new Set(expandedIds)
-      // Trace parent chain and expand each ancestor
-      let current: string | null = id
-      const ancestors: string[] = []
-      while (current) {
-        const f = folderMap.get(current)
-        if (!f || !f.parent_id) break
-        ancestors.push(f.parent_id)
-        current = f.parent_id
-      }
+      const ancestors = getAncestorChain(folderMap, id)
       // Load children for each ancestor if not loaded
       for (const ancestorId of ancestors) {
         if (!childrenMap.has(ancestorId)) {
@@ -107,21 +101,7 @@ export const useFolderStore = create<FolderState>((set, get) => ({
 
   rebuildVisible: () => {
     const { folderMap, childrenMap, expandedIds } = get()
-    const result: { node: Folder; depth: number }[] = []
-
-    function walk(parentId: string | null, depth: number) {
-      const children = childrenMap.get(parentId) || []
-      for (const id of children) {
-        const node = folderMap.get(id)
-        if (!node) continue
-        result.push({ node, depth })
-        if (expandedIds.has(id)) {
-          walk(id, depth + 1)
-        }
-      }
-    }
-    walk(null, 0)
-    set({ visibleNodes: result })
+    set({ visibleNodes: buildVisibleNodes(folderMap, childrenMap, expandedIds) })
   },
 
   create: async (name, parentId) => {
@@ -205,25 +185,9 @@ export const useFolderStore = create<FolderState>((set, get) => ({
     if (folder && optimisticSortKey) {
       set((state) => {
         const folderMap = new Map(state.folderMap)
-        const childrenMap = new Map(state.childrenMap)
+        const childrenMap = rebuildChildrenMapAfterMove(state.childrenMap, id, oldParentId, newParentId, prevId, nextId)
         const movedFolder = { ...folder, parent_id: newParentId, sort_key: optimisticSortKey, version }
         folderMap.set(id, movedFolder)
-
-        if (childrenMap.has(oldParentId)) {
-          childrenMap.set(oldParentId, (childrenMap.get(oldParentId) ?? []).filter((childId) => childId !== id))
-        }
-        if (childrenMap.has(newParentId)) {
-          const siblings = (childrenMap.get(newParentId) ?? []).filter((childId) => childId !== id)
-          let insertAt = siblings.length
-          if (prevId && siblings.includes(prevId)) {
-            insertAt = siblings.indexOf(prevId) + 1
-          } else if (nextId && siblings.includes(nextId)) {
-            insertAt = siblings.indexOf(nextId)
-          }
-          const nextSiblings = [...siblings]
-          nextSiblings.splice(insertAt, 0, id)
-          childrenMap.set(newParentId, nextSiblings)
-        }
 
         if (oldParentId !== null) {
           const oldParent = folderMap.get(oldParentId)
@@ -259,11 +223,7 @@ export const useFolderStore = create<FolderState>((set, get) => ({
       get().rebuildVisible()
     } catch (e) {
       set(snapshot)
-      useToastStore.getState().show({
-        message: e instanceof ConflictError
-          ? e.message
-          : '移动失败，请重试',
-      })
+      showMoveError(e)
       throw e
     }
   },

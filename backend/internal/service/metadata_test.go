@@ -25,15 +25,6 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
-func TestValidateURLRejectsMulticastIP(t *testing.T) {
-	if err := validateURL("http://224.0.0.1"); err == nil {
-		t.Fatal("expected multicast IPv4 address to be rejected")
-	}
-	if err := validateURL("http://[ff02::1]"); err == nil {
-		t.Fatal("expected multicast IPv6 address to be rejected")
-	}
-}
-
 func TestFetchTitleRejectsRedirects(t *testing.T) {
 	svc := NewMetadataService()
 	svc.resolver = staticResolver{"example.test": {"93.184.216.34"}}

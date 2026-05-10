@@ -7,6 +7,7 @@ import BatchActionBar from './BatchActionBar'
 import ContextMenu from './ContextMenu'
 import DropIndicator from './DropIndicator'
 import { useBookmarkStore } from '../stores/bookmarkStore'
+import { useSelectionStore } from '../stores/selectionStore'
 import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -31,7 +32,8 @@ import SearchResults from './SearchResults'
 import NotesPanel from './NotesPanel'
 
 export default function MainLayout() {
-  const { bookmarks, load, selectAll, selectedFolderIds, toggleFolderSelect, loading } = useBookmarkStore()
+  const { bookmarks, load, loading } = useBookmarkStore()
+  const { selectAll, selectedFolderIds, toggleFolderSelect } = useSelectionStore()
   const { selectedId, childrenMap, folderMap, select } = useFolderStore()
   const { activeItem, activeId } = useDndStore()
   const { query: searchQuery, results: searchResults } = useSearchStore()
@@ -54,7 +56,7 @@ export default function MainLayout() {
         const tag = (e.target as HTMLElement)?.tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA') return
         e.preventDefault()
-        selectAll(subFolderIds)
+        selectAll(bookmarks, subFolderIds)
       }
     }
     window.addEventListener('keydown', handler)

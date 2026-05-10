@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useBookmarkStore } from '../stores/bookmarkStore'
+import { useSelectionStore } from '../stores/selectionStore'
 
 export default function BatchActionBar() {
-  const { selectedIds, selectedFolderIds, clearSelection, deleteSelected } = useBookmarkStore()
+  const { selectedIds, selectedFolderIds, clearSelection } = useSelectionStore()
+  const { deleteSelected } = useBookmarkStore()
   const [deleting, setDeleting] = useState(false)
   const count = selectedIds.size + selectedFolderIds.size
   if (count === 0) return null

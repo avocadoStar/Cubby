@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"cubby/internal/lexorank"
 	"cubby/internal/repository"
 )
 
@@ -77,9 +78,9 @@ func (s *SortKeyService) computeTailKey(parentID *string, excludeID string, pend
 		return "", err
 	}
 	if len(siblingKeys) == 0 {
-		return after(""), nil
+		return lexorank.After(""), nil
 	}
-	sortKey := after(siblingKeys[len(siblingKeys)-1])
+	sortKey := lexorank.After(siblingKeys[len(siblingKeys)-1])
 	if sortKey != "" {
 		return sortKey, nil
 	}
@@ -91,9 +92,9 @@ func (s *SortKeyService) computeTailKey(parentID *string, excludeID string, pend
 		return "", err
 	}
 	if len(siblingKeys) == 0 {
-		return after(""), nil
+		return lexorank.After(""), nil
 	}
-	sortKey = after(siblingKeys[len(siblingKeys)-1])
+	sortKey = lexorank.After(siblingKeys[len(siblingKeys)-1])
 	if sortKey == "" {
 		return "", fmt.Errorf("could not generate tail sort key after rebalance")
 	}
@@ -105,7 +106,7 @@ func (s *SortKeyService) computeHeadKey(parentID, nextID *string, excludeID stri
 	if err != nil {
 		return "", err
 	}
-	sortKey := before(nextKey)
+	sortKey := lexorank.Before(nextKey)
 	if sortKey != "" && sortKey < nextKey {
 		return sortKey, nil
 	}
@@ -116,7 +117,7 @@ func (s *SortKeyService) computeHeadKey(parentID, nextID *string, excludeID stri
 	if err != nil {
 		return "", err
 	}
-	sortKey = before(nextKey)
+	sortKey = lexorank.Before(nextKey)
 	if sortKey == "" || sortKey >= nextKey {
 		return "", fmt.Errorf("could not generate head sort key after rebalance")
 	}
@@ -128,7 +129,7 @@ func (s *SortKeyService) computeTailAfterKey(parentID, prevID *string, excludeID
 	if err != nil {
 		return "", err
 	}
-	sortKey := after(prevKey)
+	sortKey := lexorank.After(prevKey)
 	if sortKey != "" && sortKey > prevKey {
 		return sortKey, nil
 	}
@@ -139,7 +140,7 @@ func (s *SortKeyService) computeTailAfterKey(parentID, prevID *string, excludeID
 	if err != nil {
 		return "", err
 	}
-	sortKey = after(prevKey)
+	sortKey = lexorank.After(prevKey)
 	if sortKey == "" || sortKey <= prevKey {
 		return "", fmt.Errorf("could not generate tail sort key after rebalance")
 	}
@@ -156,7 +157,7 @@ func (s *SortKeyService) computeBetweenKey(parentID, prevID, nextID *string, exc
 		return "", err
 	}
 
-	if needsRebalance(prevKey, nextKey) {
+	if lexorank.NeedsRebalance(prevKey, nextKey) {
 		if err := s.rebalanceSiblings(parentID, excludeID); err != nil {
 			return "", fmt.Errorf("rebalance failed: %w", err)
 		}
@@ -169,7 +170,7 @@ func (s *SortKeyService) computeBetweenKey(parentID, prevID, nextID *string, exc
 			return "", err
 		}
 	}
-	sortKey := between(prevKey, nextKey)
+	sortKey := lexorank.Between(prevKey, nextKey)
 	if sortKey == "" || sortKey <= prevKey || sortKey >= nextKey {
 		return "", fmt.Errorf("could not generate between key for %q and %q", prevKey, nextKey)
 	}
@@ -268,7 +269,7 @@ func (s *SortKeyService) rebalanceSiblings(parentID *string, excludeID string) e
 	if len(siblings) == 0 {
 		return nil
 	}
-	keys := rebalanceKeys(len(siblings))
+	keys := lexorank.RebalanceKeys(len(siblings))
 	folderUpdates := make([]repository.SortKeyUpdate, 0)
 	bookmarkUpdates := make([]repository.SortKeyUpdate, 0)
 	for i, sibling := range siblings {

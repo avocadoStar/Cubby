@@ -2,18 +2,13 @@ package service
 
 import (
 	"errors"
-	"regexp"
-	"strings"
 
+	"cubby/internal/lexorank"
 	"cubby/internal/model"
 	"cubby/internal/repository"
 )
 
-const maxBookmarkIconLength = 128 * 1024
-
 var ErrBookmarkExists = errors.New("bookmark already exists")
-
-var bookmarkIconRe = regexp.MustCompile(`^data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/]+={0,2}$`)
 
 type BookmarkService struct {
 	repo    repository.BookmarkRepo
@@ -50,7 +45,7 @@ func (s *BookmarkService) Create(title, url string, folderID *string, icon ...st
 		if err == nil {
 			return b, nil
 		}
-		sortKey = after(sortKey)
+		sortKey = lexorank.After(sortKey)
 	}
 	return nil, ErrConflict
 }
@@ -81,12 +76,4 @@ func (s *BookmarkService) UpdateNotes(id, notes string) error {
 
 func (s *BookmarkService) BatchDelete(ids []string) error {
 	return s.repo.BatchSoftDelete(ids)
-}
-
-func sanitizeBookmarkIcon(icon string) string {
-	icon = strings.TrimSpace(icon)
-	if icon == "" || len(icon) > maxBookmarkIconLength || !bookmarkIconRe.MatchString(icon) {
-		return ""
-	}
-	return icon
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"cubby/internal/lexorank"
 	"cubby/internal/model"
 	"cubby/internal/repository"
 )
@@ -34,7 +35,7 @@ func (s *FolderService) Create(name string, parentID *string) (*model.Folder, er
 		if err == nil {
 			return f, nil
 		}
-		sortKey = after(sortKey)
+		sortKey = lexorank.After(sortKey)
 	}
 	return nil, fmt.Errorf("failed to create folder after retries")
 }
@@ -110,7 +111,7 @@ func (s *FolderService) rebalanceChildren(parentID *string, excludeID string) er
 		return nil
 	}
 
-	keys := rebalanceKeys(len(filtered))
+	keys := lexorank.RebalanceKeys(len(filtered))
 	updates := make([]repository.SortKeyUpdate, len(filtered))
 	for i, child := range filtered {
 		updates[i] = repository.SortKeyUpdate{ID: child.ID, SortKey: keys[i]}

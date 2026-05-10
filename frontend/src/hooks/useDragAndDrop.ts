@@ -7,12 +7,13 @@ import {
   type DragMoveEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { POINTER_SENSOR_CONFIG, calcDropPosition, computePlacement, getUnifiedSiblings, normalizeOverId, type UnifiedSortableItem } from '../lib/dndUtils'
-import { computeSortKeyFromNeighbors } from '../lib/sortKeys'
+import { POINTER_SENSOR_CONFIG, calcDropPosition, type UnifiedSortableItem } from '../lib/dndUtils'
 import { useDndStore } from '../stores/dndStore'
 import { useFolderStore } from '../stores/folderStore'
 import { useBookmarkStore } from '../stores/bookmarkStore'
-import type { BatchMoveItem, Folder, Bookmark } from '../types'
+import { useSelectionStore } from '../stores/selectionStore'
+import type { Folder, Bookmark } from '../types'
+import { computeSingleFolderDrop, computeSingleBookmarkDrop, computeMultiDragDrop, type DropContext, type DragState } from '../lib/dragPlacement'
 
 type ListItem =
   | { kind: 'folder'; folder: Folder }
@@ -62,7 +63,7 @@ export function useDragAndDrop(
       return
     }
 
-    const { selectedIds, selectedFolderIds } = useBookmarkStore.getState()
+    const { selectedIds, selectedFolderIds } = useSelectionStore.getState()
     const item = items.find(i =>
       i.kind === 'folder' ? i.folder.id === id : i.bookmark.id === id
     )
@@ -143,154 +144,47 @@ export function useDragAndDrop(
     })()
     if (!draggedItem) { clearDrag(); return }
 
-    const isDraggedFolder = draggedItem.kind === 'folder'
-    const targetId = normalizeOverId(overId)
-
-    const targetItem: ListItem | undefined = items.find(i =>
-      i.kind === 'folder' ? i.folder.id === targetId : i.bookmark.id === targetId
-    ) ?? (useFolderStore.getState().folderMap.has(targetId)
-      ? { kind: 'folder' as const, folder: useFolderStore.getState().folderMap.get(targetId)! }
-      : (useBookmarkStore.getState().bookmarks.some(b => b.id === targetId)
-        ? { kind: 'bookmark' as const, bookmark: useBookmarkStore.getState().bookmarks.find(b => b.id === targetId)! }
-        : undefined))
-
     const folderStore = useFolderStore.getState()
     const bookmarkStore = useBookmarkStore.getState()
-    const currentChildrenMap = folderStore.childrenMap
-    const currentBookmarks = bookmarkStore.bookmarks
-    const multiDragIds = multiDragRef.current.length > 1 ? [...multiDragRef.current] : null
-    const persistTasks: Promise<void>[] = []
-    const localSortKeys = new Map<string, string>()
-    folderStore.folderMap.forEach((folder, id) => localSortKeys.set(id, folder.sort_key))
-    currentBookmarks.forEach((bookmark) => localSortKeys.set(bookmark.id, bookmark.sort_key))
-
-    const fallbackItemsForParent = (pid: string | null): UnifiedSortableItem[] => [
-      ...((currentChildrenMap.get(pid) ?? [])
-        .map((id) => folderStore.folderMap.get(id))
-        .filter((f): f is Folder => Boolean(f))
-        .map((f) => ({ id: f.id, parentId: f.parent_id, sortKey: f.sort_key }))),
-      ...currentBookmarks
-        .filter((b) => b.folder_id === pid)
-        .map((b) => ({ id: b.id, parentId: b.folder_id, sortKey: b.sort_key })),
-    ]
-
-    const siblingsOf = (pid: string | null) =>
-      getUnifiedSiblings(renderedItems, fallbackItemsForParent(pid), pid, itemDragId)
-
-    const siblingsExcluding = (pid: string | null, excludeIds: Set<string>) =>
-      getUnifiedSiblings(renderedItems, fallbackItemsForParent(pid), pid, '')
-        .filter((sid) => !excludeIds.has(sid))
-
-    const getSortKey = (id: string | null) => id ? localSortKeys.get(id) ?? '' : ''
-    const moveSortKey = (prevId: string | null, nextId: string | null) =>
-      computeSortKeyFromNeighbors(getSortKey(prevId), getSortKey(nextId))
-
-    const destParentId = () => {
-      if (!targetItem) return selectedId
-      if (targetItem.kind === 'folder') {
-        return dropPosition === 'inside' ? targetItem.folder.id : targetItem.folder.parent_id
-      }
-      return targetItem.bookmark.folder_id
+    const { selectedIds, selectedFolderIds } = useSelectionStore.getState()
+    const ctx: DropContext = {
+      items,
+      renderedItems,
+      selectedId,
+      folderMap: folderStore.folderMap,
+      bookmarks: bookmarkStore.bookmarks,
+      childrenMap: folderStore.childrenMap,
+      selectedIds,
+      selectedFolderIds,
+    }
+    const dragState: DragState = {
+      activeId: itemDragId,
+      activeItem: dragItem,
+      overId,
+      dropPosition,
     }
 
+    const persistTasks: Promise<void>[] = []
+    const multiDragIds = multiDragRef.current.length > 1 ? [...multiDragRef.current] : null
+
     if (multiDragIds) {
-      const dp = destParentId()
-      const selectedFolderIds = new Set(multiDragIds.filter((sid) => !sid.startsWith('bookmark:')))
-      const hasSelectedAncestor = (folderId: string) => {
-        let current = folderStore.folderMap.get(folderId)?.parent_id ?? null
-        while (current) {
-          if (selectedFolderIds.has(current)) return true
-          current = folderStore.folderMap.get(current)?.parent_id ?? null
-        }
-        return false
-      }
-      const effectiveDragIds = multiDragIds.filter((sid) => {
-        if (sid.startsWith('bookmark:')) return true
-        return !hasSelectedAncestor(sid)
-      })
-      const draggedIds = new Set(effectiveDragIds.map(sid => sid.startsWith('bookmark:') ? sid.slice('bookmark:'.length) : sid))
-      const siblings = siblingsExcluding(dp, draggedIds)
-
-      let insertIdx = siblings.length
-      if (targetItem && !(targetItem.kind === 'folder' && dropPosition === 'inside')) {
-        const tid = targetItem.kind === 'folder' ? targetItem.folder.id : targetItem.bookmark.id
-        const ti = siblings.indexOf(tid)
-        insertIdx = ti === -1 ? siblings.length : dropPosition === 'before' ? ti : ti + 1
-      }
-
-      let { prevId, nextId } = computePlacement(siblings, insertIdx)
-      if (prevId && nextId && getSortKey(prevId) === getSortKey(nextId)) nextId = null
-
-      const batchItems: BatchMoveItem[] = []
-      for (const selId of effectiveDragIds) {
-        const strippedId = selId.startsWith('bookmark:') ? selId.slice('bookmark:'.length) : selId
-        const sortKey = moveSortKey(prevId, nextId)
-        if (selId.startsWith('bookmark:')) {
-          const bookmark = currentBookmarks.find((bk) => bk.id === strippedId)
-          if (bookmark) {
-            batchItems.push({ kind: 'bookmark', id: strippedId, parent_id: dp, prev_id: prevId, next_id: nextId, optimistic_sort_key: sortKey, version: bookmark.version })
-          }
-        } else {
-          const folder = folderStore.folderMap.get(strippedId)
-          if (folder) {
-            batchItems.push({ kind: 'folder', id: strippedId, parent_id: dp, prev_id: prevId, next_id: nextId, optimistic_sort_key: sortKey, version: folder.version })
-          }
-        }
-        if (sortKey) localSortKeys.set(strippedId, sortKey)
-        prevId = strippedId
-      }
-      if (batchItems.length > 0) {
-        persistTasks.push(useBookmarkStore.getState().batchMove(batchItems))
+      const result = computeMultiDragDrop(multiDragIds, dragState, ctx)
+      if (result && result.batchItems.length > 0) {
+        persistTasks.push(useBookmarkStore.getState().batchMove(result.batchItems))
       }
       useBookmarkStore.getState().clearSelection()
-    } else if (isDraggedFolder) {
-      const draggedFolder = draggedItem.folder
-      let newParentId: string | null
-      let prevId: string | null
-      let nextId: string | null
-      if (!targetItem) {
-        newParentId = selectedId; const s = siblingsOf(selectedId); ({ prevId, nextId } = computePlacement(s, s.length))
-      } else if (targetItem.kind === 'folder' && dropPosition === 'inside') {
-        newParentId = targetItem.folder.id; const s = siblingsOf(newParentId); ({ prevId, nextId } = computePlacement(s, s.length))
-      } else if (targetItem.kind === 'bookmark') {
-        newParentId = targetItem.bookmark.folder_id; const s = siblingsOf(newParentId)
-        const ti = s.indexOf(targetItem.bookmark.id)
-        const ii = ti === -1 ? s.length : dropPosition === 'before' ? ti : ti + 1
-        ;({ prevId, nextId } = computePlacement(s, ii))
-      } else {
-        newParentId = targetItem.folder.parent_id; const s = siblingsOf(newParentId)
-        const ti = s.indexOf(targetItem.folder.id)
-        const ii = ti === -1 ? s.length : dropPosition === 'before' ? ti : ti + 1
-        ;({ prevId, nextId } = computePlacement(s, ii))
+      useSelectionStore.getState().clearSelection()
+    } else if (draggedItem.kind === 'folder') {
+      const result = computeSingleFolderDrop(dragState, ctx)
+      if (result) {
+        persistTasks.push(folderStore.moveFolder(itemDragId, result.newParentId, result.prevId, result.nextId, dragItem.version, (result as any).sortKey || undefined))
       }
-      const sortKey = moveSortKey(prevId, nextId)
-      persistTasks.push(folderStore.moveFolder(itemDragId, newParentId, prevId, nextId, draggedFolder.version, sortKey || undefined))
     } else {
-      const draggedBookmark = currentBookmarks.find((b) => b.id === itemDragId) ?? draggedItem.bookmark
-      let newFolderId: string | null = selectedId
-      let prevId: string | null
-      let nextId: string | null
-
-      if (!targetItem) {
-        const s = siblingsOf(selectedId); ({ prevId, nextId } = computePlacement(s, s.length))
-      } else if (targetItem.kind === 'folder') {
-        if (dropPosition === 'inside') {
-          newFolderId = targetItem.folder.id; const s = siblingsOf(newFolderId); ({ prevId, nextId } = computePlacement(s, s.length))
-        } else {
-          newFolderId = targetItem.folder.parent_id; const s = siblingsOf(newFolderId)
-          const ti = s.indexOf(targetItem.folder.id)
-          const ii = ti === -1 ? s.length : dropPosition === 'before' ? ti : ti + 1
-          ;({ prevId, nextId } = computePlacement(s, ii))
-          if (prevId && nextId && getSortKey(prevId) === getSortKey(nextId)) nextId = null
-        }
-      } else {
-        newFolderId = targetItem.bookmark.folder_id; const s = siblingsOf(newFolderId)
-        const ti = s.indexOf(targetItem.bookmark.id)
-        const ii = dropPosition === 'before' ? (ti === -1 ? s.length : ti) : (ti === -1 ? s.length : ti + 1)
-        ;({ prevId, nextId } = computePlacement(s, ii))
+      const result = computeSingleBookmarkDrop(dragState, ctx)
+      if (result) {
+        const draggedBookmark = bookmarkStore.bookmarks.find(b => b.id === itemDragId) ?? draggedItem.bookmark
+        persistTasks.push(bookmarkStore.move(itemDragId, result.newFolderId, result.prevId, result.nextId, draggedBookmark.version, result.sortKey || undefined))
       }
-      const sortKey = moveSortKey(prevId, nextId)
-      persistTasks.push(bookmarkStore.move(itemDragId, newFolderId, prevId, nextId, draggedBookmark.version, sortKey || undefined))
     }
 
     multiDragRef.current = []

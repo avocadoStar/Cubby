@@ -41,17 +41,17 @@ func (h *FolderHandler) Create(c *gin.Context) {
 		ParentID *string `json:"parent_id"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		badRequest(c, "invalid request")
 		return
 	}
 	if req.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name required"})
+		badRequest(c, "name required")
 		return
 	}
 
 	req.Name = strings.TrimSpace(req.Name)
 	if len(req.Name) > maxNameLength {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name exceeds maximum length of 200 characters"})
+		badRequest(c, "name exceeds maximum length of 200 characters")
 		return
 	}
 
@@ -69,23 +69,23 @@ func (h *FolderHandler) Update(c *gin.Context) {
 		Version int    `json:"version"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		badRequest(c, "invalid request")
 		return
 	}
 	if req.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name required"})
+		badRequest(c, "name required")
 		return
 	}
 
 	req.Name = strings.TrimSpace(req.Name)
 	if len(req.Name) > maxNameLength {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "name exceeds maximum length of 200 characters"})
+		badRequest(c, "name exceeds maximum length of 200 characters")
 		return
 	}
 
 	f, err := h.svc.Update(c.Param("id"), req.Name, req.Version)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "conflict"})
+		conflictError(c, "conflict")
 		return
 	}
 	c.JSON(http.StatusOK, f)
@@ -113,7 +113,7 @@ func (h *FolderHandler) BatchDelete(c *gin.Context) {
 		IDs []string `json:"ids"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		badRequest(c, "invalid request")
 		return
 	}
 	if err := h.svc.BatchDelete(req.IDs); err != nil {
@@ -132,12 +132,12 @@ func (h *FolderHandler) Move(c *gin.Context) {
 		Version  int     `json:"version"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		badRequest(c, "invalid request")
 		return
 	}
 	f, err := h.svc.Move(req.ID, req.ParentID, req.PrevID, req.NextID, nil, req.Version)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		conflictError(c, err.Error())
 		return
 	}
 	c.JSON(http.StatusOK, f)

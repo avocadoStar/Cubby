@@ -1,6 +1,7 @@
 import { memo, useState } from 'react'
 import type { Bookmark } from '../types'
 import { useBookmarkStore } from '../stores/bookmarkStore'
+import { useSelectionStore } from '../stores/selectionStore'
 import { useDndStore } from '../stores/dndStore'
 import { useDraggable } from '@dnd-kit/core'
 
@@ -10,9 +11,9 @@ function openExternalURL(url: string) {
 }
 
 const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpenNotes?: () => void }) => {
-  const isSelected = useBookmarkStore(s => s.selectedIds.has(bookmark.id))
+  const isSelected = useSelectionStore(s => s.selectedIds.has(bookmark.id))
   const isDeleting = useBookmarkStore(s => s.deletingIds.has(bookmark.id))
-  const toggleSelect = useBookmarkStore(s => s.toggleSelect)
+  const toggleSelect = useSelectionStore(s => s.toggleSelect)
   const deleteOne = useBookmarkStore(s => s.deleteOne)
   const [hovered, setHovered] = useState(false)
 
