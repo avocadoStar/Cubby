@@ -21,6 +21,8 @@ import {
 import { pointerClosestCenter, type UnifiedSortableItem } from '../lib/dndUtils'
 import type { Folder, Bookmark } from '../types'
 import { useDragAndDrop } from '../hooks/useDragAndDrop'
+import { useIsMobile } from '../hooks/useIsMobile'
+import MobileLayout from './mobile/MobileLayout'
 
 export type ListItem =
   | { kind: 'folder'; folder: Folder }
@@ -32,6 +34,7 @@ import SearchResults from './SearchResults'
 import NotesPanel from './NotesPanel'
 
 export default function MainLayout() {
+  const isMobile = useIsMobile()
   const { bookmarks, load, loading } = useBookmarkStore()
   const { selectAll, selectedFolderIds, toggleFolderSelect } = useSelectionStore()
   const { selectedId, childrenMap, folderMap, select } = useFolderStore()
@@ -39,6 +42,9 @@ export default function MainLayout() {
   const { query: searchQuery, results: searchResults } = useSearchStore()
   const isSearching = searchQuery !== ''
   const [notesBookmarkId, setNotesBookmarkId] = useState<string | null>(null)
+
+  // Mobile branch — render completely separate layout
+  if (isMobile) return <MobileLayout />
 
   const scrollRef = useRef<HTMLDivElement>(null)
 

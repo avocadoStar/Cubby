@@ -117,7 +117,7 @@ export default function LoginPage() {
       <LoginSunnyBackground />
       <form
         onSubmit={handleSubmit}
-        className="relative z-10 flex w-80 flex-col gap-4 p-8"
+        className="relative z-10 flex w-80 max-w-full flex-col gap-4 p-8 max-sm:mx-4 max-sm:p-6"
         style={{
           background: 'rgba(250, 247, 241, 0.88)',
           border: '1px solid rgba(216, 213, 207, 0.92)',

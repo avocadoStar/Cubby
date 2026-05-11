@@ -60,7 +60,7 @@ export default function SearchResults({ query, results }: SearchResultsProps) {
                 ))}
               </span>
               {r.kind === 'bookmark' && r.url && (
-                <span className="flex-shrink-0 truncate text-xs ml-4" style={{ maxWidth: 320, color: 'var(--app-text2)' }}>
+                <span className="shrink truncate text-xs ml-4" style={{ maxWidth: 200, color: 'var(--app-text2)' }}>
                   {highlightMatches(r.url, query).map((seg, i) => (
                     <span key={i} style={seg.highlight ? { background: 'var(--search-highlight)', borderRadius: 2, padding: '0 1px' } : undefined}>
                       {seg.text}
