@@ -104,6 +104,7 @@ func main() {
 
 	// Serve frontend static files in production
 	r.Static("/assets", "./cmd/server/static/assets")
+	r.Static("/theme", "./cmd/server/static/theme")
 	r.StaticFile("/favicon.svg", "./cmd/server/static/favicon.svg")
 	r.NoRoute(func(c *gin.Context) {
 		if strings.HasPrefix(c.Request.URL.Path, "/api/") {

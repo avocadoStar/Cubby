@@ -86,7 +86,7 @@ npm run dev
 
 ```bash
 make build
-./cubby-server
+cd backend && nohup ../cubby-server > ../cubby.log 2>&1 &
 ```
 
 浏览器打开 `http://localhost:8080`。
@@ -105,8 +105,8 @@ cd ../frontend && npm install && npm run build
 mkdir -p ../backend/cmd/server/static
 cp -r dist/* ../backend/cmd/server/static/
 
-# 启动
-cd .. && ./cubby-server
+# 后台启动（需从 backend 目录启动，静态文件路径为相对路径）
+cd ../backend && nohup ../cubby-server > ../cubby.log 2>&1 &
 ```
 
 </details>
