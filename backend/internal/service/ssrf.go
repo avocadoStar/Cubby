@@ -1,13 +1,12 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"net/url"
 )
 
-var errURLNotAllowed = errors.New("URL not allowed")
+var errURLNotAllowed = NewValidationError("url not allowed")
 
 type ipResolver interface {
 	LookupIP(host string) ([]net.IP, error)

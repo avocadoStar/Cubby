@@ -10,6 +10,7 @@ import { api, ConflictError } from '../services/api'
 import CreateFolderModal from './CreateFolderModal'
 import FontSizePopover from './FontSizePopover'
 import ModalBase from './ModalBase'
+import { shouldFetchMetadata } from '../lib/metadata'
 
 export default function Toolbar() {
   const { selectedId } = useFolderStore()
@@ -40,12 +41,16 @@ export default function Toolbar() {
 
   // Auto-fetch title when URL changes
   useEffect(() => {
-    if (!url.trim() || !/^https?:\/\//i.test(url.trim())) return
+    const trimmedUrl = url.trim()
+    if (!shouldFetchMetadata(trimmedUrl)) {
+      setFetchingTitle(false)
+      return
+    }
     clearTimeout(urlTimer.current)
     urlTimer.current = setTimeout(async () => {
       setFetchingTitle(true)
       try {
-        const meta = await api.fetchMetadata(url.trim())
+        const meta = await api.fetchMetadata(trimmedUrl)
         setTitle(prev => prev ? prev : meta.title)
         setIcon(meta.icon ?? '')
       } catch { /* ignore fetch errors */ }

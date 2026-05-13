@@ -3,6 +3,7 @@
 .superpowers/
 node_modules/
 *.db
+*.db-journal
 .env
 cubby-server
 backend/cmd/server/static/

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ModalBase from '../ModalBase'
 import { useFolderStore } from '../../stores/folderStore'
 import { useBookmarkStore } from '../../stores/bookmarkStore'
@@ -8,6 +8,7 @@ import { api, ConflictError } from '../../services/api'
 import CreateFolderModal from '../CreateFolderModal'
 import ImportModal from '../ImportModal'
 import MobileActionMenu from './MobileActionMenu'
+import { shouldFetchMetadata } from '../../lib/metadata'
 
 export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { selectedId } = useFolderStore()
@@ -32,30 +33,42 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
   }
 
   const handleUrlChange = (value: string) => {
-    setIcon(''); setDuplicateUrlError(''); setUrl(value)
-    if (value && !/^https?:\/\//i.test(value) && value.includes('.')) {
-      setUrl('https://' + value)
-    }
+    setIcon('')
+    setDuplicateUrlError('')
+    const normalized = value && !/^https?:\/\//i.test(value) && value.includes('.')
+      ? 'https://' + value
+      : value
+    setUrl(normalized)
   }
 
-  // Auto-fetch title
-  const prevUrlRef = useRef('')
-  if (url !== prevUrlRef.current) {
-    prevUrlRef.current = url
-    if (url.trim() && /^https?:\/\//i.test(url.trim())) {
-      clearTimeout(urlTimer.current)
-      const currentUrl = url
-      urlTimer.current = setTimeout(async () => {
-        setFetchingTitle(true)
-        try {
-          const meta = await api.fetchMetadata(currentUrl.trim())
-          setTitle(prev => prev ? prev : meta.title)
-          setIcon(meta.icon ?? '')
-        } catch { /* ignore */ }
-        setFetchingTitle(false)
-      }, 600)
+  useEffect(() => {
+    const trimmedUrl = url.trim()
+    clearTimeout(urlTimer.current)
+    if (!shouldFetchMetadata(trimmedUrl)) {
+      setFetchingTitle(false)
+      return
     }
-  }
+
+    let cancelled = false
+    urlTimer.current = setTimeout(async () => {
+      setFetchingTitle(true)
+      try {
+        const meta = await api.fetchMetadata(trimmedUrl)
+        if (cancelled) return
+        setTitle(prev => prev ? prev : meta.title)
+        setIcon(meta.icon ?? '')
+      } catch {
+        // Metadata is optional; users can still add the bookmark manually.
+      } finally {
+        if (!cancelled) setFetchingTitle(false)
+      }
+    }, 600)
+
+    return () => {
+      cancelled = true
+      clearTimeout(urlTimer.current)
+    }
+  }, [url])
 
   const handleAddBookmark = async () => {
     if (!title.trim() || !url.trim()) return
