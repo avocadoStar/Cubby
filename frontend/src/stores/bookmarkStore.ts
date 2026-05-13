@@ -17,6 +17,7 @@ interface BookmarkState {
   load: (folderId?: string | null) => Promise<void>
   deleteSelected: () => Promise<void>
   deleteOne: (id: string) => void
+  updateNotes: (id: string, notes: string) => Promise<void>
   move: (id: string, folderId: string | null, prevId: string | null, nextId: string | null, version: number, sortKey?: string) => Promise<void>
   batchMove: (items: BatchMoveItem[]) => Promise<void>
 }
@@ -131,6 +132,27 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       // API failed — re-add bookmark
       finishUndo()
     })
+  },
+
+  updateNotes: async (id, notes) => {
+    const previous = get().bookmarks.find((b) => b.id === id)?.notes
+    set((state) => ({
+      bookmarks: state.bookmarks.map((bookmark) => (
+        bookmark.id === id ? { ...bookmark, notes } : bookmark
+      )),
+    }))
+    try {
+      await api.updateNotes(id, notes)
+    } catch (e) {
+      if (previous !== undefined) {
+        set((state) => ({
+          bookmarks: state.bookmarks.map((bookmark) => (
+            bookmark.id === id ? { ...bookmark, notes: previous } : bookmark
+          )),
+        }))
+      }
+      throw e
+    }
   },
 
   move: async (id, folderId, prevId, nextId, version, sortKey) => {

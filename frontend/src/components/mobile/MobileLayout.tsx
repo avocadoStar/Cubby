@@ -25,7 +25,7 @@ export default function MobileLayout() {
 
   return (
     <div style={{
-      position: 'relative', width: '100%', minHeight: '100dvh',
+      position: 'relative', width: '100%', height: '100dvh', overflow: 'hidden',
       display: 'flex', flexDirection: 'column',
       background: 'var(--app-bg)',
     }}>

@@ -13,6 +13,7 @@ vi.mock('../services/api', () => ({
     batchDeleteFolders: vi.fn(),
     batchMove: vi.fn(),
     moveBookmark: vi.fn(),
+    updateNotes: vi.fn(),
   },
   ConflictError: class extends Error {
     constructor(msg = 'conflict') { super(msg) }
@@ -106,6 +107,20 @@ describe('bookmarkStore', () => {
 
       await useBookmarkStore.getState().load(null)
       expect(useBookmarkStore.getState().loading).toBe(true)
+    })
+  })
+
+  describe('updateNotes', () => {
+    it('persists notes and updates the local bookmark', async () => {
+      useBookmarkStore.setState({
+        bookmarks: [makeBookmark({ id: 'b1', notes: '' })],
+      })
+      vi.mocked(api.updateNotes).mockResolvedValue(undefined)
+
+      await useBookmarkStore.getState().updateNotes('b1', 'mobile note')
+
+      expect(api.updateNotes).toHaveBeenCalledWith('b1', 'mobile note')
+      expect(useBookmarkStore.getState().bookmarks[0].notes).toBe('mobile note')
     })
   })
 })

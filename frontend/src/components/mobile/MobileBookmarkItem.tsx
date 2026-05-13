@@ -73,6 +73,24 @@ export default function MobileBookmarkItem({ bookmark, onOpenNotes, onDelete }: 
     e.preventDefault()
   }, [offset])
 
+  const closeSwipe = useCallback(() => {
+    setSnapping(true)
+    setOffset(0)
+    offsetRef.current = 0
+    swipingRef.current = false
+    directionRef.current = null
+  }, [])
+
+  const handleOpenNotes = useCallback(() => {
+    closeSwipe()
+    onOpenNotes()
+  }, [closeSwipe, onOpenNotes])
+
+  const handleDelete = useCallback(() => {
+    closeSwipe()
+    onDelete()
+  }, [closeSwipe, onDelete])
+
   return (
     <div style={{ position: 'relative', overflow: 'hidden', background: 'var(--app-card)', borderBottom: '1px solid var(--divider-color)' }}>
       {/* Action buttons */}
@@ -80,7 +98,7 @@ export default function MobileBookmarkItem({ bookmark, onOpenNotes, onDelete }: 
         position: 'absolute', top: 0, right: 0, bottom: 0,
         display: 'flex', zIndex: 1,
       }}>
-        <button onClick={onOpenNotes} style={{
+        <button onClick={handleOpenNotes} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: 2, width: 72, height: '100%', border: 'none', cursor: 'pointer',
           fontSize: 10, fontWeight: 500, color: '#fff', background: '#8B5CF6',
@@ -94,7 +112,7 @@ export default function MobileBookmarkItem({ bookmark, onOpenNotes, onDelete }: 
           </svg>
           <span>笔记</span>
         </button>
-        <button onClick={onDelete} style={{
+        <button onClick={handleDelete} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: 2, width: 72, height: '100%', border: 'none', cursor: 'pointer',
           fontSize: 10, fontWeight: 500, color: '#fff', background: 'var(--app-danger)',

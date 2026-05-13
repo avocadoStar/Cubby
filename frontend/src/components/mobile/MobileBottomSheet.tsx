@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Bookmark } from '../../types'
-import { api } from '../../services/api'
+import { useBookmarkStore } from '../../stores/bookmarkStore'
 
 export default function MobileBottomSheet({ bookmark, onClose }: {
   bookmark: Bookmark | null
@@ -10,10 +10,14 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
   const [notes, setNotes] = useState('')
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const notesRef = useRef('')
+  const updateNotes = useBookmarkStore(s => s.updateNotes)
 
   useEffect(() => {
     if (bookmark) {
-      setNotes(bookmark.notes || '')
+      const nextNotes = bookmark.notes || ''
+      setNotes(nextNotes)
+      notesRef.current = nextNotes
       // Trigger animation on next frame
       requestAnimationFrame(() => setOpen(true))
     } else {
@@ -23,23 +27,24 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
 
   useEffect(() => {
     if (open && textareaRef.current) {
-      textareaRef.current.focus()
+      textareaRef.current.focus({ preventScroll: true })
     }
   }, [open])
 
   const handleChange = (value: string) => {
     setNotes(value)
+    notesRef.current = value
     clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      if (bookmark) api.updateNotes(bookmark.id, value)
+      if (bookmark) updateNotes(bookmark.id, value).catch(() => {})
     }, 500)
   }
 
   const handleClose = () => {
     setOpen(false)
     clearTimeout(timerRef.current)
-    if (bookmark && notes !== (bookmark.notes || '')) {
-      api.updateNotes(bookmark.id, notes)
+    if (bookmark && notesRef.current !== (bookmark.notes || '')) {
+      updateNotes(bookmark.id, notesRef.current).catch(() => {})
     }
     setTimeout(onClose, 250)
   }
@@ -50,7 +55,7 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
     <>
       {/* Overlay */}
       <div onClick={handleClose} style={{
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         background: 'rgba(0,0,0,0.4)', zIndex: 70,
         opacity: open ? 1 : 0, transition: 'opacity 0.25s ease',
         pointerEvents: open ? 'auto' : 'none',
@@ -58,7 +63,7 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
 
       {/* Sheet */}
       <div style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0,
+        position: 'fixed', left: 0, right: 0, bottom: 0,
         zIndex: 71,
         background: 'var(--app-card)',
         borderTopLeftRadius: 16, borderTopRightRadius: 16,
