@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  BookmarkPlus,
-  FolderPlus,
   Download,
   Upload,
   Settings,
@@ -18,8 +16,6 @@ interface MenuItem {
 export default function MobileActionMenu({
   open,
   onClose,
-  onAddBookmark,
-  onCreateFolder,
   onImport,
   onExport,
   onSettings,
@@ -27,8 +23,6 @@ export default function MobileActionMenu({
 }: {
   open: boolean
   onClose: () => void
-  onAddBookmark: () => void
-  onCreateFolder: () => void
   onImport: () => void
   onExport: () => void
   onSettings: () => void
@@ -58,16 +52,6 @@ export default function MobileActionMenu({
   const iconSize = 18
 
   const items: MenuItem[] = [
-    {
-      icon: <BookmarkPlus size={iconSize} />,
-      label: '添加书签',
-      onClick: () => { onClose(); onAddBookmark() },
-    },
-    {
-      icon: <FolderPlus size={iconSize} />,
-      label: '新建文件夹',
-      onClick: () => { onClose(); onCreateFolder() },
-    },
     {
       icon: <Download size={iconSize} />,
       label: '导入',

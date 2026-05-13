@@ -8,13 +8,13 @@ export default function ToastContainer() {
 
   return (
     <div
-      className="fixed bottom-6 left-1/2 z-50 flex flex-col items-center gap-2"
+      className="fixed bottom-6 left-1/2 z-50 flex w-[calc(100vw-32px)] max-w-[420px] flex-col items-center gap-2 pointer-events-none"
       style={{ transform: 'translateX(-50%)' }}
     >
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="flex items-center gap-3 px-4 py-2.5 text-body"
+          className="flex w-full max-w-full items-center gap-3 px-4 py-2.5 text-body pointer-events-auto"
           style={{
             background: 'var(--app-card)',
             border: 'var(--input-border)',
@@ -24,10 +24,10 @@ export default function ToastContainer() {
             animation: 'toast-in 0.2s ease-out',
           }}
         >
-          <span>{toast.message}</span>
+          <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{toast.message}</span>
           {toast.onUndo && (
             <button
-              className="px-2 py-0.5 rounded text-body font-medium cursor-pointer border-none"
+              className="flex-shrink-0 px-2 py-0.5 rounded text-body font-medium cursor-pointer border-none"
               style={{ background: 'var(--accent-light)', color: 'var(--app-accent)' }}
               onClick={() => {
                 toast.onUndo?.()

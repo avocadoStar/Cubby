@@ -11,11 +11,25 @@ interface ImportResult {
   folders: number
 }
 
-export default function ImportModal({ onClose }: { onClose: () => void }) {
+interface ImportModalProps {
+  onClose: () => void
+  width?: string
+  compact?: boolean
+}
+
+export default function ImportModal({ onClose, width = '440px', compact = false }: ImportModalProps) {
   const [status, setStatus] = useState<Status>('idle')
   const [result, setResult] = useState<ImportResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const isImporting = status === 'importing'
+  const dropzoneClassName = [
+    'flex flex-col items-center justify-center gap-3 border-2 border-dashed border-app-border rounded-lg cursor-pointer transition-colors duration-200 bg-input-bg shadow-app-base hover:border-app-accent hover:bg-accent-light text-app-text2',
+    compact ? 'p-5 min-h-[180px]' : 'p-8 min-h-[240px]',
+  ].join(' ')
+  const statusClassName = [
+    'flex flex-col items-center justify-center',
+    compact ? 'min-h-[180px]' : 'min-h-[240px]',
+  ].join(' ')
 
   const handleFile = async (file: File) => {
     setStatus('importing')
@@ -51,12 +65,12 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
     <ModalBase
       title="导入收藏夹"
       onClose={handleClose}
-      width="440px"
+      width={width}
       closeOnEscape={!isImporting}
       closeOnOverlayClick={!isImporting}
     >
       {status === 'idle' && (
-        <label className="flex flex-col items-center justify-center gap-3 p-8 min-h-[240px] border-2 border-dashed border-app-border rounded-lg cursor-pointer transition-colors duration-200 bg-input-bg shadow-app-base hover:border-app-accent hover:bg-accent-light text-app-text2">
+        <label className={dropzoneClassName}>
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--app-accent)" strokeWidth="1.6">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
@@ -72,14 +86,14 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
       )}
 
       {status === 'importing' && (
-        <div className="flex flex-col items-center justify-center gap-4 py-8 min-h-[240px]">
+        <div className={`${statusClassName} gap-4 py-8`}>
           <div className="w-10 h-10 border-2 border-t-transparent border-app-accent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
           <p className="text-body text-app-text2">正在导入…</p>
         </div>
       )}
 
       {status === 'done' && (
-        <div className="flex flex-col items-center justify-center text-center py-6 min-h-[240px]">
+        <div className={`${statusClassName} text-center py-6`}>
           <div className="w-10 h-10 mx-auto mb-4 rounded-full flex items-center justify-center bg-[var(--success-bg)]">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--app-accent)" strokeWidth="2.5">
               <polyline points="20 6 9 17 4 12"/>
@@ -97,7 +111,7 @@ export default function ImportModal({ onClose }: { onClose: () => void }) {
       )}
 
       {status === 'error' && (
-        <div className="flex flex-col items-center justify-center text-center py-6 min-h-[240px]">
+        <div className={`${statusClassName} text-center py-6`}>
           <div className="w-10 h-10 mx-auto mb-4 rounded-full flex items-center justify-center bg-[var(--danger-bg)]">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--app-danger)" strokeWidth="2.5">
               <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>

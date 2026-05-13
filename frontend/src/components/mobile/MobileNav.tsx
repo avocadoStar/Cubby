@@ -142,8 +142,6 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
         <MobileActionMenu
           open={showMenu}
           onClose={() => setShowMenu(false)}
-          onAddBookmark={() => setShowAddBookmark(true)}
-          onCreateFolder={() => setShowCreateFolder(true)}
           onImport={() => setShowImport(true)}
           onExport={handleExport}
           onSettings={onOpenSettings}
@@ -198,7 +196,7 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
         <CreateFolderModal parentId={selectedId} onClose={() => setShowCreateFolder(false)} />
       )}
 
-      {showImport && <ImportModal onClose={() => setShowImport(false)} />}
+      {showImport && <ImportModal width="320px" compact onClose={() => setShowImport(false)} />}
     </>
   )
 }
