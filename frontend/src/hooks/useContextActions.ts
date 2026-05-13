@@ -1,7 +1,6 @@
 import { useCallback } from 'react'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useFolderStore } from '../stores/folderStore'
-import { api } from '../services/api'
 
 interface Target {
   id: string
@@ -42,14 +41,11 @@ export function useContextActions(target: Target | null, closeMenu: () => void) 
     if (!id) return
     const folderStore = useFolderStore.getState()
     if (target?.type === 'bookmark') {
-      await api.deleteBookmark(id)
-      useBookmarkStore.getState().load(folderStore.selectedId)
+      useBookmarkStore.getState().deleteOne(id)
     } else {
       const folder = folderStore.folderMap.get(id)
       const parentId = folder?.parent_id ?? null
-      await api.deleteFolder(id)
-      await folderStore.loadChildren(parentId)
-      await folderStore.loadChildren(null)
+      folderStore.deleteOne(id)
       if (folderStore.selectedId === id) {
         folderStore.select(parentId)
       }

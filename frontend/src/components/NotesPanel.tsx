@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { api } from '../services/api'
 import { useFolderStore } from '../stores/folderStore'
+import { useBookmarkStore } from '../stores/bookmarkStore'
 import type { Bookmark } from '../types'
 
 interface NotesPanelProps {
@@ -18,11 +18,12 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
   const open = bookmark !== null
   const bookmarkId = bookmark?.id
   const bookmarkNotes = bookmark?.notes || ''
+  const updateNotes = useBookmarkStore(s => s.updateNotes)
   currentBookmarkIdRef.current = bookmarkId
 
   useEffect(() => {
     if (bookmarkId) { setNotes(bookmarkNotes); setSaved(false) }
-  }, [bookmarkId, bookmarkNotes])
+  }, [bookmarkId, bookmarkNotes, updateNotes])
 
   const save = useCallback((value: string) => {
     if (!bookmarkId) return
@@ -32,7 +33,7 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
     timerRef.current = setTimeout(async () => {
       timerRef.current = undefined
       try {
-        await api.updateNotes(pending.bookmarkId, pending.value)
+        await updateNotes(pending.bookmarkId, pending.value)
         if (currentBookmarkIdRef.current === pending.bookmarkId) {
           setSaved(true)
           clearTimeout(savedTimerRef.current)
@@ -41,7 +42,7 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
       } catch { /* ignore */ }
       if (pendingSaveRef.current === pending) pendingSaveRef.current = null
     }, 500)
-  }, [bookmarkId, bookmarkNotes])
+  }, [bookmarkId, bookmarkNotes, updateNotes])
 
   // Flush pending save on unmount or bookmark change
   useEffect(() => () => {
@@ -52,9 +53,9 @@ export default function NotesPanel({ bookmark, onClose }: NotesPanelProps) {
       clearTimeout(timer)
       timerRef.current = undefined
       pendingSaveRef.current = null
-      api.updateNotes(pending.bookmarkId, pending.value).catch(() => {})
+      updateNotes(pending.bookmarkId, pending.value).catch(() => {})
     }
-  }, [bookmarkId])
+  }, [bookmarkId, updateNotes])
 
   const folderPath = bookmark ? (() => {
     const { folderMap } = useFolderStore.getState()
