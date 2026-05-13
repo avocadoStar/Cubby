@@ -5,31 +5,180 @@ import { useBookmarkStore } from '../../stores/bookmarkStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useToastStore } from '../../stores/toastStore'
 import { api, ConflictError } from '../../services/api'
-import CreateFolderModal from '../CreateFolderModal'
 import ImportModal from '../ImportModal'
 import MobileActionMenu from './MobileActionMenu'
 import { shouldFetchMetadata } from '../../lib/metadata'
 
+export type MobileAddMode = 'bookmark' | 'folder'
+
+interface MobileAddModalProps {
+  mode: MobileAddMode
+  title: string
+  url: string
+  folderName: string
+  fetchingTitle: boolean
+  duplicateUrlError: string
+  onModeChange: (mode: MobileAddMode) => void
+  onTitleChange: (value: string) => void
+  onUrlChange: (value: string) => void
+  onFolderNameChange: (value: string) => void
+  onClose: () => void
+  onSubmitBookmark: () => void
+  onSubmitFolder: () => void
+}
+
+export function MobileAddModal({
+  mode,
+  title,
+  url,
+  folderName,
+  fetchingTitle,
+  duplicateUrlError,
+  onModeChange,
+  onTitleChange,
+  onUrlChange,
+  onFolderNameChange,
+  onClose,
+  onSubmitBookmark,
+  onSubmitFolder,
+}: MobileAddModalProps) {
+  const isBookmark = mode === 'bookmark'
+  const canSubmit = isBookmark ? Boolean(title.trim() && url.trim()) : Boolean(folderName.trim())
+  const fieldStyle = {
+    width: '100%',
+    height: 38,
+    padding: '0 12px',
+    borderRadius: 8,
+    border: 'var(--input-border)',
+    background: 'var(--input-bg)',
+    color: 'var(--app-text)',
+    fontSize: 14,
+    outline: 'none',
+  }
+
+  const tabStyle = (active: boolean) => ({
+    flex: 1,
+    height: 34,
+    borderRadius: 7,
+    border: 'none',
+    background: active ? 'var(--app-card)' : 'transparent',
+    color: active ? 'var(--app-text)' : 'var(--app-text2)',
+    fontSize: 14,
+    fontWeight: active ? 600 : 400,
+    cursor: 'pointer',
+    boxShadow: active ? 'var(--shadow-sm)' : 'none',
+    transition: 'background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
+  })
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!canSubmit) return
+    if (isBookmark) onSubmitBookmark()
+    else onSubmitFolder()
+  }
+
+  return (
+    <ModalBase title="添加" onClose={onClose} width="340px" closeOnEscape>
+      <form onSubmit={handleSubmit}>
+        <div
+          role="group"
+          aria-label="添加类型"
+          style={{
+            display: 'flex',
+            gap: 4,
+            padding: 3,
+            borderRadius: 10,
+            background: 'var(--app-hover)',
+            marginBottom: 16,
+          }}
+        >
+          <button type="button" aria-pressed={isBookmark} onClick={() => onModeChange('bookmark')} style={tabStyle(isBookmark)}>
+            书签
+          </button>
+          <button type="button" aria-pressed={!isBookmark} onClick={() => onModeChange('folder')} style={tabStyle(!isBookmark)}>
+            文件夹
+          </button>
+        </div>
+
+        {isBookmark ? (
+          <>
+            <input
+              value={title}
+              onChange={e => onTitleChange(e.target.value)}
+              placeholder={fetchingTitle ? '正在获取标题…' : '名称'}
+              aria-label="名称"
+              style={{ ...fieldStyle, marginBottom: 12 }}
+            />
+            <input
+              value={url}
+              onChange={e => onUrlChange(e.target.value)}
+              placeholder="URL"
+              aria-label="URL"
+              style={{ ...fieldStyle, marginBottom: duplicateUrlError ? 6 : 16 }}
+            />
+            {duplicateUrlError && (
+              <div style={{ fontSize: 13, color: 'var(--app-danger)', marginBottom: 12 }}>{duplicateUrlError}</div>
+            )}
+          </>
+        ) : (
+          <input
+            value={folderName}
+            onChange={e => onFolderNameChange(e.target.value)}
+            placeholder="文件夹名称"
+            aria-label="文件夹名称"
+            style={{ ...fieldStyle, marginBottom: 16 }}
+          />
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button type="button" onClick={onClose} style={{
+            height: 32, padding: '0 16px', borderRadius: 8, fontSize: 13,
+            border: 'var(--input-border)', background: 'var(--app-card)',
+            color: 'var(--app-text)', cursor: 'pointer',
+          }}>取消</button>
+          <button type="submit" disabled={!canSubmit} style={{
+            height: 32, padding: '0 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+            border: 'none', background: 'var(--app-accent)', color: '#fff',
+            cursor: 'pointer', opacity: canSubmit ? 1 : 0.5,
+          }}>添加</button>
+        </div>
+      </form>
+    </ModalBase>
+  )
+}
+
 export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => void }) {
-  const { selectedId } = useFolderStore()
+  const { selectedId, create } = useFolderStore()
   const { load } = useBookmarkStore()
   const logout = useAuthStore(s => s.logout)
   const [showMenu, setShowMenu] = useState(false)
   const [showAddBookmark, setShowAddBookmark] = useState(false)
-  const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [addMode, setAddMode] = useState<MobileAddMode>('bookmark')
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [icon, setIcon] = useState('')
+  const [folderName, setFolderName] = useState('')
   const [duplicateUrlError, setDuplicateUrlError] = useState('')
   const [fetchingTitle, setFetchingTitle] = useState(false)
   const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  const closeAddBookmark = () => {
+  const closeAddModal = () => {
     clearTimeout(urlTimer.current)
     setShowAddBookmark(false)
+    setAddMode('bookmark')
     setTitle(''); setUrl(''); setIcon('')
+    setFolderName('')
     setDuplicateUrlError(''); setFetchingTitle(false)
+  }
+
+  const handleAddModeChange = (mode: MobileAddMode) => {
+    if (mode === 'folder') {
+      clearTimeout(urlTimer.current)
+      setFetchingTitle(false)
+      setDuplicateUrlError('')
+    }
+    setAddMode(mode)
   }
 
   const handleUrlChange = (value: string) => {
@@ -83,7 +232,13 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
       throw e
     }
     await load(selectedId)
-    closeAddBookmark()
+    closeAddModal()
+  }
+
+  const handleCreateFolder = async () => {
+    if (!folderName.trim()) return
+    await create(folderName.trim(), selectedId)
+    closeAddModal()
   }
 
   const handleExport = async () => {
@@ -150,50 +305,21 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
       </div>
 
       {showAddBookmark && (
-        <ModalBase title="添加收藏夹" onClose={closeAddBookmark} width="340px" closeOnEscape>
-          <input value={title} onChange={e => setTitle(e.target.value)}
-            placeholder={fetchingTitle ? '正在获取标题…' : '名称'}
-            style={{
-              width: '100%', height: 36, padding: '0 12px', borderRadius: 8,
-              border: 'var(--input-border)', background: 'var(--input-bg)',
-              color: 'var(--app-text)', fontSize: 14, outline: 'none', marginBottom: 12,
-            }} />
-          <input value={url} onChange={e => handleUrlChange(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAddBookmark()}
-            placeholder="URL"
-            style={{
-              width: '100%', height: 36, padding: '0 12px', borderRadius: 8,
-              border: 'var(--input-border)', background: 'var(--input-bg)',
-              color: 'var(--app-text)', fontSize: 14, outline: 'none',
-              marginBottom: duplicateUrlError ? 6 : 16,
-            }} />
-          {duplicateUrlError && (
-            <div style={{ fontSize: 13, color: 'var(--app-danger)', marginBottom: 12 }}>{duplicateUrlError}</div>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <button onClick={closeAddBookmark} style={{
-              height: 32, padding: '0 16px', borderRadius: 8, fontSize: 13,
-              border: 'var(--input-border)', background: 'var(--app-card)',
-              color: 'var(--app-text)', cursor: 'pointer',
-            }}>取消</button>
-            <button onClick={handleAddBookmark} disabled={!title.trim() || !url.trim()} style={{
-              height: 32, padding: '0 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-              border: 'none', background: 'var(--app-accent)', color: '#fff',
-              cursor: 'pointer', opacity: (!title.trim() || !url.trim()) ? 0.5 : 1,
-            }}>添加</button>
-          </div>
-          <div style={{ marginTop: 12, borderTop: '1px solid var(--divider-color)', paddingTop: 12 }}>
-            <button onClick={() => { closeAddBookmark(); setShowCreateFolder(true) }} style={{
-              width: '100%', height: 36, borderRadius: 8, fontSize: 13,
-              border: '1px solid var(--app-border)', background: 'var(--app-card)',
-              color: 'var(--app-text)', cursor: 'pointer',
-            }}>+ 新建文件夹</button>
-          </div>
-        </ModalBase>
-      )}
-
-      {showCreateFolder && (
-        <CreateFolderModal parentId={selectedId} onClose={() => setShowCreateFolder(false)} />
+        <MobileAddModal
+          mode={addMode}
+          title={title}
+          url={url}
+          folderName={folderName}
+          fetchingTitle={fetchingTitle}
+          duplicateUrlError={duplicateUrlError}
+          onModeChange={handleAddModeChange}
+          onTitleChange={setTitle}
+          onUrlChange={handleUrlChange}
+          onFolderNameChange={setFolderName}
+          onClose={closeAddModal}
+          onSubmitBookmark={handleAddBookmark}
+          onSubmitFolder={handleCreateFolder}
+        />
       )}
 
       {showImport && <ImportModal width="320px" compact onClose={() => setShowImport(false)} />}
