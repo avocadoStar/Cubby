@@ -1,110 +1,152 @@
+<div align="center">
+
 # Cubby
 
-类 edge://favorites/ 的书签管理器，Fluent 风格两栏布局。
+**轻量级自托管书签管理器**
+
+灵感来自 `edge://favorites/` — 简洁、快速、开箱即用
+
+</div>
+
+---
+
+Cubby 是一个轻量级自托管书签管理器，支持无限层级文件夹、拖拽排序、导入导出、全局搜索、备注、批量操作，以及 PC / 移动端自适应。单二进制部署，零外部依赖。
+
+## 亮点
+
+- **无限层级文件夹** — 树形结构，展开 / 折叠 / 拖拽排序
+- **高性能渲染** — 虚拟滚动，流畅处理大量书签
+- **跨浏览器导入导出** — 兼容 Chrome、Edge、Firefox HTML 书签文件
+- **实时搜索** — 模糊匹配 + 关键词高亮
+- **移动端友好** — 响应式布局，触控操作
+- **单二进制部署** — 前端嵌入 Go 服务，一个文件即可运行
+- **低资源占用** — SQLite 存储，无需额外数据库
+
+<details>
+<summary>更多功能</summary>
+
+- 书签备注，自动保存
+- 多选和批量删除
+- 右键菜单操作
+- 删除撤销 Toast
+- 明暗主题切换
+- 字体大小调节
+- JWT Token 认证，密码自动加密
+- Lexorank 排序算法，PC 与移动端统一
+
+</details>
+
+## 技术栈
+
+| | 技术 |
+|---|---|
+| **后端** | Go · Gin · SQLite · JWT |
+| **前端** | React 19 · TypeScript · Vite · Tailwind CSS 4 |
+| **关键库** | Zustand · dnd-kit · @tanstack/react-virtual |
 
 ## 环境要求
 
 - [Go](https://go.dev/dl/) 1.25+
 - [Node.js](https://nodejs.org/) 20+
 
-## 项目结构
+## 快速开始
 
-```
-├── backend/               # Go + Gin + SQLite
-│   ├── cmd/server/        # 入口
-│   └── internal/
-│       ├── config/        # 配置（YAML 文件）
-│       ├── db/            # 数据库初始化 & 迁移
-│       ├── handler/       # HTTP 处理器（路由、认证、CRUD）
-│       ├── middleware/     # JWT 中间件
-│       ├── model/         # 数据模型
-│       ├── repository/    # 数据访问层（SQL）
-│       └── service/       # 业务逻辑（LexoRank、认证、搜索、导入）
-│
-├── frontend/              # React + Vite + Tailwind
-│   └── src/
-│       ├── components/    # UI 组件
-│       ├── services/      # API 客户端
-│       ├── stores/        # Zustand 状态管理
-│       └── types/         # TypeScript 类型
-│
-├── docs/                  # 设计文档 & 实施计划
-└── Makefile               # 构建脚本（可选，需要 make）
+### 1. 克隆与配置
+
+```bash
+git clone https://github.com/avocadoStar/Cubby.git
+cd Cubby
+cp config.example.yaml config.yaml
 ```
 
-## 开发模式启动
+配置项说明见 `config.example.yaml` 内的注释。
 
-**两个终端分别启动：**
+### 2. 开发模式
 
-终端 1 — 后端（端口 8080）：
+需要两个终端分别运行前后端。
 
-```powershell
+**后端：**
+
+```bash
 cd backend
 go run ./cmd/server/
 ```
 
-终端 2 — 前端（端口 5173，自动代理 API 到 8080）：
+**前端：**
 
-```powershell
+```bash
 cd frontend
-npm install    # 首次运行需要
+npm install
 npm run dev
 ```
 
-浏览器打开 `http://localhost:5173`。
+浏览器打开 `http://localhost:5173`，API 请求自动代理到后端。
 
-## 生产构建
+### 3. 生产构建
 
-```powershell
-# 1. 编译后端
-cd backend
-go build -o ../cubby-server.exe ./cmd/server/
-
-# 2. 打包前端
-cd ..\frontend
-npm install
-npm run build
-
-# 3. 复制静态文件
-mkdir ..\backend\cmd\server\static
-xcopy /E /Y dist\* ..\backend\cmd\server\static\
-
-# 4. 启动
-cd ..
-.\cubby-server.exe
+```bash
+make build
+./cubby-server
 ```
 
 浏览器打开 `http://localhost:8080`。
 
-> 如果你安装了 make：`make build && ./cubby-server` 一键完成上述步骤。
+<details>
+<summary>手动构建步骤</summary>
 
-## 配置
+```bash
+# 编译后端
+cd backend && go build -o ../cubby-server ./cmd/server/
 
-复制示例配置文件并修改：
+# 打包前端
+cd ../frontend && npm install && npm run build
 
-```powershell
-cp config.example.yaml config.yaml
+# 复制静态文件
+mkdir -p ../backend/cmd/server/static
+cp -r dist/* ../backend/cmd/server/static/
+
+# 启动
+cd .. && ./cubby-server
 ```
 
-`config.yaml` 内容：
+</details>
 
-```yaml
-port: "8080"                          # HTTP 监听端口
-db_path: "cubby.db"                   # SQLite 数据库文件路径
-jwt_secret: "change-me-in-production" # JWT 签名密钥（生产环境务必修改）
-password: "your-password"             # 登录密码（启动时自动 bcrypt 加密）
+## 项目结构
+
+```
+├── backend/                    # Go + Gin + SQLite
+│   ├── cmd/server/             # 入口 main.go + 静态文件
+│   └── internal/
+│       ├── handler/            # HTTP 处理器（路由、认证、CRUD）
+│       ├── service/            # 业务逻辑（LexoRank、认证、搜索、导入）
+│       ├── repository/         # 数据访问层（SQL）
+│       ├── model/              # 数据模型
+│       ├── middleware/         # JWT 中间件
+│       └── db/                 # 数据库初始化与迁移
+│
+├── frontend/                   # React + Vite + Tailwind
+│   └── src/
+│       ├── components/         # UI 组件
+│       ├── hooks/              # 自定义 Hooks
+│       ├── services/           # API 客户端
+│       ├── stores/             # Zustand 状态管理
+│       ├── lib/                # 工具函数
+│       └── types/              # TypeScript 类型
+│
+├── config.example.yaml         # 配置模板
+└── Makefile                    # 构建命令
 ```
 
+## Makefile
 
-## 功能
+| 命令 | 说明 |
+|------|------|
+| `make dev-backend` | 启动后端开发服务 |
+| `make dev-frontend` | 启动前端开发服务 |
+| `make build` | 完整生产构建 |
+| `make run` | 构建并运行 |
+| `make clean` | 清理构建产物 |
 
-- 无限层级文件夹树，展开/折叠，拖拽排序
-- 书签列表（虚拟滚动，支持大量书签）
-- 卡片式行设计，弧形圆角 + 边框
-- 多选复选框 + 批量删除
-- 右键菜单（打开 / 重命名 / 删除）
-- HTML 书签文件导入/导出（Chrome / Edge / Firefox 兼容）
-- 全局搜索（实时搜索 + 关键词高亮）
-- 书签备注（右侧详情面板，自动保存）
-- 字体大小控制（3 档预设）
-- 删除撤销（Toast + 撤销按钮）
+## 许可证
+
+[MIT](LICENSE)
