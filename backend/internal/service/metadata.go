@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"cubby/internal/model"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -149,7 +150,7 @@ func (s *MetadataService) fetchRemoteIcon(rawURL string) (string, error) {
 		return "", fmt.Errorf("icon fetch failed: %s", resp.Status)
 	}
 
-	maxBytes := int64((maxBookmarkIconLength * 3) / 4)
+	maxBytes := int64((model.MaxBookmarkIconSize * 3) / 4)
 	data, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes+1))
 	if err != nil {
 		return "", err

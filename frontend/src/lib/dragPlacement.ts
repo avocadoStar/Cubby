@@ -29,13 +29,14 @@ export interface SingleFolderDrop {
   newParentId: string | null
   prevId: string | null
   nextId: string | null
+  sortKey: string
 }
 
 export function computeSingleFolderDrop(
   dragState: DragState,
   ctx: DropContext,
 ): SingleFolderDrop | null {
-  const { activeId, activeItem, overId, dropPosition } = dragState
+  const { activeId, overId, dropPosition } = dragState
   const draggedFolder = ctx.folderMap.get(activeId)
   if (!draggedFolder) return null
 
@@ -90,7 +91,7 @@ export function computeSingleFolderDrop(
   }
 
   const sortKey = moveSortKey(prevId, nextId)
-  return { newParentId, prevId, nextId, sortKey } as SingleFolderDrop & { sortKey: string }
+  return { newParentId, prevId, nextId, sortKey }
 }
 
 export interface SingleBookmarkDrop {

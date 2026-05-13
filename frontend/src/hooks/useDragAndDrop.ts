@@ -172,12 +172,11 @@ export function useDragAndDrop(
       if (result && result.batchItems.length > 0) {
         persistTasks.push(useBookmarkStore.getState().batchMove(result.batchItems))
       }
-      useBookmarkStore.getState().clearSelection()
       useSelectionStore.getState().clearSelection()
     } else if (draggedItem.kind === 'folder') {
       const result = computeSingleFolderDrop(dragState, ctx)
       if (result) {
-        persistTasks.push(folderStore.moveFolder(itemDragId, result.newParentId, result.prevId, result.nextId, dragItem.version, (result as any).sortKey || undefined))
+        persistTasks.push(folderStore.moveFolder(itemDragId, result.newParentId, result.prevId, result.nextId, dragItem.version, result.sortKey || undefined))
       }
     } else {
       const result = computeSingleBookmarkDrop(dragState, ctx)

@@ -1,14 +1,12 @@
 package service
 
 import (
-	"errors"
-
 	"cubby/internal/lexorank"
 	"cubby/internal/model"
 	"cubby/internal/repository"
 )
 
-var ErrBookmarkExists = errors.New("bookmark already exists")
+var ErrBookmarkExists = NewConflictError("已存在", nil)
 
 type BookmarkService struct {
 	repo    repository.BookmarkRepo
@@ -23,8 +21,17 @@ func (s *BookmarkService) List(folderID *string) ([]model.Bookmark, error) {
 	return s.repo.List(folderID)
 }
 
-func (s *BookmarkService) Create(title, url string, folderID *string, icon ...string) (*model.Bookmark, error) {
-	exists, err := s.repo.ExistsActiveURL(url)
+func (s *BookmarkService) Create(title, rawURL string, folderID *string, icon ...string) (*model.Bookmark, error) {
+	title, err := validateBookmarkTitle(title)
+	if err != nil {
+		return nil, err
+	}
+	validatedURL, err := validateAndNormalizeURL(rawURL)
+	if err != nil {
+		return nil, err
+	}
+
+	exists, err := s.repo.ExistsActiveURL(validatedURL)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +48,7 @@ func (s *BookmarkService) Create(title, url string, folderID *string, icon ...st
 		iconValue = sanitizeBookmarkIcon(icon[0])
 	}
 	for i := 0; i < 3; i++ {
-		b, err := s.repo.Create(title, url, folderID, sortKey, iconValue)
+		b, err := s.repo.Create(title, validatedURL, folderID, sortKey, iconValue)
 		if err == nil {
 			return b, nil
 		}
@@ -50,8 +57,16 @@ func (s *BookmarkService) Create(title, url string, folderID *string, icon ...st
 	return nil, ErrConflict
 }
 
-func (s *BookmarkService) Update(id, title, url string, version int) (*model.Bookmark, error) {
-	return s.repo.Update(id, title, url, version)
+func (s *BookmarkService) Update(id, rawTitle, rawURL string, version int) (*model.Bookmark, error) {
+	title, err := validateBookmarkTitle(rawTitle)
+	if err != nil {
+		return nil, err
+	}
+	validatedURL, err := validateAndNormalizeURL(rawURL)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.Update(id, title, validatedURL, version)
 }
 
 func (s *BookmarkService) Delete(id string) error {

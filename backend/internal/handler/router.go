@@ -16,6 +16,7 @@ func SetupRoutes(
 	bookmarkSvc *service.BookmarkService,
 	searchSvc *service.SearchService,
 	importSvc *service.ImportService,
+	exportSvc *service.ExportService,
 	metadataSvc *service.MetadataService,
 	moveSvc *service.MoveService,
 	cfg *config.Config,
@@ -24,7 +25,7 @@ func SetupRoutes(
 	folderH := NewFolderHandler(folderSvc)
 	bookmarkH := NewBookmarkHandler(bookmarkSvc)
 	searchH := NewSearchHandler(searchSvc)
-	importExportH := NewImportExportHandler(importSvc, folderSvc, bookmarkSvc)
+	importExportH := NewImportExportHandler(importSvc, exportSvc)
 	metadataH := NewMetadataHandler(metadataSvc)
 	moveH := NewMoveHandler(moveSvc)
 

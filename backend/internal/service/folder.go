@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 
 	"cubby/internal/lexorank"
@@ -9,11 +8,11 @@ import (
 	"cubby/internal/repository"
 )
 
-var ErrConflict = errors.New("conflict")
+var ErrConflict = NewConflictError("conflict", nil)
 
 type FolderService struct {
 	repo         repository.FolderRepo
-	bookmarkRepo repository.BookmarkRepo
+	bookmarkRepo repository.BookmarkRepo // Direct access for recursive tree operations (collectTree) — avoids unnecessary service overhead when batch-loading bookmarks across hundreds of folders
 	sortKey      *SortKeyService
 }
 
@@ -25,7 +24,11 @@ func (s *FolderService) List(parentID *string) ([]model.Folder, error) {
 	return s.repo.List(parentID)
 }
 
-func (s *FolderService) Create(name string, parentID *string) (*model.Folder, error) {
+func (s *FolderService) Create(rawName string, parentID *string) (*model.Folder, error) {
+	name, err := validateFolderName(rawName)
+	if err != nil {
+		return nil, err
+	}
 	sortKey, err := s.sortKey.ComputeFolderSortKey(parentID, nil, nil, "")
 	if err != nil {
 		return nil, err
@@ -40,7 +43,11 @@ func (s *FolderService) Create(name string, parentID *string) (*model.Folder, er
 	return nil, fmt.Errorf("failed to create folder after retries")
 }
 
-func (s *FolderService) Update(id, name string, version int) (*model.Folder, error) {
+func (s *FolderService) Update(id, rawName string, version int) (*model.Folder, error) {
+	name, err := validateFolderName(rawName)
+	if err != nil {
+		return nil, err
+	}
 	return s.repo.Update(id, name, version)
 }
 

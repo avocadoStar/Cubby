@@ -28,8 +28,5 @@ func (h *SearchHandler) Search(c *gin.Context) {
 		internalError(c, err)
 		return
 	}
-	if results == nil {
-		results = []model.SearchResult{}
-	}
-	c.JSON(http.StatusOK, results)
+	jsonList(c, results)
 }

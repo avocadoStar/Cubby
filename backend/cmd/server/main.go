@@ -44,6 +44,7 @@ func main() {
 	moveSvc := service.NewMoveService(moveRepo, folderSvc, sortKeySvc)
 	searchSvc := service.NewSearchService(bookmarkRepo)
 	importSvc := service.NewImportService(folderRepo, bookmarkRepo)
+	exportSvc := service.NewExportService(folderSvc, bookmarkSvc)
 	metadataSvc := service.NewMetadataService()
 
 	r := gin.Default()
@@ -99,7 +100,7 @@ func main() {
 		c.Next()
 	})
 
-	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, metadataSvc, moveSvc, cfg)
+	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, exportSvc, metadataSvc, moveSvc, cfg)
 
 	// Serve frontend static files in production
 	r.Static("/assets", "./cmd/server/static/assets")

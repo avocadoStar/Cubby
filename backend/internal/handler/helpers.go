@@ -5,7 +5,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"net/url"
+
+	"cubby/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -37,13 +38,42 @@ func conflictError(c *gin.Context, msg string) {
 	c.JSON(http.StatusConflict, gin.H{"error": msg})
 }
 
-func validateURL(rawURL string) (string, string, bool) {
-	if len(rawURL) > maxURLLength {
-		return "", "url exceeds maximum length of 2048 characters", false
+func bindJSON[T any](c *gin.Context) (*T, bool) {
+	var req T
+	if err := c.ShouldBindJSON(&req); err != nil {
+		badRequest(c, "invalid request")
+		return nil, false
 	}
-	parsed, err := url.Parse(rawURL)
-	if err != nil || !parsed.IsAbs() || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return "", "url must be a valid absolute URL with http or https scheme", false
+	return &req, true
+}
+
+func jsonList[T any](c *gin.Context, items []T) {
+	if items == nil {
+		items = []T{}
 	}
-	return parsed.String(), "", true
+	c.JSON(http.StatusOK, items)
+}
+
+// handleServiceError maps service-layer errors to appropriate HTTP responses.
+// It prevents internal error messages from leaking to clients.
+func handleServiceError(c *gin.Context, err error) {
+	var appErr *service.AppError
+	if errors.As(err, &appErr) {
+		switch appErr.Code {
+		case "conflict":
+			conflictError(c, appErr.Message)
+		case "not_found":
+			errorResponse(c, http.StatusNotFound, appErr.Message, err)
+		case "invalid_input":
+			badRequest(c, appErr.Message)
+		default:
+			internalError(c, err)
+		}
+		return
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	internalError(c, err)
 }

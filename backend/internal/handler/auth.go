@@ -17,11 +17,8 @@ func NewAuthHandler(svc *service.AuthService) *AuthHandler {
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req struct {
-		Password string `json:"password"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+	req, ok := bindJSON[loginRequest](c)
+	if !ok {
 		return
 	}
 	if !h.svc.VerifyPassword(req.Password) {

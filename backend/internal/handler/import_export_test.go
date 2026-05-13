@@ -43,7 +43,8 @@ func TestJSONExportIncludesEntireTree(t *testing.T) {
 	}
 
 	router := gin.New()
-	handler := NewImportExportHandler(importSvc, folderSvc, bookmarkSvc)
+	exportSvc := service.NewExportService(folderSvc, bookmarkSvc)
+	handler := NewImportExportHandler(importSvc, exportSvc)
 	router.GET("/export", handler.Export)
 
 	req := httptest.NewRequest(http.MethodGet, "/export?format=json", nil)
@@ -91,7 +92,8 @@ func TestHTMLExportIncludesBookmarkIcon(t *testing.T) {
 	}
 
 	router := gin.New()
-	handler := NewImportExportHandler(importSvc, folderSvc, bookmarkSvc)
+	exportSvc := service.NewExportService(folderSvc, bookmarkSvc)
+	handler := NewImportExportHandler(importSvc, exportSvc)
 	router.GET("/export", handler.Export)
 
 	req := httptest.NewRequest(http.MethodGet, "/export", nil)

@@ -3,6 +3,9 @@ import { useDraggable } from '@dnd-kit/core'
 import { useDndStore } from '../stores/dndStore'
 import { ChevronRight } from 'lucide-react'
 import type { Folder } from '../types'
+import RowCheckbox from './RowCheckbox'
+import RowDeleteButton from './RowDeleteButton'
+import { t } from '../i18n'
 
 interface FolderRowComponentProps {
   folder: Folder
@@ -46,25 +49,7 @@ const FolderRowComponent = memo(function FolderRowComponent({
       onMouseLeave={() => setHovered(false)}
       onClick={onNavigate}
     >
-      <div
-        role="checkbox"
-        aria-checked={isFolderSelected}
-        aria-label="选择文件夹"
-        className="flex-shrink-0 mr-2.5 flex items-center justify-center cursor-default"
-        style={{
-          width: 18, height: 18,
-          borderRadius: '50%',
-          border: isFolderSelected ? '2px solid var(--app-accent)' : 'var(--checkbox-border)',
-          background: isFolderSelected ? 'var(--app-accent)' : 'transparent',
-        }}
-        onClick={(e) => { e.stopPropagation(); onToggleSelect() }}
-      >
-        {isFolderSelected && (
-          <svg aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-on-accent)" strokeWidth="3">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        )}
-      </div>
+      <RowCheckbox checked={isFolderSelected} ariaLabel={t('folder.selectAria')} onToggle={onToggleSelect} />
       <div
         className="flex-shrink-0 mr-2 flex items-center justify-center"
         style={{
@@ -79,19 +64,9 @@ const FolderRowComponent = memo(function FolderRowComponent({
         </svg>
       </div>
       <span className="flex-1 truncate text-body" style={{ color: 'var(--app-text)' }}>{folder.name}</span>
-      <span className="flex-shrink-0 truncate text-xs mr-8" style={{ width: 320, color: 'var(--app-text2)' }}>文件夹</span>
+      <span className="flex-shrink-0 truncate text-xs mr-8" style={{ width: 320, color: 'var(--app-text2)' }}>{t('folder.label')}</span>
       <span className="flex-shrink-0 text-xs" style={{ width: 100, minWidth: 100, color: 'var(--app-text2)' }} />
-      <div
-        role="button"
-        aria-label="删除文件夹"
-        className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default"
-        style={{ opacity: hovered ? 1 : 0.35, color: hovered ? 'var(--app-danger)' : 'var(--app-text3)' }}
-        onClick={(e) => { e.stopPropagation(); onDelete() }}
-      >
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </div>
+      <RowDeleteButton hovered={hovered} ariaLabel={t('folder.deleteAria')} onDelete={onDelete} />
       <div
         className="flex-shrink-0"
         style={{ width: 1, alignSelf: 'stretch', background: hovered ? 'var(--divider-color)' : 'transparent', margin: '0 6px' }}

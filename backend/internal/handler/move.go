@@ -17,18 +17,8 @@ func NewMoveHandler(svc *service.MoveService) *MoveHandler {
 }
 
 func (h *MoveHandler) BatchMove(c *gin.Context) {
-	var req struct {
-		Items []struct {
-			Kind     string  `json:"kind"`
-			ID       string  `json:"id"`
-			ParentID *string `json:"parent_id"`
-			PrevID   *string `json:"prev_id"`
-			NextID   *string `json:"next_id"`
-			Version  int     `json:"version"`
-		} `json:"items"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+	req, ok := bindJSON[batchMoveRequest](c)
+	if !ok {
 		return
 	}
 
@@ -46,7 +36,7 @@ func (h *MoveHandler) BatchMove(c *gin.Context) {
 
 	result, err := h.svc.BatchMove(items)
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		handleServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, result)

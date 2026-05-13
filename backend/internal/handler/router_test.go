@@ -38,9 +38,10 @@ func setupTestRouter(t *testing.T) *gin.Engine {
 	moveSvc := service.NewMoveService(moveRepo, folderSvc, sortKeySvc)
 	searchSvc := service.NewSearchService(bookmarkRepo)
 	importSvc := service.NewImportService(folderRepo, bookmarkRepo)
+	exportSvc := service.NewExportService(folderSvc, bookmarkSvc)
 	metadataSvc := service.NewMetadataService()
 
-	SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, metadataSvc, moveSvc, cfg)
+	SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, exportSvc, metadataSvc, moveSvc, cfg)
 	return r
 }
 

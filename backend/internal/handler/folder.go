@@ -2,9 +2,7 @@ package handler
 
 import (
 	"net/http"
-	"strings"
 
-	"cubby/internal/model"
 	"cubby/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -29,19 +27,12 @@ func (h *FolderHandler) List(c *gin.Context) {
 		internalError(c, err)
 		return
 	}
-	if folders == nil {
-		folders = []model.Folder{}
-	}
-	c.JSON(http.StatusOK, folders)
+	jsonList(c, folders)
 }
 
 func (h *FolderHandler) Create(c *gin.Context) {
-	var req struct {
-		Name     string  `json:"name"`
-		ParentID *string `json:"parent_id"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		badRequest(c, "invalid request")
+	req, ok := bindJSON[createFolderRequest](c)
+	if !ok {
 		return
 	}
 	if req.Name == "" {
@@ -49,27 +40,17 @@ func (h *FolderHandler) Create(c *gin.Context) {
 		return
 	}
 
-	req.Name = strings.TrimSpace(req.Name)
-	if len(req.Name) > maxNameLength {
-		badRequest(c, "name exceeds maximum length of 200 characters")
-		return
-	}
-
 	f, err := h.svc.Create(req.Name, req.ParentID)
 	if err != nil {
-		internalError(c, err)
+		handleServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, f)
 }
 
 func (h *FolderHandler) Update(c *gin.Context) {
-	var req struct {
-		Name    string `json:"name"`
-		Version int    `json:"version"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		badRequest(c, "invalid request")
+	req, ok := bindJSON[updateFolderRequest](c)
+	if !ok {
 		return
 	}
 	if req.Name == "" {
@@ -77,15 +58,9 @@ func (h *FolderHandler) Update(c *gin.Context) {
 		return
 	}
 
-	req.Name = strings.TrimSpace(req.Name)
-	if len(req.Name) > maxNameLength {
-		badRequest(c, "name exceeds maximum length of 200 characters")
-		return
-	}
-
 	f, err := h.svc.Update(c.Param("id"), req.Name, req.Version)
 	if err != nil {
-		conflictError(c, "conflict")
+		handleServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, f)
@@ -109,11 +84,8 @@ func (h *FolderHandler) Restore(c *gin.Context) {
 }
 
 func (h *FolderHandler) BatchDelete(c *gin.Context) {
-	var req struct {
-		IDs []string `json:"ids"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		badRequest(c, "invalid request")
+	req, ok := bindJSON[batchDeleteRequest](c)
+	if !ok {
 		return
 	}
 	if err := h.svc.BatchDelete(req.IDs); err != nil {
@@ -124,20 +96,13 @@ func (h *FolderHandler) BatchDelete(c *gin.Context) {
 }
 
 func (h *FolderHandler) Move(c *gin.Context) {
-	var req struct {
-		ID       string  `json:"id"`
-		ParentID *string `json:"parent_id"`
-		PrevID   *string `json:"prev_id"`
-		NextID   *string `json:"next_id"`
-		Version  int     `json:"version"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		badRequest(c, "invalid request")
+	req, ok := bindJSON[moveFolderRequest](c)
+	if !ok {
 		return
 	}
 	f, err := h.svc.Move(req.ID, req.ParentID, req.PrevID, req.NextID, nil, req.Version)
 	if err != nil {
-		conflictError(c, err.Error())
+		handleServiceError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, f)

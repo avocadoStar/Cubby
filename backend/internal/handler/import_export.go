@@ -1,25 +1,20 @@
 package handler
 
 import (
-	"encoding/json"
-	"html"
 	"net/http"
-	"strings"
 
-	"cubby/internal/model"
 	"cubby/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 type ImportExportHandler struct {
-	importSvc   *service.ImportService
-	folderSvc   *service.FolderService
-	bookmarkSvc *service.BookmarkService
+	importSvc *service.ImportService
+	exportSvc *service.ExportService
 }
 
-func NewImportExportHandler(is *service.ImportService, fs *service.FolderService, bs *service.BookmarkService) *ImportExportHandler {
-	return &ImportExportHandler{importSvc: is, folderSvc: fs, bookmarkSvc: bs}
+func NewImportExportHandler(importSvc *service.ImportService, exportSvc *service.ExportService) *ImportExportHandler {
+	return &ImportExportHandler{importSvc: importSvc, exportSvc: exportSvc}
 }
 
 func (h *ImportExportHandler) Import(c *gin.Context) {
@@ -38,99 +33,11 @@ func (h *ImportExportHandler) Import(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func (h *ImportExportHandler) exportFolder(b *strings.Builder, parentID *string, folders map[string][]model.Folder, bookmarks map[string][]model.Bookmark) {
-	for _, f := range folders[key(parentID)] {
-		b.WriteString("<DT><H3>" + html.EscapeString(f.Name) + "</H3>\n")
-		b.WriteString("<DL><p>\n")
-		for _, bm := range bookmarks[f.ID] {
-			writeBookmarkHTML(b, bm)
-		}
-		h.exportFolder(b, &f.ID, folders, bookmarks)
-		b.WriteString("</DL><p>\n")
-	}
-}
-
-func key(pid *string) string {
-	if pid == nil {
-		return "__root__"
-	}
-	return *pid
-}
-
 func (h *ImportExportHandler) Export(c *gin.Context) {
-	format := c.DefaultQuery("format", "html")
-
-	folderMap := make(map[string][]model.Folder)
-	bookmarkMap := make(map[string][]model.Bookmark)
-	allFolders := []model.Folder{}
-	allBookmarks := []model.Bookmark{}
-	var loadAll func(pid *string) error
-	loadAll = func(pid *string) error {
-		children, err := h.folderSvc.List(pid)
-		if err != nil {
-			return err
-		}
-		folderMap[key(pid)] = children
-		allFolders = append(allFolders, children...)
-		bms, err := h.bookmarkSvc.List(pid)
-		if err != nil {
-			return err
-		}
-		bookmarkMap[key(pid)] = bms
-		allBookmarks = append(allBookmarks, bms...)
-		for _, f := range children {
-			if err := loadAll(&f.ID); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	if err := loadAll(nil); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load data for export"})
+	result, err := h.exportSvc.Export(c.DefaultQuery("format", "html"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to export"})
 		return
 	}
-
-	if format == "json" {
-		if allFolders == nil {
-			allFolders = []model.Folder{}
-		}
-		if allBookmarks == nil {
-			allBookmarks = []model.Bookmark{}
-		}
-		data := gin.H{"folders": allFolders, "bookmarks": allBookmarks}
-		j, err := json.Marshal(data)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal export data"})
-			return
-		}
-		c.Data(http.StatusOK, "application/json", j)
-		return
-	}
-
-	// HTML export (Netscape Bookmark File Format — Chrome/Edge compatible)
-	var b strings.Builder
-	b.WriteString("<!DOCTYPE NETSCAPE-Bookmark-file-1>\n")
-	b.WriteString("<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">\n")
-	b.WriteString("<TITLE>Bookmarks</TITLE>\n")
-	b.WriteString("<H1>Bookmarks</H1>\n")
-	b.WriteString("<DL><p>\n")
-
-	// Export root bookmarks
-	for _, bm := range bookmarkMap["__root__"] {
-		writeBookmarkHTML(&b, bm)
-	}
-
-	// Export folder tree recursively
-	h.exportFolder(&b, nil, folderMap, bookmarkMap)
-
-	b.WriteString("</DL><p>\n")
-	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(b.String()))
-}
-
-func writeBookmarkHTML(b *strings.Builder, bm model.Bookmark) {
-	b.WriteString("<DT><A HREF=\"" + html.EscapeString(bm.URL) + "\"")
-	if bm.Icon != "" {
-		b.WriteString(" ICON=\"" + html.EscapeString(bm.Icon) + "\"")
-	}
-	b.WriteString(">" + html.EscapeString(bm.Title) + "</A>\n")
+	c.Data(http.StatusOK, result.ContentType, result.Data)
 }
