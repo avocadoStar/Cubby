@@ -1,6 +1,6 @@
-# Cubby
+<h1 align="center">Cubby</h1>
 
-轻量级自托管书签管理器，灵感来自 `edge://favorites/`。
+<p align="center">轻量级自托管书签管理器，灵感来自 <code>edge://favorites/</code>。</p>
 
 Cubby 专注于：
 

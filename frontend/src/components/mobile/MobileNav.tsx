@@ -4,9 +4,10 @@ import { useFolderStore } from '../../stores/folderStore'
 import { useBookmarkStore } from '../../stores/bookmarkStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useToastStore } from '../../stores/toastStore'
-import { api, ConflictError } from '../../services/api'
+import { api } from '../../services/api'
 import ImportModal from '../ImportModal'
 import MobileActionMenu from './MobileActionMenu'
+import { DUPLICATE_URL_MESSAGE, isDuplicateURLConflict, normalizeBookmarkUrlForSubmit, normalizeBookmarkUrlInput } from '../../lib/addBookmark'
 import { shouldFetchMetadata } from '../../lib/metadata'
 
 export type MobileAddMode = 'bookmark' | 'folder'
@@ -184,10 +185,7 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
   const handleUrlChange = (value: string) => {
     setIcon('')
     setDuplicateUrlError('')
-    const normalized = value && !/^https?:\/\//i.test(value) && value.includes('.')
-      ? 'https://' + value
-      : value
-    setUrl(normalized)
+    setUrl(normalizeBookmarkUrlInput(value))
   }
 
   useEffect(() => {
@@ -221,13 +219,12 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
 
   const handleAddBookmark = async () => {
     if (!title.trim() || !url.trim()) return
-    let normalizedUrl = url.trim()
-    if (!/^https?:\/\//i.test(normalizedUrl)) normalizedUrl = 'https://' + normalizedUrl
+    const normalizedUrl = normalizeBookmarkUrlForSubmit(url)
     try {
       await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
     } catch (e) {
-      if (e instanceof ConflictError && e.message === '已存在') {
-        setDuplicateUrlError('已存在'); return
+      if (isDuplicateURLConflict(e)) {
+        setDuplicateUrlError(DUPLICATE_URL_MESSAGE); return
       }
       throw e
     }

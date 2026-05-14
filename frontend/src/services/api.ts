@@ -1,68 +1,6 @@
 import type { Folder, Bookmark, SearchResultItem, MoveRequest, BatchMoveItem, BatchMoveResponse } from '../types'
-
-const BASE = '/api'
-
-function token(): string | null {
-  return localStorage.getItem('token')
-}
-
-type RequestOptions = RequestInit & {
-  signal?: AbortSignal
-  skipAuthRedirect?: boolean
-}
-
-async function request<T>(url: string, options?: RequestOptions): Promise<T> {
-  const headers: Record<string, string> = {}
-  if (!(options?.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json'
-  }
-  const t = token()
-  if (t) {
-    headers['Authorization'] = `Bearer ${t}`
-  }
-
-  const { signal, skipAuthRedirect = false, ...rest } = options ?? {}
-  const res = await fetch(BASE + url, { ...rest, headers: { ...headers, ...(options?.headers as Record<string, string>) }, signal })
-
-  if (res.status === 401) {
-    if (skipAuthRedirect) {
-      const text = await res.text()
-      throw new Error(text || 'Unauthorized')
-    }
-    localStorage.removeItem('token')
-    window.location.reload()
-    throw new Error('Unauthorized')
-  }
-  if (res.status === 409) {
-    throw new ConflictError(await readErrorMessage(res))
-  }
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text)
-  }
-  if (res.status === 204) {
-    return undefined as T
-  }
-  return res.json()
-}
-
-export class ConflictError extends Error {
-  constructor(message = 'conflict') {
-    super(message)
-  }
-}
-
-async function readErrorMessage(res: Response): Promise<string> {
-  const text = await res.text()
-  if (!text) return 'conflict'
-  try {
-    const data = JSON.parse(text) as { error?: unknown }
-    if (typeof data.error === 'string' && data.error) return data.error
-  } catch {
-    // Fall through to the raw response body.
-  }
-  return text
-}
+import { request, requestBlob } from './httpClient'
+export { ConflictError } from './apiErrors'
 
 export const api = {
   // Auth
@@ -174,22 +112,7 @@ export const api = {
   },
 
   exportBookmarks: async () => {
-    const headers: Record<string, string> = {}
-    const t = token()
-    if (t) {
-      headers['Authorization'] = `Bearer ${t}`
-    }
-
-    const res = await fetch(`${BASE}/export`, { headers })
-    if (res.status === 401) {
-      localStorage.removeItem('token')
-      window.location.reload()
-      throw new Error('Unauthorized')
-    }
-    if (!res.ok) {
-      throw new Error(await readErrorMessage(res))
-    }
-    return res.blob()
+    return requestBlob('/export')
   },
 }
 

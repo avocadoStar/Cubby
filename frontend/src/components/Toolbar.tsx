@@ -6,10 +6,11 @@ import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useAuthStore } from '../stores/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { themes } from '../lib/themes'
-import { api, ConflictError } from '../services/api'
+import { api } from '../services/api'
 import CreateFolderModal from './CreateFolderModal'
 import FontSizePopover from './FontSizePopover'
 import ModalBase from './ModalBase'
+import { DUPLICATE_URL_MESSAGE, isDuplicateURLConflict, normalizeBookmarkUrlForSubmit, normalizeBookmarkUrlInput } from '../lib/addBookmark'
 import { shouldFetchMetadata } from '../lib/metadata'
 
 export default function Toolbar() {
@@ -72,24 +73,17 @@ export default function Toolbar() {
   const handleUrlChange = (value: string) => {
     setIcon('')
     setDuplicateUrlError('')
-    setUrl(value)
-    if (value && !/^https?:\/\//i.test(value) && value.includes('.')) {
-      setUrl('https://' + value)
-      return
-    }
+    setUrl(normalizeBookmarkUrlInput(value))
   }
 
   const handleAddBookmark = async () => {
     if (!title.trim() || !url.trim()) return
-    let normalizedUrl = url.trim()
-    if (!/^https?:\/\//i.test(normalizedUrl)) {
-      normalizedUrl = 'https://' + normalizedUrl
-    }
+    const normalizedUrl = normalizeBookmarkUrlForSubmit(url)
     try {
       await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
     } catch (e) {
-      if (e instanceof ConflictError && e.message === '已存在') {
-        setDuplicateUrlError('已存在')
+      if (isDuplicateURLConflict(e)) {
+        setDuplicateUrlError(DUPLICATE_URL_MESSAGE)
         return
       }
       throw e

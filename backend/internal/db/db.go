@@ -9,6 +9,40 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+const schemaDDL = `
+	CREATE TABLE IF NOT EXISTS folder (
+		id         TEXT PRIMARY KEY,
+		name       TEXT NOT NULL,
+		parent_id  TEXT REFERENCES folder(id) ON DELETE CASCADE,
+		sort_key   TEXT NOT NULL,
+		version    INTEGER NOT NULL DEFAULT 1,
+		deleted_at TEXT,
+		created_at TEXT NOT NULL DEFAULT (datetime('now')),
+		updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+	);
+	CREATE INDEX IF NOT EXISTS idx_folder_parent_sort ON folder(parent_id, sort_key);
+
+	CREATE TABLE IF NOT EXISTS bookmark (
+		id         TEXT PRIMARY KEY,
+		title      TEXT NOT NULL,
+		url        TEXT NOT NULL,
+		icon       TEXT NOT NULL DEFAULT '',
+		folder_id  TEXT REFERENCES folder(id) ON DELETE SET NULL,
+		sort_key   TEXT NOT NULL,
+		version    INTEGER NOT NULL DEFAULT 1,
+		notes      TEXT NOT NULL DEFAULT '',
+		deleted_at TEXT,
+		created_at TEXT NOT NULL DEFAULT (datetime('now')),
+		updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+	);
+	CREATE INDEX IF NOT EXISTS idx_bookmark_folder_sort ON bookmark(folder_id, sort_key);
+
+	CREATE TABLE IF NOT EXISTS setting (
+		key   TEXT PRIMARY KEY,
+		value TEXT NOT NULL
+	);
+`
+
 func MustOpen(path string) *sql.DB {
 	db, err := sql.Open("sqlite", path+"?_journal_mode=WAL&_foreign_keys=on")
 	if err != nil {
@@ -23,72 +57,47 @@ func MustOpen(path string) *sql.DB {
 }
 
 func migrate(db *sql.DB) {
-	ddl := `
-		CREATE TABLE IF NOT EXISTS folder (
-			id         TEXT PRIMARY KEY,
-			name       TEXT NOT NULL,
-			parent_id  TEXT REFERENCES folder(id) ON DELETE CASCADE,
-			sort_key   TEXT NOT NULL,
-			version    INTEGER NOT NULL DEFAULT 1,
-			deleted_at TEXT,
-			created_at TEXT NOT NULL DEFAULT (datetime('now')),
-			updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-		);
-		CREATE INDEX IF NOT EXISTS idx_folder_parent_sort ON folder(parent_id, sort_key);
+	mustExec(db, schemaDDL)
+	addBookmarkCompatibilityColumns(db)
+	rebuildSortKeyUniqueIndexes(db)
+}
 
-		CREATE TABLE IF NOT EXISTS bookmark (
-			id         TEXT PRIMARY KEY,
-			title      TEXT NOT NULL,
-			url        TEXT NOT NULL,
-			icon       TEXT NOT NULL DEFAULT '',
-			folder_id  TEXT REFERENCES folder(id) ON DELETE SET NULL,
-			sort_key   TEXT NOT NULL,
-			version    INTEGER NOT NULL DEFAULT 1,
-			notes      TEXT NOT NULL DEFAULT '',
-			deleted_at TEXT,
-			created_at TEXT NOT NULL DEFAULT (datetime('now')),
-			updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-		);
-		CREATE INDEX IF NOT EXISTS idx_bookmark_folder_sort ON bookmark(folder_id, sort_key);
-
-		CREATE TABLE IF NOT EXISTS setting (
-			key   TEXT PRIMARY KEY,
-			value TEXT NOT NULL
-		);
-	`
-	if _, err := db.Exec(ddl); err != nil {
-		panic(err)
-	}
+func addBookmarkCompatibilityColumns(db *sql.DB) {
 	if _, err := db.Exec(`ALTER TABLE bookmark ADD COLUMN notes TEXT NOT NULL DEFAULT ''`); err != nil {
-		if !strings.Contains(err.Error(), "duplicate column name") {
+		if !isDuplicateColumnError(err) {
 			panic(err)
 		}
 	}
 	if _, err := db.Exec(`ALTER TABLE bookmark ADD COLUMN icon TEXT NOT NULL DEFAULT ''`); err != nil {
-		if !strings.Contains(err.Error(), "duplicate column name") {
+		if !isDuplicateColumnError(err) {
 			panic(err)
 		}
 	}
-	if _, err := db.Exec(`DROP INDEX IF EXISTS idx_folder_parent_sort_unique`); err != nil {
-		panic(err)
-	}
-	if _, err := db.Exec(`DROP INDEX IF EXISTS idx_bookmark_folder_sort_unique`); err != nil {
-		panic(err)
-	}
+}
+
+func rebuildSortKeyUniqueIndexes(db *sql.DB) {
+	mustExec(db, `DROP INDEX IF EXISTS idx_folder_parent_sort_unique`)
+	mustExec(db, `DROP INDEX IF EXISTS idx_bookmark_folder_sort_unique`)
 	if err := repairDuplicateSortKeys(db, "folder", "parent_id"); err != nil {
 		panic(err)
 	}
 	if err := repairDuplicateSortKeys(db, "bookmark", "folder_id"); err != nil {
 		panic(err)
 	}
-	if _, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_folder_parent_sort_unique
-		ON folder(COALESCE(parent_id, '__root__'), sort_key) WHERE deleted_at IS NULL`); err != nil {
+	mustExec(db, `CREATE UNIQUE INDEX IF NOT EXISTS idx_folder_parent_sort_unique
+		ON folder(COALESCE(parent_id, '__root__'), sort_key) WHERE deleted_at IS NULL`)
+	mustExec(db, `CREATE UNIQUE INDEX IF NOT EXISTS idx_bookmark_folder_sort_unique
+		ON bookmark(COALESCE(folder_id, '__root__'), sort_key) WHERE deleted_at IS NULL`)
+}
+
+func mustExec(db *sql.DB, query string) {
+	if _, err := db.Exec(query); err != nil {
 		panic(err)
 	}
-	if _, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_bookmark_folder_sort_unique
-		ON bookmark(COALESCE(folder_id, '__root__'), sort_key) WHERE deleted_at IS NULL`); err != nil {
-		panic(err)
-	}
+}
+
+func isDuplicateColumnError(err error) bool {
+	return strings.Contains(err.Error(), "duplicate column name")
 }
 
 func repairDuplicateSortKeys(db *sql.DB, table, parentColumn string) error {

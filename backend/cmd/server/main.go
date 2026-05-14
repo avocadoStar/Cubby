@@ -7,6 +7,7 @@ import (
 	"cubby/internal/handler"
 	"cubby/internal/repository"
 	"cubby/internal/service"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,6 +21,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type appServices struct {
+	auth     *service.AuthService
+	folder   *service.FolderService
+	bookmark *service.BookmarkService
+	search   *service.SearchService
+	importer *service.ImportService
+	exporter *service.ExportService
+	metadata *service.MetadataService
+	move     *service.MoveService
+}
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -29,6 +41,37 @@ func main() {
 	database := db.MustOpen(cfg.DBPath)
 	defer database.Close()
 
+	r, err := buildRouter(cfg, database)
+	if err != nil {
+		log.Fatalf("build router: %v", err)
+	}
+
+	srv := &http.Server{
+		Addr:    ":" + cfg.BackendPort,
+		Handler: r.Handler(),
+	}
+
+	go func() {
+		log.Printf("listening on :%s", cfg.BackendPort)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("shutting down...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("shutdown: %s", err)
+	}
+	log.Println("server stopped")
+}
+
+func buildServices(cfg *config.Config, database *sql.DB) (*appServices, error) {
 	folderRepo := repository.NewFolderRepo(database)
 	bookmarkRepo := repository.NewBookmarkRepo(database)
 	moveRepo := repository.NewMoveRepo(database)
@@ -38,7 +81,7 @@ func main() {
 
 	authSvc := service.NewAuthService(cfg, settingRepo)
 	if err := authSvc.SyncConfiguredPassword(); err != nil {
-		log.Fatalf("sync configured password: %v", err)
+		return nil, fmt.Errorf("sync configured password: %w", err)
 	}
 	folderSvc := service.NewFolderService(folderRepo, bookmarkRepo, sortKeySvc)
 	bookmarkSvc := service.NewBookmarkService(bookmarkRepo, sortKeySvc)
@@ -48,23 +91,69 @@ func main() {
 	exportSvc := service.NewExportService(folderSvc, bookmarkSvc)
 	metadataSvc := service.NewMetadataService()
 
-	r := gin.Default()
-	if len(cfg.TrustedProxies) == 0 {
-		if err := r.SetTrustedProxies(nil); err != nil {
-			log.Fatalf("configure trusted proxies: %v", err)
-		}
-	} else if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
-		log.Fatalf("configure trusted proxies: %v", err)
+	return &appServices{
+		auth:     authSvc,
+		folder:   folderSvc,
+		bookmark: bookmarkSvc,
+		search:   searchSvc,
+		importer: importSvc,
+		exporter: exportSvc,
+		metadata: metadataSvc,
+		move:     moveSvc,
+	}, nil
+}
+
+func buildRouter(cfg *config.Config, database *sql.DB) (*gin.Engine, error) {
+	services, err := buildServices(cfg, database)
+	if err != nil {
+		return nil, err
 	}
 
+	r := gin.Default()
+	if err := configureTrustedProxies(r, cfg); err != nil {
+		return nil, err
+	}
+	installBodyLimitMiddleware(r)
+	installCORSMiddleware(r, cfg.AllowedOrigins)
+
+	handler.SetupRoutes(
+		r,
+		services.auth,
+		services.folder,
+		services.bookmark,
+		services.search,
+		services.importer,
+		services.exporter,
+		services.metadata,
+		services.move,
+		cfg,
+	)
+	setupFrontendRoutes(r, resolveFrontendDist())
+
+	return r, nil
+}
+
+func configureTrustedProxies(r *gin.Engine, cfg *config.Config) error {
+	if len(cfg.TrustedProxies) == 0 {
+		if err := r.SetTrustedProxies(nil); err != nil {
+			return fmt.Errorf("configure trusted proxies: %w", err)
+		}
+	} else if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		return fmt.Errorf("configure trusted proxies: %w", err)
+	}
+	return nil
+}
+
+func installBodyLimitMiddleware(r *gin.Engine) {
 	// Task 1.5: Limit request body size to 10MB.
 	r.Use(func(c *gin.Context) {
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 10<<20)
 		c.Next()
 	})
+}
 
+func installCORSMiddleware(r *gin.Engine, allowedOrigins []string) {
 	// Task 1.6: CORS middleware.
-	allowedOrigins := cfg.AllowedOrigins
 	r.Use(func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
 
@@ -100,34 +189,6 @@ func main() {
 
 		c.Next()
 	})
-
-	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, exportSvc, metadataSvc, moveSvc, cfg)
-
-	setupFrontendRoutes(r, resolveFrontendDist())
-
-	srv := &http.Server{
-		Addr:    ":" + cfg.BackendPort,
-		Handler: r.Handler(),
-	}
-
-	go func() {
-		log.Printf("listening on :%s", cfg.BackendPort)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s", err)
-		}
-	}()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Println("shutting down...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("shutdown: %s", err)
-	}
-	log.Println("server stopped")
 }
 
 func resolveFrontendDist() string {

@@ -18,55 +18,81 @@ type ExportService struct {
 	bookmarkSvc *BookmarkService
 }
 
+type exportTree struct {
+	folderMap    map[string][]model.Folder
+	bookmarkMap  map[string][]model.Bookmark
+	allFolders   []model.Folder
+	allBookmarks []model.Bookmark
+}
+
 func NewExportService(folderSvc *FolderService, bookmarkSvc *BookmarkService) *ExportService {
 	return &ExportService{folderSvc: folderSvc, bookmarkSvc: bookmarkSvc}
 }
 
 func (s *ExportService) Export(format string) (*ExportResult, error) {
-	folderMap := make(map[string][]model.Folder)
-	bookmarkMap := make(map[string][]model.Bookmark)
-	var allFolders []model.Folder
-	var allBookmarks []model.Bookmark
-
-	var loadAll func(pid *string) error
-	loadAll = func(pid *string) error {
-		children, err := s.folderSvc.List(pid)
-		if err != nil {
-			return err
-		}
-		folderMap[exportKey(pid)] = children
-		allFolders = append(allFolders, children...)
-		bms, err := s.bookmarkSvc.List(pid)
-		if err != nil {
-			return err
-		}
-		bookmarkMap[exportKey(pid)] = bms
-		allBookmarks = append(allBookmarks, bms...)
-		for _, f := range children {
-			if err := loadAll(&f.ID); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	if err := loadAll(nil); err != nil {
+	tree, err := s.loadExportTree()
+	if err != nil {
 		return nil, err
 	}
 
 	if format == "json" {
-		if allFolders == nil {
-			allFolders = []model.Folder{}
-		}
-		if allBookmarks == nil {
-			allBookmarks = []model.Bookmark{}
-		}
-		data, err := json.Marshal(map[string]any{"folders": allFolders, "bookmarks": allBookmarks})
-		if err != nil {
-			return nil, err
-		}
-		return &ExportResult{Data: data, ContentType: "application/json"}, nil
+		return renderJSONExport(tree)
 	}
 
+	return renderHTMLExport(tree), nil
+}
+
+func (s *ExportService) loadExportTree() (*exportTree, error) {
+	tree := &exportTree{
+		folderMap:   make(map[string][]model.Folder),
+		bookmarkMap: make(map[string][]model.Bookmark),
+	}
+	if err := s.loadExportScope(tree, nil); err != nil {
+		return nil, err
+	}
+	return tree, nil
+}
+
+func (s *ExportService) loadExportScope(tree *exportTree, pid *string) error {
+	children, err := s.folderSvc.List(pid)
+	if err != nil {
+		return err
+	}
+	tree.folderMap[exportKey(pid)] = children
+	tree.allFolders = append(tree.allFolders, children...)
+
+	bookmarks, err := s.bookmarkSvc.List(pid)
+	if err != nil {
+		return err
+	}
+	tree.bookmarkMap[exportKey(pid)] = bookmarks
+	tree.allBookmarks = append(tree.allBookmarks, bookmarks...)
+
+	for _, folder := range children {
+		if err := s.loadExportScope(tree, &folder.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func renderJSONExport(tree *exportTree) (*ExportResult, error) {
+	folders := tree.allFolders
+	if folders == nil {
+		folders = []model.Folder{}
+	}
+	bookmarks := tree.allBookmarks
+	if bookmarks == nil {
+		bookmarks = []model.Bookmark{}
+	}
+	data, err := json.Marshal(map[string]any{"folders": folders, "bookmarks": bookmarks})
+	if err != nil {
+		return nil, err
+	}
+	return &ExportResult{Data: data, ContentType: "application/json"}, nil
+}
+
+func renderHTMLExport(tree *exportTree) *ExportResult {
 	// HTML export (Netscape Bookmark File Format)
 	var b strings.Builder
 	b.WriteString("<!DOCTYPE NETSCAPE-Bookmark-file-1>\n")
@@ -75,13 +101,13 @@ func (s *ExportService) Export(format string) (*ExportResult, error) {
 	b.WriteString("<H1>Bookmarks</H1>\n")
 	b.WriteString("<DL><p>\n")
 
-	for _, bm := range bookmarkMap["__root__"] {
+	for _, bm := range tree.bookmarkMap["__root__"] {
 		writeBookmarkHTML(&b, bm)
 	}
-	exportFolder(&b, nil, folderMap, bookmarkMap)
+	exportFolder(&b, nil, tree.folderMap, tree.bookmarkMap)
 
 	b.WriteString("</DL><p>\n")
-	return &ExportResult{Data: []byte(b.String()), ContentType: "text/html; charset=utf-8"}, nil
+	return &ExportResult{Data: []byte(b.String()), ContentType: "text/html; charset=utf-8"}
 }
 
 func exportFolder(b *strings.Builder, parentID *string, folders map[string][]model.Folder, bookmarks map[string][]model.Bookmark) {

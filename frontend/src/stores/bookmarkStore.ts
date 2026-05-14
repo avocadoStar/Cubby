@@ -7,6 +7,7 @@ import { useToastStore } from './toastStore'
 import { useSelectionStore } from './selectionStore'
 import { applyOptimisticBatchMoveBookmarkState, applyOptimisticBatchMoveFolderState, reconcileAfterBatchMove } from '../lib/optimisticUpdates'
 import { showMoveError } from '../lib/errorHandler'
+import { removeSetValue, sortBookmarksBySortKey, sortBookmarksBySortKeyThenId } from './bookmarkStoreHelpers'
 
 let loadController: AbortController | null = null
 
@@ -83,11 +84,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       if (undoClicked) return
       undoClicked = true
       set((s) => {
-        const d = new Set(s.deletingIds)
-        d.delete(id)
-        const next = [...s.bookmarks, bookmark]
-        next.sort((a, b) => a.sort_key < b.sort_key ? -1 : 1)
-        return { bookmarks: next, deletingIds: d }
+        return { bookmarks: sortBookmarksBySortKey([...s.bookmarks, bookmark]), deletingIds: removeSetValue(s.deletingIds, id) }
       })
     }
 
@@ -96,7 +93,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       done = true
       set((s) => ({
         bookmarks: s.bookmarks.filter((b) => b.id !== id),
-        deletingIds: (() => { const d = new Set(s.deletingIds); d.delete(id); return d })(),
+        deletingIds: removeSetValue(s.deletingIds, id),
       }))
     }
 
@@ -114,11 +111,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
           api.restoreBookmark(id).then((restored) => {
             if (restored) {
               set((s) => {
-                const next = [...s.bookmarks, restored]
-                next.sort((a, b) => a.sort_key < b.sort_key ? -1 : 1)
-                const d = new Set(s.deletingIds)
-                d.delete(id)
-                return { bookmarks: next, deletingIds: d }
+                return { bookmarks: sortBookmarksBySortKey([...s.bookmarks, restored]), deletingIds: removeSetValue(s.deletingIds, id) }
               })
             }
           }).catch(() => {
@@ -180,13 +173,12 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
         const next = state.bookmarks
           .filter((b) => b.id !== id)
           .concat(folderId === viewFolderId ? [optimisticBookmark] : [])
-          .sort((a, b) => a.sort_key < b.sort_key ? -1 : a.sort_key > b.sort_key ? 1 : a.id.localeCompare(b.id))
+        const sorted = sortBookmarksBySortKeyThenId(next)
         if (folderId !== viewFolderId) {
-          const selectedIds = new Set(useSelectionStore.getState().selectedIds)
-          selectedIds.delete(id)
+          const selectedIds = removeSetValue(useSelectionStore.getState().selectedIds, id)
           useSelectionStore.setState({ selectedIds })
         }
-        return { bookmarks: next }
+        return { bookmarks: sorted }
       })
     }
 
@@ -207,8 +199,8 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
         const next = (exists
           ? state.bookmarks.map((b) => b.id === id ? { ...b, ...moved } : b)
           : [...state.bookmarks, moved]
-        ).sort((a, b) => a.sort_key < b.sort_key ? -1 : a.sort_key > b.sort_key ? 1 : a.id.localeCompare(b.id))
-        return { bookmarks: next }
+        )
+        return { bookmarks: sortBookmarksBySortKeyThenId(next) }
       })
     } catch (e) {
       if (useFolderStore.getState().selectedId === viewFolderId) {
