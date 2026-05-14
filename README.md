@@ -95,13 +95,13 @@ npm run dev
 
 * 后端运行在 `http://localhost:8080`
 * 前端运行在 `http://localhost:5173`
-* `/api` 请求会自动代理到后端
+* 前端的 `/api` 请求会自动代理到后端
 
 ---
 
 ## 配置说明
 
-Cubby 使用 `config.yaml` 管理后端配置：
+Cubby 使用 `config.yaml` 管理运行配置：
 
 ```bash
 cp config.example.yaml config.yaml
@@ -111,7 +111,8 @@ cp config.example.yaml config.yaml
 
 | 配置项               | 默认值        | 说明                 |
 | ----------------- | ---------- | ------------------ |
-| `port`            | `8080`     | 后端 HTTP 服务监听端口     |
+| `backend_port`    | `8080`     | 后端 HTTP 服务监听端口     |
+| `frontend_port`   | `5173`     | 前端开发服务器监听端口       |
 | `db_path`         | `cubby.db` | SQLite 数据库文件路径     |
 | `jwt_secret`      | 无          | JWT 签名密钥，必须使用安全随机值 |
 | `password`        | 无          | 登录密码，至少 8 个字符      |

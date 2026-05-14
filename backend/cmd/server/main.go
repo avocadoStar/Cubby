@@ -106,12 +106,12 @@ func main() {
 	setupFrontendRoutes(r, resolveFrontendDist())
 
 	srv := &http.Server{
-		Addr:    ":" + cfg.Port,
+		Addr:    ":" + cfg.BackendPort,
 		Handler: r.Handler(),
 	}
 
 	go func() {
-		log.Printf("listening on :%s", cfg.Port)
+		log.Printf("listening on :%s", cfg.BackendPort)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s", err)
 		}

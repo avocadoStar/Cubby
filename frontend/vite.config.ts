@@ -8,21 +8,24 @@ import tailwindcss from '@tailwindcss/vite'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const sharedConfigPath = path.resolve(__dirname, '../config.yaml')
 
-function readBackendPort(): string {
+function readConfigValue(key: string, fallback: string): string {
   try {
     const config = readFileSync(sharedConfigPath, 'utf8')
-    const match = config.match(/^\s*port\s*:\s*["']?(\d+)["']?\s*$/m)
-    return match?.[1] ?? '8080'
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const match = config.match(new RegExp(`^\\s*${escapedKey}\\s*:\\s*["']?([^"'\\s#]+)["']?\\s*(?:#.*)?$`, 'm'))
+    return match?.[1] ?? fallback
   } catch {
-    return '8080'
+    return fallback
   }
 }
 
-const backendPort = readBackendPort()
+const backendPort = readConfigValue('backend_port', readConfigValue('port', '8080'))
+const frontendPort = Number(readConfigValue('frontend_port', '5173'))
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    port: frontendPort,
     proxy: { '/api': `http://localhost:${backendPort}` }
   },
   build: {

@@ -9,14 +9,15 @@ import (
 )
 
 const (
-	defaultPort        = "8080"
+	defaultBackendPort = "8080"
 	defaultDBPath      = "cubby.db"
 	defaultConfigPath  = "config.yaml"
 	fallbackConfigPath = "../config.yaml"
 )
 
 type Config struct {
-	Port           string   `yaml:"port"`
+	BackendPort    string   `yaml:"backend_port"`
+	LegacyPort     string   `yaml:"port"`
 	DBPath         string   `yaml:"db_path"`
 	JWTSecret      string   `yaml:"jwt_secret"`
 	Password       string   `yaml:"password"`
@@ -39,8 +40,11 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
 
-	if cfg.Port == "" {
-		cfg.Port = defaultPort
+	if cfg.BackendPort == "" {
+		cfg.BackendPort = cfg.LegacyPort
+	}
+	if cfg.BackendPort == "" {
+		cfg.BackendPort = defaultBackendPort
 	}
 	if cfg.DBPath == "" {
 		cfg.DBPath = defaultDBPath
