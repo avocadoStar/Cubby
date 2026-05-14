@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -102,17 +103,7 @@ func main() {
 
 	handler.SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, exportSvc, metadataSvc, moveSvc, cfg)
 
-	// Serve frontend static files in production
-	r.Static("/assets", "./cmd/server/static/assets")
-	r.Static("/theme", "./cmd/server/static/theme")
-	r.StaticFile("/favicon.svg", "./cmd/server/static/favicon.svg")
-	r.NoRoute(func(c *gin.Context) {
-		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-			return
-		}
-		c.File("./cmd/server/static/index.html")
-	})
+	setupFrontendRoutes(r, resolveFrontendDist())
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
@@ -137,4 +128,44 @@ func main() {
 		log.Fatalf("shutdown: %s", err)
 	}
 	log.Println("server stopped")
+}
+
+func resolveFrontendDist() string {
+	if distDir := os.Getenv("CUBBY_FRONTEND_DIST"); distDir != "" {
+		return filepath.Clean(distDir)
+	}
+
+	candidates := []string{
+		filepath.Join("frontend", "dist"),
+		filepath.Join("..", "frontend", "dist"),
+		filepath.Join("..", "..", "..", "frontend", "dist"),
+	}
+	for _, candidate := range candidates {
+		if frontendIndexExists(candidate) {
+			return filepath.Clean(candidate)
+		}
+	}
+	return filepath.Clean(candidates[0])
+}
+
+func frontendIndexExists(distDir string) bool {
+	info, err := os.Stat(filepath.Join(distDir, "index.html"))
+	return err == nil && !info.IsDir()
+}
+
+func setupFrontendRoutes(r *gin.Engine, distDir string) {
+	if !frontendIndexExists(distDir) {
+		log.Printf("frontend build not found at %s; run frontend build or set CUBBY_FRONTEND_DIST", distDir)
+	}
+
+	r.Static("/assets", filepath.Join(distDir, "assets"))
+	r.Static("/theme", filepath.Join(distDir, "theme"))
+	r.StaticFile("/favicon.svg", filepath.Join(distDir, "favicon.svg"))
+	r.NoRoute(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.File(filepath.Join(distDir, "index.html"))
+	})
 }

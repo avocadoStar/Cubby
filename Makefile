@@ -16,12 +16,10 @@ build-frontend:
 	cd frontend && npm run build
 
 build: build-backend build-frontend
-	mkdir -p backend/cmd/server/static
-	cp -r frontend/dist/* backend/cmd/server/static/
 	@echo "Build complete: ./cubby-server"
 
 run: build
 	./cubby-server
 
 clean:
-	rm -rf cubby-server backend/cmd/server/static frontend/dist
+	rm -rf cubby-server frontend/dist
