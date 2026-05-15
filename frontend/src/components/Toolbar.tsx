@@ -13,6 +13,60 @@ import ModalBase from './ModalBase'
 import { mergeFetchedBookmarkTitle } from '../lib/addBookmark'
 import { useAddBookmarkFlow } from '../hooks/useAddBookmarkFlow'
 
+interface ThemeMenuProps {
+  themeId: string
+  onSelectTheme: (id: string, currentTarget: HTMLElement, clientX: number, clientY: number) => void
+}
+
+export function ThemeMenu({ themeId, onSelectTheme }: ThemeMenuProps) {
+  return (
+    <div className="absolute right-0 top-full mt-2 z-50 p-3 bg-app-card border border-app-border rounded-card shadow-app-lg w-[200px]">
+      <div className="text-body font-medium mb-2 text-app-text">涓婚</div>
+      {themes.map(t => {
+        const selected = themeId === t.id
+
+        return (
+          <Button
+            key={t.id}
+            variant="ghost"
+            className="w-full justify-start"
+            aria-current={selected ? 'true' : undefined}
+            onClick={(e) => onSelectTheme(t.id, e.currentTarget as HTMLElement, e.clientX, e.clientY)}
+            style={{
+              background: selected ? 'var(--accent-light)' : 'transparent',
+              color: selected ? 'var(--app-accent)' : 'var(--app-text)',
+              fontWeight: selected ? 600 : 500,
+            }}
+          >
+            <span
+              className="flex-shrink-0 rounded-full"
+              style={{
+                width: 14, height: 14,
+                background: t.vars['--bg'],
+                boxShadow: t.id === 'neumorphism'
+                  ? t.vars['--shadow']
+                  : `0 0 0 1px ${t.vars['--border']}`,
+              }}
+            />
+            <span className="flex-1 text-left text-body">{t.name}</span>
+            <span
+              aria-hidden="true"
+              data-theme-marker-slot="true"
+              data-theme-selected-marker={selected ? 'true' : undefined}
+              className="inline-flex w-4 flex-shrink-0 items-center justify-center text-sm"
+              style={{
+                color: 'var(--app-accent)',
+                fontWeight: 700,
+                opacity: selected ? 1 : 0,
+              }}
+            />
+          </Button>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Toolbar() {
   const { selectedId } = useFolderStore()
   const { upsertOne } = useBookmarkStore()
@@ -110,36 +164,8 @@ export default function Toolbar() {
             <span>主题</span>
           </Button>
           {showTheme && (
-            <div
-              ref={themeRef}
-              className="absolute right-0 top-full mt-2 z-50 p-3 bg-app-card border border-app-border rounded-card shadow-app-lg w-[200px]"
-            >
-              <div className="text-body font-medium mb-2 text-app-text">主题</div>
-              {themes.map(t => (
-                <Button
-                  key={t.id}
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={(e) => selectTheme(t.id, e.currentTarget as HTMLElement, e.clientX, e.clientY)}
-                >
-                  <span
-                    className="flex-shrink-0 rounded-full"
-                    style={{
-                      width: 14, height: 14,
-                      background: t.vars['--bg'],
-                      boxShadow: t.id === 'neumorphism'
-                        ? t.vars['--shadow']
-                        : `0 0 0 1px ${t.vars['--border']}`,
-                    }}
-                  />
-                  <span className="flex-1 text-left text-body">{t.name}</span>
-                  {themeId === t.id && (
-                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </Button>
-              ))}
+            <div ref={themeRef}>
+              <ThemeMenu themeId={themeId} onSelectTheme={selectTheme} />
             </div>
           )}
         </div>

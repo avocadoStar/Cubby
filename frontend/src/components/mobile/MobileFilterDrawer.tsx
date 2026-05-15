@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useFolderStore } from '../../stores/folderStore'
+import { motionTransform, overlayOpacity, transitionFor } from '../../lib/motion'
+
+const prefersReducedMotion =
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export default function MobileFilterDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { visibleNodes, selectedId, select, toggleExpand, expandedIds, childrenMap } = useFolderStore()
@@ -39,8 +43,9 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
       {/* Overlay */}
       <div onClick={onClose} style={{
         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.4)', zIndex: 50,
-        opacity: animated ? 1 : 0, transition: `opacity var(--motion-duration-normal) var(--motion-easing-standard)`,
+        background: `rgba(0,0,0,${overlayOpacity.mobileScrim})`, zIndex: 50,
+        opacity: animated ? 1 : 0,
+        transition: transitionFor('opacity', animated ? 'normal' : 'exit', animated ? 'standard' : 'exit', prefersReducedMotion),
         pointerEvents: animated ? 'auto' : 'none',
       }} />
 
@@ -50,8 +55,8 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
         style={{
           position: 'absolute', top: 0, right: 0, bottom: 0, width: '100%',
           background: 'var(--app-card)', zIndex: 51,
-          transform: animated ? 'translateX(0)' : 'translateX(100%)',
-          transition: `transform var(--motion-duration-normal) var(--motion-easing-standard)`,
+          transform: animated ? motionTransform.drawer.open : motionTransform.drawer.closed,
+          transition: transitionFor('transform', animated ? 'normal' : 'exit', animated ? 'enter' : 'exit', prefersReducedMotion),
           display: 'flex', flexDirection: 'column',
         }}
       >

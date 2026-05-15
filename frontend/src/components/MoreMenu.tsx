@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useCallback, useState, useRef, useEffect } from 'react'
 import ImportModal from './ImportModal'
 import { api } from '../services/api'
+import { motionDurationMs, motionTransform, transitionFor } from '../lib/motion'
 import { useToastStore } from '../stores/toastStore'
 
 const prefersReducedMotion =
@@ -14,6 +15,14 @@ export default function MoreMenu() {
   const ref = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number | null>(null)
 
+  const closeMenu = useCallback(() => {
+    setAnimated(false)
+    setTimeout(() => {
+      setMounted(false)
+      setOpen(false)
+    }, prefersReducedMotion ? 0 : motionDurationMs.fast)
+  }, [])
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -22,15 +31,7 @@ export default function MoreMenu() {
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const closeMenu = () => {
-    setAnimated(false)
-    setTimeout(() => {
-      setMounted(false)
-      setOpen(false)
-    }, prefersReducedMotion ? 0 : 150)
-  }
+  }, [closeMenu])
 
   const toggle = () => {
     if (!open) {
@@ -46,7 +47,10 @@ export default function MoreMenu() {
     if (!animated && !open) setMounted(false)
   }
 
-  const menuTransition = prefersReducedMotion ? 'none' : 'transform 0.15s ease-out, opacity 0.12s ease-out'
+  const menuTransition = [
+    transitionFor('transform', animated ? 'fast' : 'exit', animated ? 'enter' : 'exit', prefersReducedMotion),
+    transitionFor('opacity', animated ? 'fast' : 'exit', animated ? 'enter' : 'exit', prefersReducedMotion),
+  ].join(', ')
 
   return (
     <>
@@ -71,7 +75,7 @@ export default function MoreMenu() {
               borderRadius: 'var(--card-radius)',
               boxShadow: 'var(--shadow-lg)',
               transformOrigin: 'top right',
-              transform: animated ? 'scale(1)' : 'scale(0.92)',
+              transform: animated ? motionTransform.menu.open : motionTransform.menu.closed,
               opacity: animated ? 1 : 0,
               transition: menuTransition,
             }}

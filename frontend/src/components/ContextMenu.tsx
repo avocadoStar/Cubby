@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useContextMenu } from '../hooks/useContextMenu'
 import { useContextActions } from '../hooks/useContextActions'
+import { motionDurationMs, motionTransform, transitionFor } from '../lib/motion'
 import EditBookmarkModal from './EditBookmarkModal'
 import RenameFolderModal from './RenameFolderModal'
 
@@ -60,7 +61,7 @@ export default function ContextMenu() {
       closeTimerRef.current = setTimeout(() => {
         setLocalOpen(false)
         closeTimerRef.current = null
-      }, prefersReducedMotion ? 0 : 150)
+      }, prefersReducedMotion ? 0 : motionDurationMs.fast)
     }
   }, [menu])
 
@@ -70,7 +71,7 @@ export default function ContextMenu() {
       setLocalOpen(false)
       closeMenu()
       fn?.()
-    }, prefersReducedMotion ? 0 : 150)
+    }, prefersReducedMotion ? 0 : motionDurationMs.fast)
   }
 
   if (!localOpen && !editingBookmark && !renamingFolder) return null
@@ -78,7 +79,10 @@ export default function ContextMenu() {
   const isBookmark = target?.type === 'bookmark'
   const targetId = target?.id
 
-  const menuTransition = prefersReducedMotion ? 'none' : 'transform 0.15s ease-out, opacity 0.12s ease-out'
+  const menuTransition = [
+    transitionFor('transform', animated ? 'fast' : 'exit', animated ? 'enter' : 'exit', prefersReducedMotion),
+    transitionFor('opacity', animated ? 'fast' : 'exit', animated ? 'enter' : 'exit', prefersReducedMotion),
+  ].join(', ')
 
   return (
     <>
@@ -94,7 +98,7 @@ export default function ContextMenu() {
             borderRadius: 'var(--card-radius)',
             boxShadow: 'var(--shadow-lg)',
             transformOrigin: 'top left',
-            transform: animated ? 'scale(1)' : 'scale(0.92)',
+            transform: animated ? motionTransform.menu.open : motionTransform.menu.closed,
             opacity: animated ? 1 : 0,
             transition: menuTransition,
           }}

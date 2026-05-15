@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { motionDurationMs, motionTransform, transitionFor } from '../lib/motion'
 
 interface ModalBaseProps {
   title: string
@@ -35,7 +36,7 @@ export default function ModalBase({
     if (closingRef.current) return
     closingRef.current = true
     setVisible(false)
-    setTimeout(() => void onClose(), prefersReducedMotion ? 0 : 200)
+    setTimeout(() => void onClose(), prefersReducedMotion ? 0 : motionDurationMs.exit)
   }
 
   const handleOverlayClick = () => {
@@ -54,8 +55,11 @@ export default function ModalBase({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [closeOnEscape, onClose])
 
-  const transition = prefersReducedMotion ? 'none' : `opacity var(--motion-duration-normal) var(--motion-easing-standard)`
-  const cardTransition = prefersReducedMotion ? 'none' : `transform var(--motion-duration-normal) var(--motion-easing-enter), opacity var(--motion-duration-normal) var(--motion-easing-enter)`
+  const transition = transitionFor('opacity', visible ? 'normal' : 'exit', visible ? 'standard' : 'exit', prefersReducedMotion)
+  const cardTransition = [
+    transitionFor('transform', visible ? 'normal' : 'exit', visible ? 'enter' : 'exit', prefersReducedMotion),
+    transitionFor('opacity', visible ? 'normal' : 'exit', visible ? 'enter' : 'exit', prefersReducedMotion),
+  ].join(', ')
 
   return (
     <div
@@ -71,7 +75,7 @@ export default function ModalBase({
         className="bg-app-card border border-app-border rounded-card shadow-app-lg p-6"
         style={{
           width: `min(92vw, ${width})`,
-          transform: visible ? 'scale(1) translateY(0)' : 'scale(0.92) translateY(4px)',
+          transform: visible ? motionTransform.modal.open : motionTransform.modal.closed,
           opacity: visible ? 1 : 0,
           transition: cardTransition,
         }}

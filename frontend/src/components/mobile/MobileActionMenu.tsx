@@ -5,6 +5,10 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react'
+import { motionTransform, overlayOpacity, transitionFor } from '../../lib/motion'
+
+const prefersReducedMotion =
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 interface MenuItem {
   icon: React.ReactNode
@@ -80,9 +84,9 @@ export default function MobileActionMenu({
       {/* Scrim */}
       <div onClick={onClose} style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.32)', zIndex: 40,
+        background: `rgba(0,0,0,${overlayOpacity.mobileMenuScrim})`, zIndex: 40,
         opacity: animated ? 1 : 0,
-        transition: `opacity var(--motion-duration-normal) var(--motion-easing-standard)`,
+        transition: transitionFor('opacity', animated ? 'normal' : 'exit', animated ? 'standard' : 'exit', prefersReducedMotion),
         pointerEvents: animated ? 'auto' : 'none',
       }} />
 
@@ -98,9 +102,12 @@ export default function MobileActionMenu({
           minWidth: 180,
           overflow: 'hidden',
           transformOrigin: 'top right',
-          transform: animated ? 'scale(1)' : 'scale(0.92)',
+          transform: animated ? motionTransform.menu.open : motionTransform.menu.closed,
           opacity: animated ? 1 : 0,
-          transition: `transform var(--motion-duration-fast) var(--motion-easing-enter), opacity var(--motion-duration-fast) var(--motion-easing-enter)`,
+          transition: [
+            transitionFor('transform', animated ? 'fast' : 'exit', animated ? 'enter' : 'exit', prefersReducedMotion),
+            transitionFor('opacity', animated ? 'fast' : 'exit', animated ? 'enter' : 'exit', prefersReducedMotion),
+          ].join(', '),
         }}
       >
         {items.map((item, i) => (
@@ -114,7 +121,7 @@ export default function MobileActionMenu({
               color: item.danger ? 'var(--app-danger)' : 'var(--app-text)',
               borderBottom: i < items.length - 1 ? '1px solid var(--divider-color)' : 'none',
               background: 'transparent',
-              transition: `background var(--motion-duration-instant) var(--motion-easing-standard)`,
+              transition: transitionFor('background', 'instant', 'standard', prefersReducedMotion),
             }}
             onTouchStart={(e) => {
               (e.currentTarget as HTMLElement).style.background = 'var(--app-hover)'

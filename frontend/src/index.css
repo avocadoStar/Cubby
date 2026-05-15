@@ -23,13 +23,14 @@
 }
 
 :root {
-  --motion-duration-instant: 100ms;
-  --motion-duration-fast: 150ms;
-  --motion-duration-normal: 200ms;
+  --motion-duration-instant: 90ms;
+  --motion-duration-fast: 140ms;
+  --motion-duration-normal: 210ms;
+  --motion-duration-exit: 170ms;
   --motion-duration-slow: 300ms;
-  --motion-easing-standard: ease;
-  --motion-easing-enter: ease-out;
-  --motion-easing-exit: ease-in;
+  --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-easing-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-easing-exit: cubic-bezier(0.4, 0, 1, 1);
 }
 
 @keyframes fade-in {

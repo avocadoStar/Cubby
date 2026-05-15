@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Bookmark } from '../../types'
 import { useBookmarkStore } from '../../stores/bookmarkStore'
+import { motionDurationMs, motionTransform, overlayOpacity, transitionFor } from '../../lib/motion'
+
+const prefersReducedMotion =
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export default function MobileBottomSheet({ bookmark, onClose }: {
   bookmark: Bookmark | null
@@ -46,7 +50,7 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
     if (bookmark && notesRef.current !== (bookmark.notes || '')) {
       updateNotes(bookmark.id, notesRef.current).catch(() => {})
     }
-    setTimeout(onClose, 250)
+    setTimeout(onClose, prefersReducedMotion ? 0 : motionDurationMs.normal)
   }
 
   if (!bookmark) return null
@@ -56,8 +60,9 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
       {/* Overlay */}
       <div onClick={handleClose} style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'rgba(0,0,0,0.4)', zIndex: 70,
-        opacity: open ? 1 : 0, transition: `opacity var(--motion-duration-normal) var(--motion-easing-standard)`,
+        background: `rgba(0,0,0,${overlayOpacity.mobileScrim})`, zIndex: 70,
+        opacity: open ? 1 : 0,
+        transition: transitionFor('opacity', open ? 'normal' : 'exit', open ? 'standard' : 'exit', prefersReducedMotion),
         pointerEvents: open ? 'auto' : 'none',
       }} />
 
@@ -68,8 +73,8 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
         background: 'var(--app-card)',
         borderTopLeftRadius: 16, borderTopRightRadius: 16,
         boxShadow: 'var(--shadow-lg)',
-        transform: open ? 'translateY(0)' : 'translateY(100%)',
-        transition: `transform var(--motion-duration-normal) var(--motion-easing-standard)`,
+        transform: open ? motionTransform.bottomSheet.open : motionTransform.bottomSheet.closed,
+        transition: transitionFor('transform', open ? 'normal' : 'exit', open ? 'enter' : 'exit', prefersReducedMotion),
         height: '60vh',
         display: 'flex', flexDirection: 'column',
       }}>
