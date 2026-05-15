@@ -31,13 +31,16 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   load: async (folderId) => {
     loadController?.abort()
     loadController = new AbortController()
-    set({ loading: true })
+    const controller = loadController
+    set({ bookmarks: [], loading: true })
     try {
-      const bookmarks = await api.getBookmarks(folderId, loadController.signal)
+      const bookmarks = await api.getBookmarks(folderId, controller.signal)
+      if (loadController !== controller) return
       set({ bookmarks, loading: false })
       useSelectionStore.getState().clearSelection()
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
+      if (loadController !== controller) return
       set({ loading: false })
       throw e
     }

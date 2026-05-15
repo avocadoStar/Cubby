@@ -71,6 +71,23 @@ describe('bookmarkStore', () => {
   })
 
   describe('load', () => {
+    it('clears existing bookmarks and enters loading while a folder is loading', () => {
+      const previous = [makeBookmark({ id: 'old' })]
+      let resolveBookmarks!: (bookmarks: Bookmark[]) => void
+      vi.mocked(api.getBookmarks).mockReturnValue(new Promise((resolve) => {
+        resolveBookmarks = resolve
+      }))
+      useBookmarkStore.setState({ bookmarks: previous, loading: false })
+
+      const loading = useBookmarkStore.getState().load('folder1')
+
+      expect(useBookmarkStore.getState().bookmarks).toEqual([])
+      expect(useBookmarkStore.getState().loading).toBe(true)
+
+      resolveBookmarks([])
+      return loading
+    })
+
     it('loads bookmarks for a folder', async () => {
       const bookmarks = [makeBookmark({ id: 'b1' }), makeBookmark({ id: 'b2' })]
       vi.mocked(api.getBookmarks).mockResolvedValue(bookmarks)
@@ -102,11 +119,31 @@ describe('bookmarkStore', () => {
     })
 
     it('leaves loading state unchanged on AbortError', async () => {
-      useBookmarkStore.setState({ loading: true })
+      useBookmarkStore.setState({ bookmarks: [makeBookmark({ id: 'old' })], loading: true })
       vi.mocked(api.getBookmarks).mockRejectedValue(new DOMException('aborted', 'AbortError'))
 
       await useBookmarkStore.getState().load(null)
       expect(useBookmarkStore.getState().loading).toBe(true)
+      expect(useBookmarkStore.getState().bookmarks).toEqual([])
+    })
+
+    it('does not let an aborted older request overwrite the latest load', async () => {
+      const latest = [makeBookmark({ id: 'latest' })]
+      let rejectFirst!: (error: unknown) => void
+      vi.mocked(api.getBookmarks)
+        .mockReturnValueOnce(new Promise((_, reject) => {
+          rejectFirst = reject
+        }))
+        .mockResolvedValueOnce(latest)
+
+      const firstLoad = useBookmarkStore.getState().load('folder1')
+      const secondLoad = useBookmarkStore.getState().load('folder2')
+      rejectFirst(new DOMException('aborted', 'AbortError'))
+
+      await Promise.all([firstLoad, secondLoad])
+
+      expect(useBookmarkStore.getState().bookmarks).toEqual(latest)
+      expect(useBookmarkStore.getState().loading).toBe(false)
     })
   })
 

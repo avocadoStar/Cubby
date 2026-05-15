@@ -76,23 +76,32 @@ export const useFolderStore = create<FolderState>((set, get) => ({
   },
 
   select: async (id) => {
-    // Expand all ancestors so the selected folder is visible in the tree
     if (id) {
-      const { folderMap, expandedIds, childrenMap } = get()
-      const newExpanded = new Set(expandedIds)
-      const ancestors = getAncestorChain(folderMap, id)
-      // Load children for each ancestor if not loaded
+      const ancestors = getAncestorChain(get().folderMap, id)
+      set((state) => {
+        const expandedIds = new Set(state.expandedIds)
+        for (const ancestorId of ancestors) {
+          expandedIds.add(ancestorId)
+        }
+        return { selectedId: id, expandedIds }
+      })
+      get().rebuildVisible()
+
       for (const ancestorId of ancestors) {
-        if (!childrenMap.has(ancestorId)) {
+        if (!get().childrenMap.has(ancestorId)) {
           await get().loadChildren(ancestorId)
         }
-        newExpanded.add(ancestorId)
       }
-      // Load children for the selected folder
-      if (!childrenMap.has(id)) {
+      if (!get().childrenMap.has(id)) {
         await get().loadChildren(id)
       }
-      set({ selectedId: id, expandedIds: newExpanded })
+      set((state) => {
+        const expandedIds = new Set(state.expandedIds)
+        for (const ancestorId of ancestors) {
+          expandedIds.add(ancestorId)
+        }
+        return { expandedIds }
+      })
     } else {
       set({ selectedId: null })
     }

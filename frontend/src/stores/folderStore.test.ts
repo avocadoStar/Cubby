@@ -109,6 +109,27 @@ describe('folderStore', () => {
   })
 
   describe('select', () => {
+    it('sets selectedId immediately before loading unloaded children', async () => {
+      const target = makeFolder({ id: 't', parent_id: null })
+      let resolveFolders!: (folders: Folder[]) => void
+      vi.mocked(api.getFolders).mockReturnValue(new Promise((resolve) => {
+        resolveFolders = resolve
+      }))
+
+      useFolderStore.setState({
+        folderMap: new Map([['t', target]]),
+        childrenMap: new Map([[null, ['t']]]),
+      })
+
+      const selection = useFolderStore.getState().select('t')
+
+      expect(useFolderStore.getState().selectedId).toBe('t')
+      expect(api.getFolders).toHaveBeenCalledWith('t')
+
+      resolveFolders([])
+      await selection
+    })
+
     it('sets selectedId and expands ancestors', async () => {
       const grandparent = makeFolder({ id: 'gp', parent_id: null })
       const parent = makeFolder({ id: 'p', parent_id: 'gp' })

@@ -37,6 +37,53 @@ import DraggableFolderRow from './FolderRow'
 import SearchResults from './SearchResults'
 import NotesPanel from './NotesPanel'
 
+function ListSkeleton() {
+  return (
+    <div
+      aria-label={t('main.loading')}
+      className="px-4 py-3"
+      style={{ color: 'var(--app-text3)' }}
+    >
+      {Array.from({ length: 10 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex items-center gap-3 h-[46px] animate-pulse"
+          style={{ borderBottom: '1px solid transparent' }}
+        >
+          <div
+            className="flex-shrink-0 rounded"
+            style={{
+              width: 18,
+              height: 18,
+              background: 'var(--app-hover)',
+              boxShadow: 'var(--input-shadow)',
+            }}
+          />
+          <div className="flex-1 min-w-0">
+            <div
+              className="rounded mb-2"
+              style={{
+                width: `${index % 3 === 0 ? 42 : index % 3 === 1 ? 58 : 72}%`,
+                height: 10,
+                background: 'var(--app-hover)',
+              }}
+            />
+            <div
+              className="rounded"
+              style={{
+                width: `${index % 2 === 0 ? 28 : 36}%`,
+                height: 8,
+                background: 'var(--app-hover)',
+                opacity: 0.72,
+              }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function MainLayout() {
   const isMobile = useIsMobile()
 
@@ -102,10 +149,8 @@ function DesktopMainLayout() {
           ) : (
           <>
           <div className="flex-1" ref={scrollRef} style={{ overflow: 'auto' }}>
-            {loading && items.length === 0 ? (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200, color: 'var(--app-text3)', fontSize: 'var(--fs--1)' }}>
-                {t('main.loading')}
-              </div>
+            {loading ? (
+              <ListSkeleton />
             ) : (
             <div style={{ height: rowVirtualizer.getTotalSize() + 8, position: 'relative' }}>
               {rowVirtualizer.getVirtualItems().map((vi) => {

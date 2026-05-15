@@ -19,3 +19,4 @@ frontend/dist/
 .codex/
 AGENTS.md
 CLAUDE.md
+.idea/
