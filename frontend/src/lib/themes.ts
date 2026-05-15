@@ -192,6 +192,7 @@ export const themes: Theme[] = [
 
 export function applyTheme(theme: Theme) {
   const root = document.documentElement
+  root.dataset.theme = theme.id
   for (const [key, value] of Object.entries(theme.vars)) {
     root.style.setProperty(key, value)
   }

@@ -89,6 +89,25 @@ body {
   margin: 0;
 }
 
+html[data-theme="neumorphism"] .cubby-button:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow: var(--input-shadow) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-theme="neumorphism"] .cubby-button:not(:disabled):hover {
+    box-shadow: var(--card-shadow-hover) !important;
+  }
+
+  html[data-theme="neumorphism"] .neumorphic-row:not([data-selected="true"]):not([data-dragging="true"]):not([data-deleting="true"]):hover {
+    transform: translateY(-1px) !important;
+  }
+}
+
+html[data-theme="neumorphism"] .cubby-modal-card {
+  box-shadow: var(--shadow-lg);
+}
+
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;

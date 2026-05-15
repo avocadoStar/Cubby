@@ -22,6 +22,7 @@ function stubBrowserEnvironment() {
   vi.stubGlobal('document', {
     documentElement: {
       style: { setProperty },
+      dataset: {},
       animate,
     },
     startViewTransition,

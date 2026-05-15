@@ -72,7 +72,7 @@ export default function ModalBase({
       onClick={handleOverlayClick}
     >
       <div
-        className="bg-app-card border border-app-border rounded-card shadow-app-lg p-6"
+        className="cubby-modal-card bg-app-card border border-app-border rounded-card shadow-app-lg p-6"
         style={{
           width: `min(92vw, ${width})`,
           transform: visible ? motionTransform.modal.open : motionTransform.modal.closed,

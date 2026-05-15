@@ -32,7 +32,9 @@ const FolderRowComponent = memo(function FolderRowComponent({
     <div
       data-context="folder"
       data-id={folder.id}
-      className="flex items-center px-2 select-none cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)]"
+      data-selected={isFolderSelected ? 'true' : undefined}
+      data-dragging={isDragging ? 'true' : undefined}
+      className="neumorphic-row flex items-center px-2 select-none cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)]"
       style={{
         height: 38,
         borderRadius: 'var(--card-radius)',

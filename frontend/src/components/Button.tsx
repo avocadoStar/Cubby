@@ -66,14 +66,15 @@ export default function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-1.5 rounded cursor-pointer font-medium
+      data-variant={variant}
+      className={`cubby-button inline-flex items-center justify-center gap-1.5 rounded cursor-pointer font-medium
         disabled:opacity-50 disabled:cursor-not-allowed
         focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-accent)]
         ${className}`}
       style={{
         ...variantStyle[variant],
         ...sizeStyle[size],
-        transition: `background var(--motion-duration-fast) ease, box-shadow var(--motion-duration-fast) ease, opacity var(--motion-duration-fast) ease`,
+        transition: `background var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard), opacity var(--motion-duration-fast) var(--motion-easing-standard), transform var(--motion-duration-fast) var(--motion-easing-standard)`,
         ...style,
       }}
       disabled={disabled || loading}

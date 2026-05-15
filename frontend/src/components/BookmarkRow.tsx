@@ -45,7 +45,9 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
       data-context="bookmark"
       data-id={bookmark.id}
       data-deleting={isDeleting ? 'true' : undefined}
-      className="bookmark-delete-motion flex items-center px-2 rounded select-none cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)]"
+      data-selected={isSelected ? 'true' : undefined}
+      data-dragging={isDragging ? 'true' : undefined}
+      className="bookmark-delete-motion neumorphic-row flex items-center px-2 rounded select-none cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)]"
       style={{
         height: 38,
         opacity: isDeleting ? 0 : isDragging ? 0.3 : 1,
