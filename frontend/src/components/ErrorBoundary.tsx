@@ -26,12 +26,19 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--app-bg)', color: 'var(--app-text)', fontFamily: 'system-ui' }}>
-          <h2 style={{ marginBottom: 8 }}>出了点问题</h2>
-          <p style={{ color: 'var(--app-text2)', marginBottom: 24, fontSize: 'var(--fs--1)' }}>{this.state.error?.message}</p>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => this.setState({ hasError: false, error: null })} style={{ padding: '8px 24px', borderRadius: 'var(--btn-radius)', border: 'var(--input-border)', background: 'var(--app-card)', color: 'var(--app-text)', cursor: 'pointer', fontSize: 'var(--fs--1)' }}>返回</button>
-            <button onClick={() => window.location.reload()} style={{ padding: '8px 24px', borderRadius: 'var(--btn-radius)', border: 'none', background: 'var(--app-accent)', color: 'var(--text-on-accent)', cursor: 'pointer', fontSize: 'var(--fs--1)' }}>刷新页面</button>
+        <div className="flex flex-col items-center justify-center h-screen bg-app-bg text-app-text font-[system-ui]">
+          <h2 className="mb-2">出了点问题</h2>
+          <p className="text-app-text2 mb-6 text-[var(--fs--1)]">{this.state.error?.message}</p>
+          <div className="flex gap-2">
+            <button onClick={() => this.setState({ hasError: false, error: null })}
+              className="py-2 px-6 rounded-button bg-app-card text-app-text cursor-pointer text-[var(--fs--1)]"
+              style={{ border: 'var(--input-border)' }}>
+              返回
+            </button>
+            <button onClick={() => window.location.reload()}
+              className="py-2 px-6 rounded-button border-none bg-app-accent text-[var(--text-on-accent)] cursor-pointer text-[var(--fs--1)]">
+              刷新页面
+            </button>
           </div>
         </div>
       )

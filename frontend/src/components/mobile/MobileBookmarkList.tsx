@@ -3,6 +3,7 @@ import { Folder as FolderIcon } from 'lucide-react'
 import { useFolderStore } from '../../stores/folderStore'
 import { useBookmarkStore } from '../../stores/bookmarkStore'
 import { useSearchStore } from '../../stores/searchStore'
+import Spinner from '../Spinner'
 import MobileBookmarkItem from './MobileBookmarkItem'
 import SearchResults from '../SearchResults'
 import { useListItems } from '../../hooks/useListItems'
@@ -26,33 +27,20 @@ export function MobileBookmarkListContent({
   onDeleteBookmark,
 }: MobileBookmarkListContentProps) {
   return (
-    <div style={{ flex: 1, overflow: 'auto', background: 'var(--app-bg)', WebkitOverflowScrolling: 'touch', position: 'relative' }}>
+    <div className="flex-1 overflow-auto bg-app-bg relative" style={{ WebkitOverflowScrolling: 'touch' }}>
       {loading && items.length === 0 ? (
-        <div style={{
-          display: 'flex', justifyContent: 'center', alignItems: 'center',
-          height: 200, color: 'var(--app-text3)', fontSize: 14,
-        }}>加载中...</div>
+        <div className="flex justify-center items-center h-[200px] text-[var(--app-text3)] text-[14px]">加载中...</div>
       ) : (
         <>
           {items.map(item => {
             if (item.kind === 'folder') {
               return (
-                <div key={item.folder.id} onClick={() => onSelectFolder(item.folder.id)} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '12px 16px', background: 'var(--app-card)',
-                  borderBottom: '1px solid var(--divider-color)', cursor: 'pointer',
-                }}>
-                  <div style={{
-                    width: 18, height: 18, borderRadius: 'var(--radius-xs)', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--app-accent)',
-                  }}>
+                <div key={item.folder.id} onClick={() => onSelectFolder(item.folder.id)} className="flex items-center gap-2 px-4 py-3 bg-app-card border-b border-divider cursor-pointer">
+                  <div className="w-[18px] h-[18px] rounded-[var(--radius-xs)] shrink-0 flex items-center justify-center text-app-accent">
                     <FolderIcon size={18} strokeWidth={1.8} />
                   </div>
-                  <span style={{
-                    flex: 1, fontSize: 14, fontWeight: 500, color: 'var(--app-text)',
-                  }}>{item.folder.name}</span>
-                  <span style={{ color: 'var(--app-text3)', fontSize: 14 }}>›</span>
+                  <span className="flex-1 text-[14px] font-medium text-app-text">{item.folder.name}</span>
+                  <span className="text-[var(--app-text3)] text-[14px]">›</span>
                 </div>
               )
             }
@@ -69,42 +57,17 @@ export function MobileBookmarkListContent({
           })}
 
           {items.length === 0 && (
-            <div style={{
-              display: 'flex', justifyContent: 'center', alignItems: 'center',
-              height: 200, color: 'var(--app-text3)', fontSize: 14,
-            }}>暂无书签</div>
+            <div className="flex justify-center items-center h-[200px] text-[var(--app-text3)] text-[14px]">暂无书签</div>
           )}
         </>
       )}
       {loading && items.length > 0 && (
         <div
           aria-label="加载中"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-start',
-            paddingTop: 12,
-            background: 'rgba(255, 255, 255, 0.24)',
-            backdropFilter: 'blur(1px)',
-            pointerEvents: 'none',
-          }}
+          className="absolute inset-0 flex justify-start items-center pt-3 bg-white/24 backdrop-blur-[1px] pointer-events-none"
         >
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            height: 30,
-            padding: '0 12px',
-            borderRadius: 'var(--radius-pill)',
-            border: 'var(--input-border)',
-            background: 'var(--app-card)',
-            color: 'var(--app-text2)',
-            boxShadow: 'var(--shadow-lg)',
-            fontSize: 13,
-          }}>
-            <span className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--app-accent)', borderTopColor: 'transparent' }} />
+          <div className="inline-flex items-center gap-2 h-[30px] px-3 rounded-[var(--radius-pill)] border border-input-border bg-app-card text-app-text2 shadow-app-lg text-[13px]">
+            <Spinner size="sm" />
             <span>加载中...</span>
           </div>
         </div>
@@ -124,7 +87,7 @@ export default function MobileBookmarkList({ onOpenNotes }: { onOpenNotes: (id: 
 
   if (isSearching) {
     return (
-      <div style={{ flex: 1, overflow: 'auto', background: 'var(--app-bg)' }}>
+      <div className="flex-1 overflow-auto bg-app-bg">
         <SearchResults query={searchQuery} results={searchResults} />
       </div>
     )

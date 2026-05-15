@@ -56,16 +56,18 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
   return (
     <div
       ref={setNodeRef}
+      role="treeitem"
+      aria-expanded={hasChildren ? isExpanded : undefined}
+      aria-selected={isSelected}
       data-context="folder"
       data-id={node.id}
-      className="flex items-center cursor-pointer rounded select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)]"
+      className="flex items-center cursor-pointer rounded-card select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)] touch-none"
       style={{
         height: 32,
         paddingLeft: 8 + depth * 20,
         paddingRight: 8,
         margin: '0 4px',
         opacity: isDragging ? 0.3 : 1,
-        borderRadius: 'var(--card-radius)',
         background: isInside
           ? 'var(--accent-light)'
           : isSelected
@@ -76,7 +78,6 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
         boxShadow: isSelected || isInside ? 'var(--input-shadow)' : hovered ? 'var(--tree-hover-shadow)' : 'none',
         outline: isInside ? '1px solid var(--app-accent)' : undefined,
         outlineOffset: -1,
-        touchAction: 'none',
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -86,8 +87,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       tabIndex={0}
     >
       <span
-        className="flex-shrink-0 flex items-center justify-center"
-        style={{ width: 16, height: 16 }}
+        className="flex-shrink-0 flex items-center justify-center w-4 h-4"
         onClick={(e) => {
           e.stopPropagation()
           toggleExpand(node.id)
@@ -111,7 +111,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       >
         <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
       </svg>
-      <span className="ml-2 truncate text-body" style={{ color: 'var(--app-text)' }}>{node.name}</span>
+      <span className="ml-2 truncate text-body text-app-text">{node.name}</span>
     </div>
   )
 })

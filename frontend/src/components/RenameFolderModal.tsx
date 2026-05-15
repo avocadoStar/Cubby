@@ -2,6 +2,7 @@ import { useState, type FocusEvent } from 'react'
 import { useFolderStore } from '../stores/folderStore'
 import ModalBase from './ModalBase'
 import Button from './Button'
+import Input from './Input'
 
 const INPUT_STYLE: React.CSSProperties = {
   border: 'var(--input-border)',
@@ -44,13 +45,13 @@ export default function RenameFolderModal({ folderId, onClose }: {
 
   return (
     <ModalBase title="重命名文件夹" onClose={onClose} width="420px" closeOnEscape>
-      <input
+      <Input
         autoFocus
         value={name}
         onChange={e => setName(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && submit()}
-        className="w-full h-11 px-4 rounded-input outline-none mb-5"
-        style={INPUT_STYLE}
+        className="h-11 px-4 mb-5"
+        inputStyle={INPUT_STYLE}
         onFocus={handleFocus}
         onBlur={handleBlur}
       />

@@ -15,7 +15,7 @@ describe('MobileSearch', () => {
 
     expect(html).toContain('placeholder="搜索书签"')
     expect(html).toContain('筛选')
-    expect(html).toContain('border-radius:var(--input-radius)')
-    expect(html).toContain('border-radius:var(--btn-radius)')
+    expect(html).toContain('rounded-input')
+    expect(html).toContain('rounded-button')
   })
 })

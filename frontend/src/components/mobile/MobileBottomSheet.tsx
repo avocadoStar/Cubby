@@ -58,56 +58,33 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
   return (
     <>
       {/* Overlay */}
-      <div onClick={handleClose} style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: `rgba(0,0,0,${overlayOpacity.mobileScrim})`, zIndex: 70,
+      <div onClick={handleClose} className="fixed inset-0 z-[70]" style={{
+        background: `rgba(0,0,0,${overlayOpacity.mobileScrim})`,
         opacity: open ? 1 : 0,
         transition: transitionFor('opacity', open ? 'normal' : 'exit', open ? 'standard' : 'exit', prefersReducedMotion),
         pointerEvents: open ? 'auto' : 'none',
       }} />
 
       {/* Sheet */}
-      <div style={{
-        position: 'fixed', left: 0, right: 0, bottom: 0,
-        zIndex: 71,
-        background: 'var(--app-card)',
-        borderTopLeftRadius: 'var(--radius-xl)', borderTopRightRadius: 'var(--radius-xl)',
-        boxShadow: 'var(--shadow-lg)',
+      <div className="fixed inset-x-0 bottom-0 z-[71] bg-app-card rounded-t-[var(--radius-xl)] shadow-app-lg h-[60vh] flex flex-col" style={{
         transform: open ? motionTransform.bottomSheet.open : motionTransform.bottomSheet.closed,
         transition: transitionFor('transform', open ? 'normal' : 'exit', open ? 'enter' : 'exit', prefersReducedMotion),
-        height: '60vh',
-        display: 'flex', flexDirection: 'column',
       }}>
         {/* Handle */}
-        <div onClick={handleClose} style={{
-          display: 'flex', justifyContent: 'center', padding: '8px 0 4px', cursor: 'pointer',
-        }}>
-          <div style={{
-            width: 36, height: 4, borderRadius: 'var(--radius-pill)',
-            background: 'var(--app-border)',
-          }} />
+        <div onClick={handleClose} className="flex justify-center pt-2 pb-1 cursor-pointer">
+          <div className="w-9 h-1 rounded-[var(--radius-pill)] bg-app-border" />
         </div>
 
         {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '4px 16px 8px', borderBottom: '1px solid var(--divider-color)',
-        }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--app-text)' }}>
+        <div className="flex items-center justify-between px-4 pt-1 pb-2 border-b border-divider">
+          <span className="text-sm font-semibold text-app-text">
             笔记
           </span>
-          <button onClick={handleClose} style={{
-            border: 'none', background: 'none', fontSize: 13,
-            color: 'var(--app-accent)', cursor: 'pointer', fontWeight: 500,
-          }}>完成</button>
+          <button onClick={handleClose} className="border-none bg-transparent text-[13px] text-app-accent cursor-pointer font-medium">完成</button>
         </div>
 
         {/* Bookmark title */}
-        <div style={{
-          padding: '8px 16px', fontSize: 12, color: 'var(--app-text3)',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          borderBottom: '1px solid var(--divider-color)',
-        }}>
+        <div className="px-4 py-2 text-xs text-[var(--app-text3)] whitespace-nowrap overflow-hidden text-ellipsis border-b border-divider">
           {bookmark.title}
         </div>
 
@@ -117,11 +94,7 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
           value={notes}
           onChange={e => handleChange(e.target.value)}
           placeholder="添加笔记..."
-          style={{
-            flex: 1, padding: 12, border: 'none', outline: 'none',
-            fontSize: 14, lineHeight: 1.6, resize: 'none',
-            background: 'var(--app-card)', color: 'var(--app-text)',
-          }}
+          className="flex-1 p-3 border-none outline-none text-sm leading-[1.6] resize-none bg-app-card text-app-text"
         />
       </div>
     </>

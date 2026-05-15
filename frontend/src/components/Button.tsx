@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import Spinner from './Spinner'
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'icon'
 type ButtonSize = 'sm' | 'md' | 'lg'
@@ -82,10 +83,7 @@ export default function Button({
       {...props}
     >
       {loading ? (
-        <span
-          className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin flex-shrink-0"
-          style={{ borderColor: 'currentColor', borderTopColor: 'transparent' }}
-        />
+        <Spinner size="md" className="flex-shrink-0" style={{ borderColor: 'currentColor' }} />
       ) : (
         <>
           {icon && <span className="flex-shrink-0">{icon}</span>}

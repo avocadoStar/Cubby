@@ -24,11 +24,9 @@ function AllBookmarksDroppable({
     <div
       ref={setNodeRef}
       data-id="all-bookmarks"
-      className="flex items-center h-8 mx-1 px-2 rounded cursor-pointer select-none"
+      className="flex items-center h-8 mx-1 px-2 rounded cursor-pointer select-none rounded-card"
       style={{
-        margin: '0 4px',
         background: isSelected ? 'var(--accent-light)' : 'transparent',
-        borderRadius: 'var(--card-radius)',
         boxShadow: isSelected ? 'var(--input-shadow)' : 'none',
       }}
       onClick={onSelect}
@@ -38,7 +36,7 @@ function AllBookmarksDroppable({
         stroke={isSelected ? 'var(--app-accent)' : 'var(--app-text)'}
         strokeWidth={1.6}
       />
-      <span className="ml-2.5 text-body" style={{ color: 'var(--app-text)' }}>所有书签</span>
+      <span className="ml-2.5 text-body text-app-text">所有书签</span>
     </div>
   )
 }
@@ -80,7 +78,8 @@ function DroppableWrapper({
     <div
       ref={setNodeRef}
       data-drop-id={`droppable:sidebar:${nodeId}`}
-      style={{ ...style, touchAction: 'none' }}
+      className="touch-none"
+      style={style}
     >
       {children}
     </div>
@@ -127,25 +126,23 @@ export default function Sidebar() {
   })
 
   return (
-    <div className="w-[280px] min-w-[280px] flex flex-col h-full" style={{ borderRight: 'var(--sidebar-border)', background: 'var(--app-card)', boxShadow: 'var(--sidebar-shadow)' }}>
-        <div className="pt-5 px-5 pb-3 text-lg font-semibold" style={{ color: 'var(--app-text)' }}>
+    <div className="w-[280px] min-w-[280px] flex flex-col h-full border-r-[var(--sidebar-border)] bg-app-card shadow-[var(--sidebar-shadow)]">
+        <div className="pt-5 px-5 pb-3 text-lg font-semibold text-app-text">
           收藏夹
         </div>
 
         <div className="px-4 pb-2">
-          <div className="flex items-center h-8 px-2 gap-1.5" style={{ border: 'var(--input-border)', borderRadius: 'var(--input-radius)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)' }}>
+          <div className="flex items-center h-8 px-2 gap-1.5 border border-input-border rounded-input shadow-input-base bg-input-bg">
             <Search size={14} stroke="var(--app-text2)" />
             <input
-              className="flex-1 border-none outline-none text-body bg-transparent"
-              style={{ color: 'var(--app-text)' }}
+              className="flex-1 border-none outline-none text-body bg-transparent text-app-text"
               placeholder="搜索收藏夹"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
             {query && (
               <div
-                className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full cursor-pointer"
-                style={{ background: 'var(--app-text3)', color: 'var(--text-on-accent)' }}
+                className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full cursor-pointer bg-[var(--app-text3)] text-[var(--text-on-accent)]"
                 onClick={() => {
                   setQuery('')
                   clearSearch()
@@ -165,11 +162,11 @@ export default function Sidebar() {
         />
 
         {/* Virtualized folder tree */}
-        <div ref={scrollRef} className="flex-1 overflow-auto theme-scrollbar">
+        <div ref={scrollRef} role="tree" aria-label="文件夹" className="flex-1 overflow-auto theme-scrollbar">
           <div
+            className="relative"
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
-              position: 'relative',
             }}
           >
             {rowVirtualizer.getVirtualItems().map((virtualItem) => {

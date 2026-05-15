@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import ModalBase from '../ModalBase'
+import Input from '../Input'
 import { useFolderStore } from '../../stores/folderStore'
 import { useBookmarkStore } from '../../stores/bookmarkStore'
 import { useAuthStore } from '../../stores/authStore'
-import { useToastStore } from '../../stores/toastStore'
-import { api } from '../../services/api'
 import ImportModal from '../ImportModal'
 import MobileActionMenu from './MobileActionMenu'
 import { useAddBookmarkFlow } from '../../hooks/useAddBookmarkFlow'
+import { exportBookmarks } from '../../hooks/useExportFlow'
 
 export type MobileAddMode = 'bookmark' | 'folder'
 
@@ -49,31 +49,6 @@ export function MobileAddModal({
 }: MobileAddModalProps) {
   const isBookmark = mode === 'bookmark'
   const canSubmit = !saving && (isBookmark ? Boolean(title.trim() && url.trim()) : Boolean(folderName.trim()))
-  const fieldStyle = {
-    width: '100%',
-    height: 38,
-    padding: '0 12px',
-    borderRadius: 'var(--input-radius)',
-    border: 'var(--input-border)',
-    background: 'var(--input-bg)',
-    color: 'var(--app-text)',
-    fontSize: 14,
-    outline: 'none',
-  }
-
-  const tabStyle = (active: boolean) => ({
-    flex: 1,
-    height: 34,
-    borderRadius: 'var(--btn-radius)',
-    border: 'none',
-    background: active ? 'var(--app-card)' : 'transparent',
-    color: active ? 'var(--app-text)' : 'var(--app-text2)',
-    fontSize: 14,
-    fontWeight: active ? 600 : 400,
-    cursor: saving ? 'default' : 'pointer',
-    boxShadow: active ? 'var(--shadow-sm)' : 'none',
-    transition: `background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard)`,
-  })
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -88,77 +63,95 @@ export function MobileAddModal({
         <div
           role="group"
           aria-label="添加类型"
-          style={{
-            display: 'flex',
-            gap: 4,
-            padding: 3,
-            borderRadius: 'var(--input-radius)',
-            background: 'var(--app-hover)',
-            marginBottom: 16,
-          }}
+          className="flex gap-1 p-[3px] rounded-input bg-app-hover mb-4"
         >
-          <button type="button" aria-pressed={isBookmark} disabled={saving} onClick={() => onModeChange('bookmark')} style={tabStyle(isBookmark)}>
+          <button
+            type="button"
+            aria-pressed={isBookmark}
+            disabled={saving}
+            onClick={() => onModeChange('bookmark')}
+            className="flex-1 h-[34px] rounded-button bg-transparent text-app-text2 text-sm font-normal cursor-pointer"
+            style={{
+              background: isBookmark ? 'var(--app-card)' : 'transparent',
+              color: isBookmark ? 'var(--app-text)' : 'var(--app-text2)',
+              fontWeight: isBookmark ? 600 : 400,
+              cursor: saving ? 'default' : 'pointer',
+              boxShadow: isBookmark ? 'var(--shadow-sm)' : 'none',
+              transition: `background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard)`,
+            }}
+          >
             书签
           </button>
-          <button type="button" aria-pressed={!isBookmark} disabled={saving} onClick={() => onModeChange('folder')} style={tabStyle(!isBookmark)}>
+          <button
+            type="button"
+            aria-pressed={!isBookmark}
+            disabled={saving}
+            onClick={() => onModeChange('folder')}
+            className="flex-1 h-[34px] rounded-button bg-transparent text-app-text2 text-sm font-normal cursor-pointer"
+            style={{
+              background: !isBookmark ? 'var(--app-card)' : 'transparent',
+              color: !isBookmark ? 'var(--app-text)' : 'var(--app-text2)',
+              fontWeight: !isBookmark ? 600 : 400,
+              cursor: saving ? 'default' : 'pointer',
+              boxShadow: !isBookmark ? 'var(--shadow-sm)' : 'none',
+              transition: `background var(--motion-duration-fast) var(--motion-easing-standard), color var(--motion-duration-fast) var(--motion-easing-standard), box-shadow var(--motion-duration-fast) var(--motion-easing-standard)`,
+            }}
+          >
             文件夹
           </button>
         </div>
 
         {isBookmark ? (
           <>
-            <input
+            <Input
               value={title}
               onChange={e => onTitleChange(e.target.value)}
               disabled={saving}
               placeholder={fetchingTitle ? '正在获取标题…' : '名称'}
               aria-label="名称"
-              style={{ ...fieldStyle, marginBottom: 12 }}
+              className="h-[38px] mb-3"
             />
-            <input
+            <Input
               value={url}
               onChange={e => onUrlChange(e.target.value)}
               disabled={saving}
               placeholder="URL"
               aria-label="URL"
-              style={{ ...fieldStyle, marginBottom: 6 }}
+              className="h-[38px] mb-1.5"
             />
-            <div style={{ fontSize: 13, color: 'var(--app-danger)', minHeight: 18, marginBottom: 12 }}>
-              {duplicateUrlError || '\u00a0'}
+            <div className="text-[13px] text-app-danger min-h-[18px] mb-3">
+              {duplicateUrlError || ' '}
             </div>
           </>
         ) : (
-          <input
+          <Input
             value={folderName}
             onChange={e => onFolderNameChange(e.target.value)}
             disabled={saving}
             placeholder="文件夹名称"
             aria-label="文件夹名称"
-            style={{ ...fieldStyle, marginBottom: 16 }}
+            className="h-[38px]"
           />
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button type="button" onClick={() => onClose()} disabled={saving} style={{
-            height: 32, minWidth: 72, padding: '0 16px', borderRadius: 'var(--btn-radius)', fontSize: 13,
-            border: 'var(--input-border)', background: 'var(--app-card)',
-            color: 'var(--app-text)', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.5 : 1,
-          }}>取消</button>
-          <button type="submit" disabled={!canSubmit} style={{
-            height: 32, minWidth: 88, padding: '0 16px', borderRadius: 'var(--btn-radius)', fontSize: 13, fontWeight: 500,
-            border: 'none', background: 'var(--app-accent)', color: 'var(--text-on-accent)',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            cursor: saving ? 'default' : 'pointer', opacity: canSubmit ? 1 : 0.5,
-          }}>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => onClose()}
+            disabled={saving}
+            className="h-8 min-w-[72px] px-4 rounded-button text-[13px] border-input-border bg-app-card text-app-text"
+            style={{ cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.5 : 1 }}
+          >
+            取消
+          </button>
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="h-8 min-w-[88px] px-4 rounded-button text-[13px] font-medium border-none bg-app-accent text-text-on-accent inline-flex items-center justify-center gap-1.5"
+            style={{ cursor: saving ? 'default' : 'pointer', opacity: canSubmit ? 1 : 0.5 }}
+          >
             {saving && (
-              <span style={{
-                width: 12,
-                height: 12,
-                borderRadius: 'var(--radius-pill)',
-                border: '2px solid currentColor',
-                borderTopColor: 'transparent',
-                animation: 'spin 1s linear infinite',
-              }} />
+              <span className="w-3 h-3 rounded-[var(--radius-pill)] border-2 border-current border-t-transparent animate-[spin_1s_linear_infinite]" />
             )}
             <span>{isBookmark ? '添加' : '创建'}</span>
           </button>
@@ -224,51 +217,27 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
     }
   }
 
-  const handleExport = async () => {
-    try {
-      const blob = await api.exportBookmarks()
-      const blobUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = blobUrl; a.download = 'bookmarks.html'; a.click()
-      URL.revokeObjectURL(blobUrl)
-    } catch (e) {
-      useToastStore.getState().show({
-        message: e instanceof Error && e.message ? e.message : '导出失败',
-      })
-    }
-  }
+  const handleExport = exportBookmarks
 
   return (
     <>
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 12px', paddingTop: 28,
-        background: 'var(--app-card)',
-        borderBottom: '1px solid var(--divider-color)',
-        flexShrink: 0,
-        position: 'relative',
-      }}>
-        <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--app-accent)', letterSpacing: 1 }}>
+      <div className="flex items-center justify-between px-3 pt-7 pb-2 bg-app-card border-b border-divider shrink-0 relative">
+        <span className="text-base font-bold text-app-accent tracking-[1px]">
           CUBBY
         </span>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button onClick={() => setShowAddBookmark(true)} style={{
-            width: 36, height: 36, borderRadius: 'var(--btn-radius)',
-            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-            background: 'var(--app-accent)', color: 'var(--text-on-accent)',
-          }}>
+        <div className="flex gap-1">
+          <button
+            onClick={() => setShowAddBookmark(true)}
+            className="w-9 h-9 rounded-button border-none flex items-center justify-center cursor-pointer bg-app-accent text-text-on-accent"
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M12 5v14M5 12h14" />
             </svg>
           </button>
-          <button onClick={() => setShowMenu(prev => !prev)} style={{
-            width: 36, height: 36, borderRadius: 'var(--btn-radius)',
-            border: '1px solid var(--app-border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-            background: 'var(--app-card)', color: 'var(--app-text2)',
-          }}>
+          <button
+            onClick={() => setShowMenu(prev => !prev)}
+            className="w-9 h-9 rounded-button border border-app-border flex items-center justify-center cursor-pointer bg-app-card text-app-text2"
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <circle cx="12" cy="5" r="1.5" />
               <circle cx="12" cy="12" r="1.5" />

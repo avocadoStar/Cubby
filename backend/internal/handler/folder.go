@@ -17,17 +17,7 @@ func NewFolderHandler(svc *service.FolderService) *FolderHandler {
 }
 
 func (h *FolderHandler) List(c *gin.Context) {
-	parentID := c.Query("parent_id")
-	var pid *string
-	if parentID != "" {
-		pid = &parentID
-	}
-	folders, err := h.svc.List(pid)
-	if err != nil {
-		internalError(c, err)
-		return
-	}
-	jsonList(c, folders)
+	listWithOptionalFilter(c, "parent_id", h.svc.List)
 }
 
 func (h *FolderHandler) Create(c *gin.Context) {
@@ -67,32 +57,15 @@ func (h *FolderHandler) Update(c *gin.Context) {
 }
 
 func (h *FolderHandler) Delete(c *gin.Context) {
-	if err := h.svc.Delete(c.Param("id")); err != nil {
-		notFoundOrInternal(c, err)
-		return
-	}
-	c.Status(http.StatusNoContent)
+	deleteByID(c, h.svc.Delete)
 }
 
 func (h *FolderHandler) Restore(c *gin.Context) {
-	f, err := h.svc.Restore(c.Param("id"))
-	if err != nil {
-		notFoundOrInternal(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, f)
+	restoreByID(c, h.svc.Restore)
 }
 
 func (h *FolderHandler) BatchDelete(c *gin.Context) {
-	req, ok := bindJSON[batchDeleteRequest](c)
-	if !ok {
-		return
-	}
-	if err := h.svc.BatchDelete(req.IDs); err != nil {
-		internalError(c, err)
-		return
-	}
-	c.Status(http.StatusNoContent)
+	batchDeleteByIDs(c, h.svc.BatchDelete)
 }
 
 func (h *FolderHandler) Move(c *gin.Context) {

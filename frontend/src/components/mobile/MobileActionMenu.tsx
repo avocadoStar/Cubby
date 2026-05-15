@@ -82,26 +82,24 @@ export default function MobileActionMenu({
   return (
     <>
       {/* Scrim */}
-      <div onClick={onClose} style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: `rgba(0,0,0,${overlayOpacity.mobileMenuScrim})`, zIndex: 40,
-        opacity: animated ? 1 : 0,
-        transition: transitionFor('opacity', animated ? 'normal' : 'exit', animated ? 'standard' : 'exit', prefersReducedMotion),
-        pointerEvents: animated ? 'auto' : 'none',
-      }} />
+      <div
+        onClick={onClose}
+        className="fixed inset-0 z-40"
+        style={{
+          background: `rgba(0,0,0,${overlayOpacity.mobileMenuScrim})`,
+          opacity: animated ? 1 : 0,
+          transition: transitionFor('opacity', animated ? 'normal' : 'exit', animated ? 'standard' : 'exit', prefersReducedMotion),
+          pointerEvents: animated ? 'auto' : 'none',
+        }}
+      />
 
       {/* Menu panel */}
       <div
         onTransitionEnd={handleTransitionEnd}
+        role="menu"
+        aria-label="操作菜单"
+        className="absolute top-[52px] right-2 z-41 bg-app-card rounded-card shadow-app-lg border border-app-border min-w-[180px] overflow-hidden origin-top-right"
         style={{
-          position: 'absolute', top: 52, right: 8, zIndex: 41,
-          background: 'var(--app-card)',
-          borderRadius: 'var(--card-radius)',
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--app-border)',
-          minWidth: 180,
-          overflow: 'hidden',
-          transformOrigin: 'top right',
           transform: animated ? motionTransform.menu.open : motionTransform.menu.closed,
           opacity: animated ? 1 : 0,
           transition: [
@@ -113,11 +111,10 @@ export default function MobileActionMenu({
         {items.map((item, i) => (
           <div
             key={i}
+            role="menuitem"
             onClick={item.onClick}
+            className="flex items-center gap-3 px-4 h-11 cursor-pointer"
             style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '0 16px', height: 44,
-              cursor: 'pointer',
               color: item.danger ? 'var(--app-danger)' : 'var(--app-text)',
               borderBottom: i < items.length - 1 ? '1px solid var(--divider-color)' : 'none',
               background: 'transparent',
@@ -130,8 +127,8 @@ export default function MobileActionMenu({
               (e.currentTarget as HTMLElement).style.background = 'transparent'
             }}
           >
-            <span style={{ display: 'flex', flexShrink: 0 }}>{item.icon}</span>
-            <span style={{ fontSize: 14, fontWeight: 400 }}>{item.label}</span>
+            <span className="flex shrink-0">{item.icon}</span>
+            <span className="text-sm font-normal">{item.label}</span>
           </div>
         ))}
       </div>

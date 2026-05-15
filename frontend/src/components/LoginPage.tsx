@@ -134,15 +134,11 @@ export default function LoginPage() {
           Cubby
         </h1>
         <p className="text-center text-sm" style={{ color: '#66615b' }}>
-          {'\u8f93\u5165\u5bc6\u7801\u4ee5\u8bbf\u95ee\u6536\u85cf\u5939'}
+          {'输入密码以访问收藏夹'}
         </p>
         <div
-          style={{
-            animation: shake ? 'login-shake 0.4s ease' : undefined,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-          }}
+          className="flex flex-col gap-2"
+          style={{ animation: shake ? 'login-shake 0.4s ease' : undefined }}
           onAnimationEnd={() => setShake(false)}
         >
           <input
@@ -151,7 +147,7 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(event) => handlePasswordChange(event.target.value)}
-            placeholder={'\u5bc6\u7801'}
+            placeholder={'密码'}
             autoComplete="current-password"
             autoFocus
             aria-invalid={showInputError}
@@ -167,13 +163,7 @@ export default function LoginPage() {
               transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
             }}
           />
-          <div
-            aria-live="polite"
-            style={{
-              minHeight: 20,
-              overflow: 'hidden',
-            }}
-          >
+          <div aria-live="polite" className="min-h-5 overflow-hidden">
             <p
               className="text-sm"
               style={{
@@ -183,7 +173,7 @@ export default function LoginPage() {
                 transition: 'opacity 0.25s ease, transform 0.25s ease',
               }}
             >
-              {visibleError || '\u00a0'}
+              {visibleError || ' '}
             </p>
           </div>
         </div>
@@ -201,7 +191,7 @@ export default function LoginPage() {
             filter: loading || !password ? 'saturate(0.85)' : 'none',
           }}
         >
-          {loading ? '\u767b\u5f55\u4e2d...' : '\u767b\u5f55'}
+          {loading ? '登录中...' : '登录'}
         </button>
       </form>
     </div>

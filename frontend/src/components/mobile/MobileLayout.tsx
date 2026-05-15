@@ -24,11 +24,7 @@ export default function MobileLayout() {
     : null
 
   return (
-    <div style={{
-      position: 'relative', width: '100%', height: '100dvh', overflow: 'hidden',
-      display: 'flex', flexDirection: 'column',
-      background: 'var(--app-bg)',
-    }}>
+    <div className="relative w-full h-dvh overflow-hidden flex flex-col bg-app-bg">
       <ContextMenu />
       <MobileNav onOpenSettings={() => setShowSettings(true)} />
       <MobileSearch onOpenFilters={() => setShowFilters(true)} />

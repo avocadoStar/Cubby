@@ -7,16 +7,11 @@ export default function DropIndicator() {
 
   return createPortal(
     <div
+      className="fixed h-[3px] rounded-sm z-[9999] pointer-events-none bg-app-accent"
       style={{
-        position: 'fixed',
         top: indicatorRect.top,
         left: indicatorRect.left,
         width: indicatorRect.width,
-        height: 3,
-        backgroundColor: 'var(--app-accent)',
-        borderRadius: 1.5,
-        zIndex: 9999,
-        pointerEvents: 'none',
       }}
     />,
     document.body,

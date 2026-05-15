@@ -102,12 +102,8 @@ export default function MobileBookmarkItem({ bookmark, isDeleting = false, onOpe
   return (
     <div
       data-deleting={isDeleting ? 'true' : undefined}
-      className="bookmark-delete-motion"
+      className="bookmark-delete-motion relative overflow-hidden bg-app-card border-b border-divider"
       style={{
-        position: 'relative',
-        overflow: 'hidden',
-        background: 'var(--app-card)',
-        borderBottom: '1px solid var(--divider-color)',
         opacity: isDeleting ? 0 : 1,
         transform: isDeleting ? 'translateX(10px) scale(0.985)' : 'translateX(0) scale(1)',
         transition: 'opacity 0.22s ease-out, transform 0.22s ease-out',
@@ -115,23 +111,14 @@ export default function MobileBookmarkItem({ bookmark, isDeleting = false, onOpe
       }}
     >
       {/* Action buttons */}
-      <div style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0,
-        display: 'flex', zIndex: 1,
-      }}>
-        <button disabled={isDeleting} onClick={handleOpenNotes} style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: 2, width: 72, height: '100%', border: 'none', cursor: 'pointer',
-          fontSize: 10, fontWeight: 500, color: '#fff', background: 'var(--app-accent)',
-        }}>
+      <div className="absolute top-0 right-0 bottom-0 flex z-1">
+        <button disabled={isDeleting} onClick={handleOpenNotes}
+          className="flex flex-col items-center justify-center gap-0.5 w-[72px] h-full border-none cursor-pointer text-[10px] font-medium text-white bg-app-accent">
           <FileText size={16} strokeWidth={2} />
           <span>笔记</span>
         </button>
-        <button disabled={isDeleting} onClick={handleDelete} style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: 2, width: 72, height: '100%', border: 'none', cursor: 'pointer',
-          fontSize: 10, fontWeight: 500, color: '#fff', background: 'var(--app-danger)',
-        }}>
+        <button disabled={isDeleting} onClick={handleDelete}
+          className="flex flex-col items-center justify-center gap-0.5 w-[72px] h-full border-none cursor-pointer text-[10px] font-medium text-white bg-app-danger">
           <Trash2 size={16} strokeWidth={2} />
           <span>删除</span>
         </button>
@@ -143,33 +130,25 @@ export default function MobileBookmarkItem({ bookmark, isDeleting = false, onOpe
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onMouseDown={handleMouseDown}
+        className="relative z-2 bg-app-card flex items-center gap-2 py-3 px-4 cursor-pointer"
         style={{
-          position: 'relative', zIndex: 2, background: 'var(--app-card)',
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '12px 16px',
           transform: `translateX(${offset}px)`,
           transition: snapping ? 'transform 0.2s ease' : 'none',
           willChange: 'transform',
           touchAction: 'pan-y',
-          cursor: 'pointer',
         }}
       >
         {bookmark.icon ? (
-          <img src={bookmark.icon} alt="" style={{ width: 18, height: 18, borderRadius: 'var(--radius-xs)', flexShrink: 0 }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          <img src={bookmark.icon} alt="" className="w-[18px] h-[18px] rounded-[var(--radius-xs)] shrink-0"
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
         ) : (
-          <div style={{
-            width: 18, height: 18, borderRadius: 'var(--radius-xs)', flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, background: 'var(--accent-light, #EFF6FF)',
-            color: 'var(--app-accent)', fontWeight: 700,
-          }}>{bookmark.title.charAt(0).toUpperCase()}</div>
+          <div className="w-[18px] h-[18px] rounded-[var(--radius-xs)] shrink-0 flex items-center justify-center text-[11px] bg-accent-light text-app-accent font-bold">
+            {bookmark.title.charAt(0).toUpperCase()}
+          </div>
         )}
-        <span style={{
-          flex: 1, fontSize: 14, fontWeight: 500, color: 'var(--app-text)',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>{bookmark.title}</span>
+        <span className="flex-1 text-sm font-medium text-app-text truncate">{bookmark.title}</span>
         {bookmark.notes && (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--app-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--app-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
           </svg>

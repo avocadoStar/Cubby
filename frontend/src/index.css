@@ -10,20 +10,28 @@
   --color-text-on-accent: var(--text-on-accent);
   --color-app-text: var(--app-text);
   --color-app-text2: var(--app-text2);
+  --color-app-text3: var(--app-text3);
+  --color-app-danger: var(--app-danger);
   --color-input-bg: var(--input-bg);
   --color-input-border: var(--input-border);
   --color-overlay: var(--overlay);
+  --color-divider: var(--divider-color);
 
   --radius-card: var(--card-radius);
   --radius-button: var(--btn-radius);
   --radius-input: var(--input-radius);
   --radius-badge: var(--badge-radius);
+  --radius-row-icon: var(--row-icon-radius);
 
   --shadow-app-sm: var(--shadow-sm);
   --shadow-app-base: var(--shadow);
   --shadow-app-lg: var(--shadow-lg);
   --shadow-input-base: var(--input-shadow);
   --shadow-input-focus: var(--input-shadow-focus);
+  --shadow-row: var(--row-shadow);
+  --shadow-card-hover: var(--card-shadow-hover);
+  --shadow-tree-hover: var(--tree-hover-shadow);
+  --shadow-row-icon: var(--row-icon-shadow);
 }
 
 :root {

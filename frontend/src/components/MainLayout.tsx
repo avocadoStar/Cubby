@@ -1,3 +1,4 @@
+import Spinner from './Spinner'
 import Sidebar from './Sidebar'
 import Toolbar from './Toolbar'
 import BookmarkRow from './BookmarkRow'
@@ -41,40 +42,27 @@ function ListSkeleton() {
   return (
     <div
       aria-label={t('main.loading')}
-      className="px-4 py-3"
-      style={{ color: 'var(--app-text3)' }}
+      className="px-4 py-3 text-app-text3"
     >
       {Array.from({ length: 10 }).map((_, index) => (
         <div
           key={index}
-          className="flex items-center gap-3 h-[46px] animate-pulse"
-          style={{ borderBottom: '1px solid transparent' }}
+          className="flex items-center gap-3 h-[46px] animate-pulse border-b border-transparent"
         >
           <div
-            className="flex-shrink-0 rounded"
-            style={{
-              width: 18,
-              height: 18,
-              background: 'var(--app-hover)',
-              boxShadow: 'var(--input-shadow)',
-            }}
+            className="flex-shrink-0 rounded w-[18px] h-[18px] bg-app-hover shadow-input-base"
           />
           <div className="flex-1 min-w-0">
             <div
-              className="rounded mb-2"
+              className="rounded mb-2 h-[10px] bg-app-hover"
               style={{
                 width: `${index % 3 === 0 ? 42 : index % 3 === 1 ? 58 : 72}%`,
-                height: 10,
-                background: 'var(--app-hover)',
               }}
             />
             <div
-              className="rounded"
+              className="rounded h-[8px] bg-app-hover opacity-[0.72]"
               style={{
                 width: `${index % 2 === 0 ? 28 : 36}%`,
-                height: 8,
-                background: 'var(--app-hover)',
-                opacity: 0.72,
               }}
             />
           </div>
@@ -88,24 +76,12 @@ function ListLoadingOverlay() {
   return (
     <div
       aria-label={t('main.loading')}
-      className="absolute inset-0 z-10 flex justify-center pt-4 pointer-events-none"
-      style={{
-        background: 'rgba(255, 255, 255, 0.28)',
-        backdropFilter: 'blur(1px)',
-      }}
+      className="absolute inset-0 z-10 flex justify-center pt-4 pointer-events-none bg-[rgba(255,255,255,0.28)] backdrop-blur-[1px]"
     >
       <div
-        className="inline-flex items-center gap-2 h-8 px-3 rounded-full text-sm shadow-app-lg"
-        style={{
-          background: 'var(--app-card)',
-          border: 'var(--input-border)',
-          color: 'var(--app-text2)',
-        }}
+        className="inline-flex items-center gap-2 h-8 px-3 rounded-full text-sm shadow-app-lg bg-app-card border border-input-border text-app-text2"
       >
-        <span
-          className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin"
-          style={{ borderColor: 'var(--app-accent)', borderTopColor: 'transparent' }}
-        />
+        <Spinner size="sm" />
         <span>{t('main.loading')}</span>
       </div>
     </div>
@@ -166,7 +142,7 @@ function DesktopMainLayout() {
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="flex h-screen relative" style={{ background: 'var(--app-bg)' }}>
+      <div className="flex h-screen relative bg-app-bg">
         <ContextMenu />
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
@@ -176,12 +152,12 @@ function DesktopMainLayout() {
             <SearchResults query={searchQuery} results={searchResults} />
           ) : (
           <>
-          <div className="flex-1 theme-scrollbar" ref={scrollRef} style={{ overflow: 'auto' }}>
+          <div className="flex-1 theme-scrollbar overflow-auto" ref={scrollRef}>
             {loading && items.length === 0 ? (
               <ListSkeleton />
             ) : (
-            <div style={{ position: 'relative', minHeight: '100%' }}>
-              <div style={{ height: rowVirtualizer.getTotalSize() + 8, position: 'relative' }}>
+            <div className="relative min-h-full">
+              <div className="relative" style={{ height: rowVirtualizer.getTotalSize() + 8 }}>
                 {rowVirtualizer.getVirtualItems().map((vi) => {
                   const item = items[vi.index]
                   const wrapperStyle: React.CSSProperties = {

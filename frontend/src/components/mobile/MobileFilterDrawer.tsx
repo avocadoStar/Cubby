@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronRight, Folder, Star, X } from 'lucide-react'
+import Input from '../Input'
 import { useFolderStore } from '../../stores/folderStore'
 import { motionTransform, overlayOpacity, transitionFor } from '../../lib/motion'
 
@@ -42,71 +43,62 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
   return (
     <>
       {/* Overlay */}
-      <div onClick={onClose} style={{
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        background: `rgba(0,0,0,${overlayOpacity.mobileScrim})`, zIndex: 50,
-        opacity: animated ? 1 : 0,
-        transition: transitionFor('opacity', animated ? 'normal' : 'exit', animated ? 'standard' : 'exit', prefersReducedMotion),
-        pointerEvents: animated ? 'auto' : 'none',
-      }} />
+      <div onClick={onClose}
+        className="absolute inset-0 z-50"
+        style={{
+          background: `rgba(0,0,0,${overlayOpacity.mobileScrim})`,
+          opacity: animated ? 1 : 0,
+          transition: transitionFor('opacity', animated ? 'normal' : 'exit', animated ? 'standard' : 'exit', prefersReducedMotion),
+          pointerEvents: animated ? 'auto' : 'none',
+        }} />
 
       {/* Drawer */}
       <div
         onTransitionEnd={handleTransitionEnd}
+        className="absolute top-0 right-0 bottom-0 w-full bg-app-card z-[51] flex flex-col"
         style={{
-          position: 'absolute', top: 0, right: 0, bottom: 0, width: '100%',
-          background: 'var(--app-card)', zIndex: 51,
           transform: animated ? motionTransform.drawer.open : motionTransform.drawer.closed,
           transition: transitionFor('transform', animated ? 'normal' : 'exit', animated ? 'enter' : 'exit', prefersReducedMotion),
-          display: 'flex', flexDirection: 'column',
         }}
       >
         {/* Header */}
-        <div style={{
-          padding: '28px 16px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          borderBottom: '1px solid var(--divider-color)', flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--app-text)' }}>文件夹</span>
-          <button onClick={onClose} style={{
-            width: 32, height: 32, borderRadius: 'var(--btn-radius)', border: 'none',
-            background: 'var(--app-hover)', color: 'var(--app-text2)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }} aria-label="关闭">
+        <div className="px-4 pt-7 pb-3 flex items-center justify-between border-b border-divider shrink-0">
+          <span className="text-base font-semibold text-app-text">文件夹</span>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-button border-none bg-app-hover text-app-text2 cursor-pointer flex items-center justify-center"
+            aria-label="关闭">
             <X size={18} strokeWidth={1.8} />
           </button>
         </div>
 
         {/* Search */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--divider-color)', flexShrink: 0 }}>
-          <input
+        <div className="p-3 px-4 border-b border-divider shrink-0">
+          <Input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="搜索文件夹..."
-            style={{
-              width: '100%', height: 38, border: '1px solid var(--app-border)', borderRadius: 'var(--input-radius)',
-              padding: '0 12px', fontSize: 14, background: 'var(--app-hover)',
-              color: 'var(--app-text)', outline: 'none',
-            }}
+            className="h-[38px] bg-app-hover"
+            inputStyle={{ border: '1px solid var(--app-border)' }}
           />
         </div>
 
         {/* Folder tree */}
-        <div style={{ flex: 1, overflow: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 16px' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--app-text3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+        <div className="flex-1 overflow-auto [-webkit-overflow-scrolling:touch] p-3 px-4">
+          <div className="text-[11px] font-semibold text-[var(--app-text3)] uppercase tracking-wide mb-2">
             收藏夹
           </div>
 
           {/* All bookmarks */}
-          <div onClick={async () => { await select(null); onClose() }} style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 12px', borderRadius: 'var(--btn-radius)', cursor: 'pointer',
-            fontSize: 14, color: selectedId === null ? 'var(--app-accent)' : 'var(--app-text2)',
-            background: selectedId === null ? 'var(--accent-light, #EFF6FF)' : 'transparent',
-            fontWeight: selectedId === null ? 500 : 400, marginBottom: 2,
-          }}>
-            <span style={{ width: 18, display: 'flex', justifyContent: 'center' }}>
+          <div onClick={async () => { await select(null); onClose() }}
+            className="flex items-center gap-2 py-2.5 px-3 rounded-button cursor-pointer text-sm mb-0.5"
+            style={{
+              color: selectedId === null ? 'var(--app-accent)' : 'var(--app-text2)',
+              background: selectedId === null ? 'var(--accent-light, #EFF6FF)' : 'transparent',
+              fontWeight: selectedId === null ? 500 : 400,
+            }}>
+            <span className="w-[18px] flex justify-center">
               <Star size={16} strokeWidth={1.7} />
             </span>
-            <span style={{ flex: 1 }}>所有书签</span>
+            <span className="flex-1">所有书签</span>
           </div>
 
           {filteredNodes.map(({ node, depth }) => {
@@ -122,37 +114,33 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
                     await select(node.id)
                     if (!hasCh) onClose()
                   }}
+                  className="flex items-center gap-2 py-2.5 px-3 rounded-button cursor-pointer text-sm mb-0.5"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '10px 12px', borderRadius: 'var(--btn-radius)', cursor: 'pointer',
-                    fontSize: 14, color: isSelected ? 'var(--app-accent)' : 'var(--app-text2)',
+                    color: isSelected ? 'var(--app-accent)' : 'var(--app-text2)',
                     background: isSelected ? 'var(--accent-light, #EFF6FF)' : 'transparent',
                     fontWeight: isSelected ? 500 : 400,
                     paddingLeft: 12 + depth * 16,
-                    marginBottom: 2,
                   }}
                 >
                   {hasCh ? (
-                    <span style={{
-                      width: 18, display: 'flex', justifyContent: 'center',
-                      fontSize: 10, color: 'var(--app-text3)',
-                      transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)',
-                      transition: 'transform 0.2s ease',
-                    }}>
+                    <span className="w-[18px] flex justify-center text-[10px] text-[var(--app-text3)]"
+                      style={{
+                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)',
+                        transition: 'transform 0.2s ease',
+                      }}>
                       <ChevronRight size={14} strokeWidth={1.8} />
                     </span>
                   ) : (
-                    <span style={{ width: 18, visibility: 'hidden' }}>
+                    <span className="w-[18px] invisible">
                       <ChevronRight size={14} strokeWidth={1.8} />
                     </span>
                   )}
                   <Folder size={16} strokeWidth={1.8} />
-                  <span style={{ flex: 1 }}>{node.name}</span>
+                  <span className="flex-1">{node.name}</span>
                   {hasCh && (
-                    <span style={{
-                      fontSize: 11, color: 'var(--app-text3)', background: 'var(--app-hover)',
-                      padding: '1px 6px', borderRadius: 'var(--badge-radius)',
-                    }}>{(childrenMap.get(node.id) || []).length}</span>
+                    <span className="text-[11px] text-[var(--app-text3)] bg-app-hover py-px px-1.5 rounded-badge">
+                      {(childrenMap.get(node.id) || []).length}
+                    </span>
                   )}
                 </div>
               </div>

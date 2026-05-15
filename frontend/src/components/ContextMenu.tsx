@@ -12,6 +12,7 @@ const prefersReducedMotion =
 function MenuBtn({ onClick, label, danger = false }: { onClick: () => void; label: string; danger?: boolean }) {
   return (
     <button
+      role="menuitem"
       className="block w-full text-left h-8 px-3 rounded text-body cursor-pointer border-none bg-transparent hover:bg-app-hover"
       style={{ color: danger ? 'var(--app-danger)' : 'var(--app-text)' }}
       onClick={onClick}
@@ -22,7 +23,7 @@ function MenuBtn({ onClick, label, danger = false }: { onClick: () => void; labe
 }
 
 function MenuDivider() {
-  return <div className="border-t my-0.5" style={{ borderColor: 'var(--divider-color)' }} />
+  return <div className="border-t my-0.5 border-divider" />
 }
 
 export default function ContextMenu() {
@@ -89,14 +90,13 @@ export default function ContextMenu() {
       {localOpen && (
         <div
           ref={menuRef}
-          className="fixed z-[100] p-1 min-w-[200px]"
+          role="menu"
+          aria-label="操作菜单"
+          className="fixed z-[100] p-1 min-w-[200px] bg-app-card rounded-card shadow-app-lg"
           style={{
             left: pos.x,
             top: pos.y,
-            background: 'var(--app-card)',
             border: 'var(--input-border)',
-            borderRadius: 'var(--card-radius)',
-            boxShadow: 'var(--shadow-lg)',
             transformOrigin: 'top left',
             transform: animated ? motionTransform.menu.open : motionTransform.menu.closed,
             opacity: animated ? 1 : 0,

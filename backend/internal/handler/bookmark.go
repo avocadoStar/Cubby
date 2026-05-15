@@ -17,17 +17,7 @@ func NewBookmarkHandler(svc *service.BookmarkService) *BookmarkHandler {
 }
 
 func (h *BookmarkHandler) List(c *gin.Context) {
-	folderID := c.Query("folder_id")
-	var fid *string
-	if folderID != "" {
-		fid = &folderID
-	}
-	bookmarks, err := h.svc.List(fid)
-	if err != nil {
-		internalError(c, err)
-		return
-	}
-	jsonList(c, bookmarks)
+	listWithOptionalFilter(c, "folder_id", h.svc.List)
 }
 
 func (h *BookmarkHandler) Create(c *gin.Context) {
@@ -67,20 +57,11 @@ func (h *BookmarkHandler) Update(c *gin.Context) {
 }
 
 func (h *BookmarkHandler) Delete(c *gin.Context) {
-	if err := h.svc.Delete(c.Param("id")); err != nil {
-		notFoundOrInternal(c, err)
-		return
-	}
-	c.Status(http.StatusNoContent)
+	deleteByID(c, h.svc.Delete)
 }
 
 func (h *BookmarkHandler) Restore(c *gin.Context) {
-	b, err := h.svc.Restore(c.Param("id"))
-	if err != nil {
-		notFoundOrInternal(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, b)
+	restoreByID(c, h.svc.Restore)
 }
 
 func (h *BookmarkHandler) UpdateNotes(c *gin.Context) {
@@ -109,13 +90,5 @@ func (h *BookmarkHandler) Move(c *gin.Context) {
 }
 
 func (h *BookmarkHandler) BatchDelete(c *gin.Context) {
-	req, ok := bindJSON[batchDeleteRequest](c)
-	if !ok {
-		return
-	}
-	if err := h.svc.BatchDelete(req.IDs); err != nil {
-		internalError(c, err)
-		return
-	}
-	c.Status(http.StatusNoContent)
+	batchDeleteByIDs(c, h.svc.BatchDelete)
 }

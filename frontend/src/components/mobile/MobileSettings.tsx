@@ -13,76 +13,63 @@ export default function MobileSettings({ open, onClose }: { open: boolean; onClo
 
   return (
     <>
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'var(--app-bg)', zIndex: 60,
-        display: 'flex', flexDirection: 'column',
-      }}>
+      <div className="absolute inset-0 bg-app-bg z-60 flex flex-col">
         {/* Header */}
-        <div style={{
-          padding: '28px 16px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'var(--app-card)', borderBottom: '1px solid var(--divider-color)', flexShrink: 0,
-        }}>
-          <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--app-text)' }}>设置</span>
-          <button onClick={onClose} style={{
-            width: 32, height: 32, borderRadius: 'var(--btn-radius)', border: 'none',
-            background: 'var(--app-hover)', color: 'var(--app-text2)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }} aria-label="关闭">
+        <div className="px-4 pt-7 pb-3.5 flex items-center justify-between bg-app-card border-b border-divider shrink-0">
+          <span className="text-[17px] font-semibold text-app-text">设置</span>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-button border-none bg-app-hover text-app-text2 cursor-pointer flex items-center justify-center"
+            aria-label="关闭">
             <X size={18} strokeWidth={1.8} />
           </button>
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflow: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 overflow-auto [-webkit-overflow-scrolling:touch]">
           {/* Appearance */}
-          <div style={{ background: 'var(--app-card)', borderBottom: '1px solid var(--divider-color)' }}>
-            <div style={{ padding: '16px 16px 6px', fontSize: 11, fontWeight: 600, color: 'var(--app-text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div className="bg-app-card border-b border-divider">
+            <div className="px-4 pt-4 pb-1.5 text-[11px] font-semibold text-[var(--app-text3)] uppercase tracking-wide">
               外观
             </div>
 
             {/* Theme selector */}
-            <div style={{ padding: '4px 16px 0' }}>
-              <div style={{ fontSize: 13, color: 'var(--app-text2)', marginBottom: 6 }}>主题</div>
+            <div className="px-4 pt-1">
+              <div className="text-[13px] text-app-text2 mb-1.5">主题</div>
             </div>
-            <div style={{ display: 'flex', gap: 10, padding: '4px 16px 12px' }}>
+            <div className="flex gap-2.5 px-4 pt-1 pb-3">
               {themes.map(t => (
-                <div key={t.id} onClick={(e) => setTheme(t.id, { x: e.clientX, y: e.clientY })} style={{
-                  flex: 1, padding: '10px 8px', borderRadius: 'var(--card-radius)',
-                  border: `2px solid ${themeId === t.id ? 'var(--app-accent)' : 'var(--app-border)'}`,
-                  cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', gap: 6, background: 'var(--app-card)',
-                }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: '50%',
-                    background: t.vars['--bg'],
-                    boxShadow: t.id === 'neumorphism'
-                      ? t.vars['--shadow']
-                      : `0 0 0 1px ${t.vars['--border']}`,
-                  }} />
-                  <span style={{ fontSize: 11, color: 'var(--app-text2)', fontWeight: 500 }}>{t.name}</span>
+                <div key={t.id} onClick={(e) => setTheme(t.id, { x: e.clientX, y: e.clientY })}
+                  className="flex-1 py-2.5 px-2 rounded-card cursor-pointer flex flex-col items-center gap-1.5 bg-app-card"
+                  style={{ border: `2px solid ${themeId === t.id ? 'var(--app-accent)' : 'var(--app-border)'}` }}>
+                  <div className="w-7 h-7 rounded-full"
+                    style={{
+                      background: t.vars['--bg'],
+                      boxShadow: t.id === 'neumorphism'
+                        ? t.vars['--shadow']
+                        : `0 0 0 1px ${t.vars['--border']}`,
+                    }} />
+                  <span className="text-[11px] text-app-text2 font-medium">{t.name}</span>
                   {themeId === t.id && (
-                    <span style={{ fontSize: 12, color: 'var(--app-accent)', fontWeight: 700 }}>✓</span>
+                    <span className="text-xs text-app-accent font-bold">✓</span>
                   )}
                 </div>
               ))}
             </div>
 
             {/* Font size */}
-            <div style={{ padding: '4px 16px 0', marginBottom: 6 }}>
-              <div style={{ fontSize: 13, color: 'var(--app-text2)', marginBottom: 6 }}>字号</div>
+            <div className="px-4 pt-1 mb-1.5">
+              <div className="text-[13px] text-app-text2 mb-1.5">字号</div>
             </div>
-            <div style={{ display: 'flex', gap: 8, padding: '0 16px 16px' }}>
+            <div className="flex gap-2 px-4 pb-4">
               {(['small', 'medium', 'large'] as FontSizePreset[]).map(p => (
-                <div key={p} onClick={() => setPreset(p)} style={{
-                  flex: 1, padding: '8px', borderRadius: 'var(--btn-radius)',
-                  border: `2px solid ${preset === p ? 'var(--app-accent)' : 'var(--app-border)'}`,
-                  cursor: 'pointer', textAlign: 'center',
-                  fontSize: p === 'small' ? 12 : p === 'large' ? 16 : 14,
-                  fontWeight: preset === p ? 600 : 400,
-                  color: preset === p ? 'var(--app-accent)' : 'var(--app-text2)',
-                  background: 'var(--app-card)',
-                }}>
+                <div key={p} onClick={() => setPreset(p)}
+                  className="flex-1 py-2 rounded-button cursor-pointer text-center bg-app-card"
+                  style={{
+                    border: `2px solid ${preset === p ? 'var(--app-accent)' : 'var(--app-border)'}`,
+                    fontSize: p === 'small' ? 12 : p === 'large' ? 16 : 14,
+                    fontWeight: preset === p ? 600 : 400,
+                    color: preset === p ? 'var(--app-accent)' : 'var(--app-text2)',
+                  }}>
                   {p === 'small' ? '小' : p === 'medium' ? '中' : '大'}
                 </div>
               ))}
@@ -90,8 +77,8 @@ export default function MobileSettings({ open, onClose }: { open: boolean; onClo
           </div>
 
           {/* Account */}
-          <div style={{ background: 'var(--app-card)', borderBottom: '1px solid var(--divider-color)' }}>
-            <div style={{ padding: '16px 16px 6px', fontSize: 11, fontWeight: 600, color: 'var(--app-text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div className="bg-app-card border-b border-divider">
+            <div className="px-4 pt-4 pb-1.5 text-[11px] font-semibold text-[var(--app-text3)] uppercase tracking-wide">
               账户
             </div>
             <SettingsItem icon={<Power size={16} strokeWidth={1.9} />} iconBg="#FEF2F2" iconColor="var(--app-danger)"
@@ -107,17 +94,14 @@ function SettingsItem({ icon, iconBg, iconColor, label, desc, onClick }: {
   icon: React.ReactNode, iconBg: string, iconColor: string, label: string, desc?: string, onClick: () => void
 }) {
   return (
-    <div onClick={onClick} style={{
-      display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', cursor: 'pointer',
-    }}>
-      <div style={{
-        width: 32, height: 32, borderRadius: 'var(--btn-radius)', background: iconBg, color: iconColor,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 16, flexShrink: 0,
-      }}>{icon}</div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, color: 'var(--app-text)' }}>{label}</div>
-        {desc && <div style={{ fontSize: 11, color: 'var(--app-text3)', marginTop: 1 }}>{desc}</div>}
+    <div onClick={onClick} className="flex items-center gap-3 py-[13px] px-4 cursor-pointer">
+      <div className="w-8 h-8 rounded-button flex items-center justify-center text-base shrink-0"
+        style={{ background: iconBg, color: iconColor }}>
+        {icon}
+      </div>
+      <div className="flex-1">
+        <div className="text-sm text-app-text">{label}</div>
+        {desc && <div className="text-[11px] text-[var(--app-text3)] mt-px">{desc}</div>}
       </div>
       <ChevronRight size={14} color="var(--app-text3)" strokeWidth={1.8} />
     </div>

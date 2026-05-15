@@ -34,18 +34,12 @@ const FolderRowComponent = memo(function FolderRowComponent({
       data-id={folder.id}
       data-selected={isFolderSelected ? 'true' : undefined}
       data-dragging={isDragging ? 'true' : undefined}
-      className="neumorphic-row flex items-center px-2 select-none cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)]"
+      className="neumorphic-row flex items-center px-2 h-[38px] rounded-card border-[var(--card-border)] mx-[45px] mb-[var(--card-gap)] touch-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)] select-none cursor-pointer"
       style={{
-        height: 38,
-        borderRadius: 'var(--card-radius)',
-        border: 'var(--card-border)',
-        margin: '0 45px var(--card-gap) 45px',
         opacity: isDragging ? 0.3 : 1,
         boxShadow: isFolderSelected || isInside ? 'var(--input-shadow)' : hovered ? 'var(--card-shadow-hover)' : 'var(--row-shadow)',
         background: isInside ? 'var(--accent-light)' : isFolderSelected ? 'var(--accent-light)' : hovered ? 'var(--app-hover)' : 'var(--app-card)',
         outline: isInside ? '1px solid var(--app-accent)' : undefined,
-        outlineOffset: -1,
-        touchAction: 'none',
       }}
       tabIndex={0}
       onMouseEnter={() => setHovered(true)}
@@ -54,27 +48,21 @@ const FolderRowComponent = memo(function FolderRowComponent({
     >
       <RowCheckbox checked={isFolderSelected} ariaLabel={t('folder.selectAria')} onToggle={onToggleSelect} />
       <div
-        className="flex-shrink-0 mr-2 flex items-center justify-center"
-        style={{
-          width: 16, height: 16,
-          borderRadius: 'var(--row-icon-radius)',
-          background: 'var(--row-icon-bg)',
-          boxShadow: 'var(--row-icon-shadow)',
-        }}
+        className="flex-shrink-0 mr-2 flex items-center justify-center w-4 h-4 rounded-row-icon bg-[var(--row-icon-bg)] shadow-row-icon"
       >
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="var(--folder-icon-fill)" stroke="var(--folder-icon-stroke)" strokeWidth="0.6">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" className="fill-[var(--folder-icon-fill)] stroke-[var(--folder-icon-stroke)]" strokeWidth="0.6">
           <path d="M2 6a2 2 0 012-2h5l2 2h9a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
         </svg>
       </div>
-      <span className="flex-1 truncate text-body" style={{ color: 'var(--app-text)' }}>{folder.name}</span>
-      <span className="flex-shrink-0 truncate text-xs mr-8" style={{ width: 320, color: 'var(--app-text2)' }}>{t('folder.label')}</span>
-      <span className="flex-shrink-0 text-xs" style={{ width: 100, minWidth: 100, color: 'var(--app-text2)' }} />
+      <span className="flex-1 truncate text-body text-app-text">{folder.name}</span>
+      <span className="flex-shrink-0 truncate text-xs mr-8 w-80 text-app-text2">{t('folder.label')}</span>
+      <span className="flex-shrink-0 text-xs w-[100px] min-w-[100px] text-app-text2" />
       <RowDeleteButton hovered={hovered} ariaLabel={t('folder.deleteAria')} onDelete={onDelete} />
       <div
-        className="flex-shrink-0"
-        style={{ width: 1, alignSelf: 'stretch', background: hovered ? 'var(--divider-color)' : 'transparent', margin: '0 6px' }}
+        className="flex-shrink-0 w-px self-stretch mx-1.5"
+        style={{ background: hovered ? 'var(--divider-color)' : 'transparent' }}
       />
-      <span className="flex-shrink-0 flex items-center justify-center" style={{ width: 26 }}>
+      <span className="flex-shrink-0 flex items-center justify-center w-[26px]">
         <ChevronRight size={14} color="var(--app-text3)" strokeWidth={1.5} />
       </span>
     </div>

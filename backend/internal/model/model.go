@@ -1,5 +1,6 @@
 package model
 
+// Folder corresponds to frontend/src/types/index.ts Folder
 type Folder struct {
 	ID          string  `json:"id"`
 	Name        string  `json:"name"`
@@ -12,6 +13,7 @@ type Folder struct {
 	UpdatedAt   string  `json:"updated_at"`
 }
 
+// Bookmark corresponds to frontend/src/types/index.ts Bookmark
 type Bookmark struct {
 	ID        string  `json:"id"`
 	Title     string  `json:"title"`
@@ -26,6 +28,7 @@ type Bookmark struct {
 	UpdatedAt string  `json:"updated_at"`
 }
 
+// SearchResult corresponds to frontend/src/types/index.ts SearchResultItem
 type SearchResult struct {
 	Kind     string  `json:"kind"` // "bookmark" or "folder"
 	ID       string  `json:"id"`

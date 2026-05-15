@@ -1,13 +1,15 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react'
+import { useState, useRef, useCallback, type FormEvent } from 'react'
 import Breadcrumb from './Breadcrumb'
 import MoreMenu from './MoreMenu'
 import Button from './Button'
+import Input from './Input'
 import { useFolderStore } from '../stores/folderStore'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useAuthStore } from '../stores/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { themes } from '../lib/themes'
 import CreateFolderModal from './CreateFolderModal'
+import { useClickOutside } from '../hooks/useClickOutside'
 import FontSizePopover from './FontSizePopover'
 import ModalBase from './ModalBase'
 import { mergeFetchedBookmarkTitle } from '../lib/addBookmark'
@@ -39,9 +41,8 @@ export function ThemeMenu({ themeId, onSelectTheme }: ThemeMenuProps) {
             }}
           >
             <span
-              className="flex-shrink-0 rounded-full"
+              className="flex-shrink-0 rounded-full w-[14px] h-[14px]"
               style={{
-                width: 14, height: 14,
                 background: t.vars['--bg'],
                 boxShadow: t.id === 'neumorphism'
                   ? t.vars['--shadow']
@@ -53,10 +54,8 @@ export function ThemeMenu({ themeId, onSelectTheme }: ThemeMenuProps) {
               aria-hidden="true"
               data-theme-marker-slot="true"
               data-theme-selected-marker={selected ? 'true' : undefined}
-              className="inline-flex w-4 flex-shrink-0 items-center justify-center text-sm"
+              className="inline-flex w-4 flex-shrink-0 items-center justify-center text-sm text-app-accent font-bold"
               style={{
-                color: 'var(--app-accent)',
-                fontWeight: 700,
                 opacity: selected ? 1 : 0,
               }}
             />
@@ -91,15 +90,8 @@ export default function Toolbar() {
     setShowAddBookmark(false)
   }
 
-  // Close theme popover on outside click
-  useEffect(() => {
-    if (!showTheme) return
-    const handler = (e: MouseEvent) => {
-      if (themeRef.current && !themeRef.current.contains(e.target as Node)) setShowTheme(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [showTheme])
+  const closeTheme = useCallback(() => setShowTheme(false), [])
+  useClickOutside(themeRef, closeTheme)
 
   const handleUrlChange = (value: string) => {
     addBookmark.handleUrlChange(value)
@@ -143,7 +135,7 @@ export default function Toolbar() {
           </svg>
           <span>添加文件夹</span>
         </Button>
-        <div style={{ position: 'relative' }}>
+        <div className="relative">
           <Button variant="ghost" onClick={() => setShowFontSize(!showFontSize)}>
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <text x="3" y="15" fontFamily="serif" fontSize="14" fontWeight="bold">A</text>
@@ -153,7 +145,7 @@ export default function Toolbar() {
           </Button>
           {showFontSize && <FontSizePopover onClose={() => setShowFontSize(false)} />}
         </div>
-        <div style={{ position: 'relative' }}>
+        <div className="relative">
           <Button variant="ghost" onClick={() => setShowTheme(!showTheme)}>
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -183,7 +175,7 @@ export default function Toolbar() {
       {showAddBookmark && (
         <ModalBase title="添加收藏夹" onClose={closeAddBookmarkModal} width="360px" closeOnEscape={!addBookmark.saving} closeOnOverlayClick={false}>
           <form onSubmit={handleAddBookmark}>
-            <input
+            <Input
               ref={titleInputRef}
               value={addBookmark.title}
               onChange={e => handleTitleChange(e.target.value)}
@@ -191,15 +183,16 @@ export default function Toolbar() {
               placeholder={addBookmark.fetchingTitle ? "正在获取标题…" : "名称"}
               aria-label="收藏夹名称"
               aria-invalid={Boolean(addBookmark.titleError)}
-              className={`w-full h-9 px-3 rounded-input outline-none ${addBookmark.titleError ? 'mb-1' : 'mb-3'} bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]`}
-              style={{ border: addBookmark.titleError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
+              error={!!addBookmark.titleError}
+              className={addBookmark.titleError ? 'mb-1' : 'mb-3'}
+              inputStyle={{ border: addBookmark.titleError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
             />
             {addBookmark.titleError && (
               <div className="text-sm mb-3 text-app-danger">
                 {addBookmark.titleError}
               </div>
             )}
-            <input
+            <Input
               ref={urlInputRef}
               value={addBookmark.url}
               onChange={e => handleUrlChange(e.target.value)}
@@ -207,8 +200,9 @@ export default function Toolbar() {
               placeholder="URL"
               aria-label="收藏夹 URL"
               aria-invalid={Boolean(addBookmark.urlError || addBookmark.duplicateUrlError)}
-              className="w-full h-9 px-3 rounded-input outline-none mb-1 bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]"
-              style={{ border: addBookmark.urlError || addBookmark.duplicateUrlError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
+              error={!!(addBookmark.urlError || addBookmark.duplicateUrlError)}
+              className="mb-1"
+              inputStyle={{ border: addBookmark.urlError || addBookmark.duplicateUrlError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
             />
             <div className="text-sm mb-3 min-h-5 text-app-danger">
               {addBookmark.urlError || addBookmark.duplicateUrlError || '\u00a0'}

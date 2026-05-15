@@ -21,9 +21,13 @@ function isExpired(token: string | null): boolean {
 
 export default function App() {
   const token = useAuthStore((s) => s.token)
-  if (!token || isExpired(token)) {
-    if (token) localStorage.removeItem('token')
-    return <LoginPage />
-  }
-  return <ErrorBoundary><MainLayout /></ErrorBoundary>
+  return (
+    <ErrorBoundary>
+      {!token || isExpired(token) ? (
+        (() => { if (token) localStorage.removeItem('token'); return <LoginPage /> })()
+      ) : (
+        <MainLayout />
+      )}
+    </ErrorBoundary>
+  )
 }

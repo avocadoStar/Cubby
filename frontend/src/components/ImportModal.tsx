@@ -4,6 +4,7 @@ import { useFolderStore } from '../stores/folderStore'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import ModalBase from './ModalBase'
 import Button from './Button'
+import Spinner from './Spinner'
 
 type Status = 'idle' | 'importing' | 'done' | 'error'
 
@@ -93,7 +94,7 @@ export default function ImportModal({ onClose, width = '440px', compact = false 
 
       {status === 'importing' && (
         <div className={`${statusClassName} gap-4 py-8`}>
-          <div className="w-10 h-10 border-2 border-t-transparent border-app-accent rounded-full animate-spin" style={{ borderTopColor: 'transparent' }} />
+          <Spinner size="lg" />
           <p className="text-body text-app-text2">正在导入…</p>
         </div>
       )}

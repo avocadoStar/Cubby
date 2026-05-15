@@ -1,3 +1,4 @@
+// Folder corresponds to backend/internal/model/model.go Folder
 export interface Folder {
   id: string
   name: string
@@ -9,6 +10,7 @@ export interface Folder {
   updated_at: string
 }
 
+// Bookmark corresponds to backend/internal/model/model.go Bookmark
 export interface Bookmark {
   id: string
   title: string
@@ -22,6 +24,7 @@ export interface Bookmark {
   updated_at: string
 }
 
+// SearchResultItem corresponds to backend/internal/model/model.go SearchResult
 export interface SearchResultItem {
   kind: 'bookmark' | 'folder'
   id: string
