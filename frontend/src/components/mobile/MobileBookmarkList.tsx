@@ -43,7 +43,7 @@ export function MobileBookmarkListContent({
                   borderBottom: '1px solid var(--divider-color)', cursor: 'pointer',
                 }}>
                   <div style={{
-                    width: 18, height: 18, borderRadius: 3, flexShrink: 0,
+                    width: 18, height: 18, borderRadius: 'var(--radius-xs)', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: 'var(--app-accent)',
                   }}>
@@ -97,7 +97,7 @@ export function MobileBookmarkListContent({
             gap: 8,
             height: 30,
             padding: '0 12px',
-            borderRadius: 999,
+            borderRadius: 'var(--radius-pill)',
             border: 'var(--input-border)',
             background: 'var(--app-card)',
             color: 'var(--app-text2)',

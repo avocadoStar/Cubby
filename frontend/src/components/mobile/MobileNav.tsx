@@ -53,7 +53,7 @@ export function MobileAddModal({
     width: '100%',
     height: 38,
     padding: '0 12px',
-    borderRadius: 8,
+    borderRadius: 'var(--input-radius)',
     border: 'var(--input-border)',
     background: 'var(--input-bg)',
     color: 'var(--app-text)',
@@ -64,7 +64,7 @@ export function MobileAddModal({
   const tabStyle = (active: boolean) => ({
     flex: 1,
     height: 34,
-    borderRadius: 7,
+    borderRadius: 'var(--btn-radius)',
     border: 'none',
     background: active ? 'var(--app-card)' : 'transparent',
     color: active ? 'var(--app-text)' : 'var(--app-text2)',
@@ -92,7 +92,7 @@ export function MobileAddModal({
             display: 'flex',
             gap: 4,
             padding: 3,
-            borderRadius: 10,
+            borderRadius: 'var(--input-radius)',
             background: 'var(--app-hover)',
             marginBottom: 16,
           }}
@@ -140,12 +140,12 @@ export function MobileAddModal({
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" onClick={() => onClose()} disabled={saving} style={{
-            height: 32, minWidth: 72, padding: '0 16px', borderRadius: 8, fontSize: 13,
+            height: 32, minWidth: 72, padding: '0 16px', borderRadius: 'var(--btn-radius)', fontSize: 13,
             border: 'var(--input-border)', background: 'var(--app-card)',
             color: 'var(--app-text)', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.5 : 1,
           }}>取消</button>
           <button type="submit" disabled={!canSubmit} style={{
-            height: 32, minWidth: 88, padding: '0 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+            height: 32, minWidth: 88, padding: '0 16px', borderRadius: 'var(--btn-radius)', fontSize: 13, fontWeight: 500,
             border: 'none', background: 'var(--app-accent)', color: 'var(--text-on-accent)',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             cursor: saving ? 'default' : 'pointer', opacity: canSubmit ? 1 : 0.5,
@@ -154,7 +154,7 @@ export function MobileAddModal({
               <span style={{
                 width: 12,
                 height: 12,
-                borderRadius: 999,
+                borderRadius: 'var(--radius-pill)',
                 border: '2px solid currentColor',
                 borderTopColor: 'transparent',
                 animation: 'spin 1s linear infinite',
@@ -253,7 +253,7 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           <button onClick={() => setShowAddBookmark(true)} style={{
-            width: 36, height: 36, borderRadius: 8,
+            width: 36, height: 36, borderRadius: 'var(--btn-radius)',
             border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer',
             background: 'var(--app-accent)', color: 'var(--text-on-accent)',
@@ -263,7 +263,7 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
             </svg>
           </button>
           <button onClick={() => setShowMenu(prev => !prev)} style={{
-            width: 36, height: 36, borderRadius: 8,
+            width: 36, height: 36, borderRadius: 'var(--btn-radius)',
             border: '1px solid var(--app-border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer',

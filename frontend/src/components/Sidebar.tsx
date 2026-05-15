@@ -127,13 +127,13 @@ export default function Sidebar() {
   })
 
   return (
-    <div className="w-[280px] min-w-[280px] flex flex-col h-full" style={{ borderRight: 'var(--sidebar-border)', background: 'var(--app-card)' }}>
+    <div className="w-[280px] min-w-[280px] flex flex-col h-full" style={{ borderRight: 'var(--sidebar-border)', background: 'var(--app-card)', boxShadow: 'var(--sidebar-shadow)' }}>
         <div className="pt-5 px-5 pb-3 text-lg font-semibold" style={{ color: 'var(--app-text)' }}>
           收藏夹
         </div>
 
         <div className="px-4 pb-2">
-          <div className="flex items-center h-8 px-2 gap-1.5" style={{ border: 'var(--input-border)', borderRadius: 'var(--card-radius)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)' }}>
+          <div className="flex items-center h-8 px-2 gap-1.5" style={{ border: 'var(--input-border)', borderRadius: 'var(--input-radius)', boxShadow: 'var(--input-shadow)', background: 'var(--input-bg)' }}>
             <Search size={14} stroke="var(--app-text2)" />
             <input
               className="flex-1 border-none outline-none text-body bg-transparent"

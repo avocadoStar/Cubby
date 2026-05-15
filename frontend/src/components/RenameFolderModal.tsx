@@ -9,6 +9,7 @@ const INPUT_STYLE: React.CSSProperties = {
   background: 'var(--input-bg)',
   color: 'var(--app-text)',
   fontSize: 'var(--fs-body)',
+  borderRadius: 'var(--input-radius)',
 }
 
 function handleFocus(e: FocusEvent<HTMLInputElement>) {
@@ -48,7 +49,7 @@ export default function RenameFolderModal({ folderId, onClose }: {
         value={name}
         onChange={e => setName(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && submit()}
-        className="w-full h-11 px-4 rounded outline-none mb-5"
+        className="w-full h-11 px-4 rounded-input outline-none mb-5"
         style={INPUT_STYLE}
         onFocus={handleFocus}
         onBlur={handleBlur}

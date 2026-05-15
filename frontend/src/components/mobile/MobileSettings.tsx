@@ -2,6 +2,7 @@ import { useThemeStore } from '../../stores/themeStore'
 import { useFontSizeStore, type FontSizePreset } from '../../stores/fontSizeStore'
 import { useAuthStore } from '../../stores/authStore'
 import { themes } from '../../lib/themes'
+import { ChevronRight, Power, X } from 'lucide-react'
 
 export default function MobileSettings({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { themeId, setTheme } = useThemeStore()
@@ -24,10 +25,12 @@ export default function MobileSettings({ open, onClose }: { open: boolean; onClo
         }}>
           <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--app-text)' }}>设置</span>
           <button onClick={onClose} style={{
-            width: 32, height: 32, borderRadius: 8, border: 'none',
-            background: 'var(--app-hover)', color: 'var(--app-text2)', fontSize: 16,
+            width: 32, height: 32, borderRadius: 'var(--btn-radius)', border: 'none',
+            background: 'var(--app-hover)', color: 'var(--app-text2)',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>×</button>
+          }} aria-label="关闭">
+            <X size={18} strokeWidth={1.8} />
+          </button>
         </div>
 
         {/* Body */}
@@ -45,7 +48,7 @@ export default function MobileSettings({ open, onClose }: { open: boolean; onClo
             <div style={{ display: 'flex', gap: 10, padding: '4px 16px 12px' }}>
               {themes.map(t => (
                 <div key={t.id} onClick={(e) => setTheme(t.id, { x: e.clientX, y: e.clientY })} style={{
-                  flex: 1, padding: '10px 8px', borderRadius: 10,
+                  flex: 1, padding: '10px 8px', borderRadius: 'var(--card-radius)',
                   border: `2px solid ${themeId === t.id ? 'var(--app-accent)' : 'var(--app-border)'}`,
                   cursor: 'pointer', display: 'flex', flexDirection: 'column',
                   alignItems: 'center', gap: 6, background: 'var(--app-card)',
@@ -72,7 +75,7 @@ export default function MobileSettings({ open, onClose }: { open: boolean; onClo
             <div style={{ display: 'flex', gap: 8, padding: '0 16px 16px' }}>
               {(['small', 'medium', 'large'] as FontSizePreset[]).map(p => (
                 <div key={p} onClick={() => setPreset(p)} style={{
-                  flex: 1, padding: '8px', borderRadius: 8,
+                  flex: 1, padding: '8px', borderRadius: 'var(--btn-radius)',
                   border: `2px solid ${preset === p ? 'var(--app-accent)' : 'var(--app-border)'}`,
                   cursor: 'pointer', textAlign: 'center',
                   fontSize: p === 'small' ? 12 : p === 'large' ? 16 : 14,
@@ -91,7 +94,7 @@ export default function MobileSettings({ open, onClose }: { open: boolean; onClo
             <div style={{ padding: '16px 16px 6px', fontSize: 11, fontWeight: 600, color: 'var(--app-text3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               账户
             </div>
-            <SettingsItem icon="⏻" iconBg="#FEF2F2" iconColor="var(--app-danger)"
+            <SettingsItem icon={<Power size={16} strokeWidth={1.9} />} iconBg="#FEF2F2" iconColor="var(--app-danger)"
               label="退出登录" onClick={logout} />
           </div>
         </div>
@@ -101,14 +104,14 @@ export default function MobileSettings({ open, onClose }: { open: boolean; onClo
 }
 
 function SettingsItem({ icon, iconBg, iconColor, label, desc, onClick }: {
-  icon: string, iconBg: string, iconColor: string, label: string, desc?: string, onClick: () => void
+  icon: React.ReactNode, iconBg: string, iconColor: string, label: string, desc?: string, onClick: () => void
 }) {
   return (
     <div onClick={onClick} style={{
       display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', cursor: 'pointer',
     }}>
       <div style={{
-        width: 32, height: 32, borderRadius: 8, background: iconBg, color: iconColor,
+        width: 32, height: 32, borderRadius: 'var(--btn-radius)', background: iconBg, color: iconColor,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 16, flexShrink: 0,
       }}>{icon}</div>
@@ -116,7 +119,7 @@ function SettingsItem({ icon, iconBg, iconColor, label, desc, onClick }: {
         <div style={{ fontSize: 14, color: 'var(--app-text)' }}>{label}</div>
         {desc && <div style={{ fontSize: 11, color: 'var(--app-text3)', marginTop: 1 }}>{desc}</div>}
       </div>
-      <span style={{ color: 'var(--app-text3)', fontSize: 14 }}>›</span>
+      <ChevronRight size={14} color="var(--app-text3)" strokeWidth={1.8} />
     </div>
   )
 }

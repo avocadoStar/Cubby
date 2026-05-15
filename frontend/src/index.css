@@ -15,7 +15,11 @@
   --color-overlay: var(--overlay);
 
   --radius-card: var(--card-radius);
+  --radius-button: var(--btn-radius);
+  --radius-input: var(--input-radius);
+  --radius-badge: var(--badge-radius);
 
+  --shadow-app-sm: var(--shadow-sm);
   --shadow-app-base: var(--shadow);
   --shadow-app-lg: var(--shadow-lg);
   --shadow-input-base: var(--input-shadow);
@@ -85,6 +89,7 @@ body {
   font-family: 'Segoe UI', -apple-system, sans-serif;
   font-size: var(--fs-body);
   background: var(--app-bg);
+  background-image: var(--bg-texture);
   color: var(--app-text);
   margin: 0;
 }

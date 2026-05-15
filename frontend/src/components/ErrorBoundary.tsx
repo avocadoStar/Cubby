@@ -30,8 +30,8 @@ export default class ErrorBoundary extends Component<Props, State> {
           <h2 style={{ marginBottom: 8 }}>出了点问题</h2>
           <p style={{ color: 'var(--app-text2)', marginBottom: 24, fontSize: 'var(--fs--1)' }}>{this.state.error?.message}</p>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => this.setState({ hasError: false, error: null })} style={{ padding: '8px 24px', borderRadius: 8, border: 'var(--input-border)', background: 'var(--app-card)', color: 'var(--app-text)', cursor: 'pointer', fontSize: 'var(--fs--1)' }}>返回</button>
-            <button onClick={() => window.location.reload()} style={{ padding: '8px 24px', borderRadius: 8, border: 'none', background: 'var(--app-accent)', color: 'var(--text-on-accent)', cursor: 'pointer', fontSize: 'var(--fs--1)' }}>刷新页面</button>
+            <button onClick={() => this.setState({ hasError: false, error: null })} style={{ padding: '8px 24px', borderRadius: 'var(--btn-radius)', border: 'var(--input-border)', background: 'var(--app-card)', color: 'var(--app-text)', cursor: 'pointer', fontSize: 'var(--fs--1)' }}>返回</button>
+            <button onClick={() => window.location.reload()} style={{ padding: '8px 24px', borderRadius: 'var(--btn-radius)', border: 'none', background: 'var(--app-accent)', color: 'var(--text-on-accent)', cursor: 'pointer', fontSize: 'var(--fs--1)' }}>刷新页面</button>
           </div>
         </div>
       )

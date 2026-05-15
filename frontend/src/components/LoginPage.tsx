@@ -121,7 +121,7 @@ export default function LoginPage() {
         style={{
           background: 'rgba(250, 247, 241, 0.88)',
           border: '1px solid rgba(216, 213, 207, 0.92)',
-          borderRadius: 12,
+          borderRadius: 'var(--card-radius, 12px)',
           boxShadow: '0 18px 34px rgba(72, 56, 34, 0.13), 0 4px 10px rgba(72, 56, 34, 0.07)',
           backdropFilter: 'blur(8px)',
         }}
@@ -158,6 +158,7 @@ export default function LoginPage() {
             className="h-9 rounded px-3 text-sm outline-none"
             style={{
               border: showInputError ? '1px solid #B94B36' : '1px solid rgba(216, 213, 207, 0.92)',
+              borderRadius: 'var(--input-radius, 8px)',
               boxShadow: showInputError
                 ? 'inset 0 1px 2px rgba(72, 56, 34, 0.06), 0 0 0 3px rgba(185, 75, 54, 0.14)'
                 : 'inset 0 1px 2px rgba(72, 56, 34, 0.06)',
@@ -192,6 +193,7 @@ export default function LoginPage() {
           className="h-9 rounded border-none text-sm font-medium transition-[opacity,filter,box-shadow] disabled:cursor-not-allowed disabled:opacity-50"
           style={{
             background: '#8b7355',
+            borderRadius: 'var(--btn-radius, 8px)',
             boxShadow: loading || !password
               ? 'inset 0 1px 2px rgba(72, 56, 34, 0.06)'
               : '0 2px 8px rgba(72, 56, 34, 0.16)',

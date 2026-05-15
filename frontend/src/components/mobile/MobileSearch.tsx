@@ -21,18 +21,18 @@ export default function MobileSearch({ onOpenFilters }: { onOpenFilters: () => v
           onChange={e => search(e.target.value)}
           placeholder="搜索书签"
           style={{
-            width: '100%', height: 38, border: '1px solid var(--app-border)', borderRadius: 8,
+            width: '100%', height: 38, border: '1px solid var(--app-border)', borderRadius: 'var(--input-radius)',
             padding: '0 12px 0 36px', fontSize: 14,
             background: 'var(--app-hover)', color: 'var(--app-text)', outline: 'none',
           }}
         />
       </div>
       <button onClick={onOpenFilters} style={{
-        height: 38, padding: '0 14px', border: '1px solid var(--app-border)', borderRadius: 8,
+        height: 38, padding: '0 14px', border: '1px solid var(--app-border)', borderRadius: 'var(--btn-radius)',
         fontSize: 13, fontWeight: 500, background: 'var(--app-card)',
         color: 'var(--app-text2)', cursor: 'pointer', whiteSpace: 'nowrap',
       }}>
-        Filters
+        筛选
       </button>
     </div>
   )

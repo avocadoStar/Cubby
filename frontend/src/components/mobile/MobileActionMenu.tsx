@@ -96,7 +96,7 @@ export default function MobileActionMenu({
         style={{
           position: 'absolute', top: 52, right: 8, zIndex: 41,
           background: 'var(--app-card)',
-          borderRadius: 10,
+          borderRadius: 'var(--card-radius)',
           boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--app-border)',
           minWidth: 180,

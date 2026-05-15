@@ -47,7 +47,7 @@ export default function CreateFolderModal({ parentId, onClose }: { parentId: str
           placeholder="文件夹名称"
           aria-label="文件夹名称"
           aria-invalid={Boolean(nameError)}
-          className={`w-full h-9 px-3 rounded outline-none ${nameError ? 'mb-1' : 'mb-4'} bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]`}
+          className={`w-full h-9 px-3 rounded-input outline-none ${nameError ? 'mb-1' : 'mb-4'} bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]`}
           style={{ border: nameError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
         />
         {nameError && (

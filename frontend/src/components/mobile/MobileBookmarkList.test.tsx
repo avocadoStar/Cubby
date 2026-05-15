@@ -97,4 +97,29 @@ describe('MobileBookmarkList', () => {
     expect(html).toContain('data-deleting="true"')
     expect(html).toContain('bookmark-delete-motion')
   })
+
+  it('uses readable mobile empty and loading labels', () => {
+    const emptyHtml = renderToStaticMarkup(
+      <MobileBookmarkListContent
+        items={[]}
+        loading={false}
+        onSelectFolder={vi.fn()}
+        onOpenNotes={vi.fn()}
+        onDeleteBookmark={vi.fn()}
+      />,
+    )
+    const loadingHtml = renderToStaticMarkup(
+      <MobileBookmarkListContent
+        items={[{ kind: 'bookmark', bookmark: makeBookmark({ id: 'b1' }) }]}
+        loading
+        onSelectFolder={vi.fn()}
+        onOpenNotes={vi.fn()}
+        onDeleteBookmark={vi.fn()}
+      />,
+    )
+
+    expect(emptyHtml).toContain('暂无书签')
+    expect(loadingHtml).toContain('aria-label="加载中"')
+    expect(loadingHtml).toContain('加载中...')
+  })
 })

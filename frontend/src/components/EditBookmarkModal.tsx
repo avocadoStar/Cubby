@@ -41,10 +41,10 @@ export default function EditBookmarkModal({ bookmark, onClose, onSaved }: {
       <form onSubmit={handleSave}>
         <input value={title} onChange={(e) => setTitle(e.target.value)}
           disabled={saving}
-          placeholder="名称" className="w-full h-9 px-3 rounded outline-none mb-3 bg-input-bg border border-input-border text-app-text shadow-input-base focus:shadow-input-focus transition-shadow text-sm" />
+          placeholder="名称" className="w-full h-9 px-3 rounded-input outline-none mb-3 bg-input-bg border border-input-border text-app-text shadow-input-base focus:shadow-input-focus transition-shadow text-sm" />
         <input value={url} onChange={(e) => setUrl(e.target.value)}
           disabled={saving}
-          placeholder="URL" className="w-full h-9 px-3 rounded outline-none mb-4 bg-input-bg border border-input-border text-app-text shadow-input-base focus:shadow-input-focus transition-shadow text-sm" />
+          placeholder="URL" className="w-full h-9 px-3 rounded-input outline-none mb-4 bg-input-bg border border-input-border text-app-text shadow-input-base focus:shadow-input-focus transition-shadow text-sm" />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => closeModal()} disabled={saving}>取消</Button>
           <Button variant="primary" type="submit" loading={saving} disabled={saving || !title.trim() || !url.trim()}>保存</Button>

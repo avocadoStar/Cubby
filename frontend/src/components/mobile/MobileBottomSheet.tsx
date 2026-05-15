@@ -71,7 +71,7 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
         position: 'fixed', left: 0, right: 0, bottom: 0,
         zIndex: 71,
         background: 'var(--app-card)',
-        borderTopLeftRadius: 16, borderTopRightRadius: 16,
+        borderTopLeftRadius: 'var(--radius-xl)', borderTopRightRadius: 'var(--radius-xl)',
         boxShadow: 'var(--shadow-lg)',
         transform: open ? motionTransform.bottomSheet.open : motionTransform.bottomSheet.closed,
         transition: transitionFor('transform', open ? 'normal' : 'exit', open ? 'enter' : 'exit', prefersReducedMotion),
@@ -83,7 +83,7 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
           display: 'flex', justifyContent: 'center', padding: '8px 0 4px', cursor: 'pointer',
         }}>
           <div style={{
-            width: 36, height: 4, borderRadius: 2,
+            width: 36, height: 4, borderRadius: 'var(--radius-pill)',
             background: 'var(--app-border)',
           }} />
         </div>

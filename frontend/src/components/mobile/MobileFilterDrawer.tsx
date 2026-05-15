@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ChevronRight, Folder, Star, X } from 'lucide-react'
 import { useFolderStore } from '../../stores/folderStore'
 import { motionTransform, overlayOpacity, transitionFor } from '../../lib/motion'
 
@@ -67,10 +68,12 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
         }}>
           <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--app-text)' }}>文件夹</span>
           <button onClick={onClose} style={{
-            width: 32, height: 32, borderRadius: 8, border: 'none',
-            background: 'var(--app-hover)', color: 'var(--app-text2)', fontSize: 18,
+            width: 32, height: 32, borderRadius: 'var(--btn-radius)', border: 'none',
+            background: 'var(--app-hover)', color: 'var(--app-text2)',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>×</button>
+          }} aria-label="关闭">
+            <X size={18} strokeWidth={1.8} />
+          </button>
         </div>
 
         {/* Search */}
@@ -79,7 +82,7 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="搜索文件夹..."
             style={{
-              width: '100%', height: 38, border: '1px solid var(--app-border)', borderRadius: 8,
+              width: '100%', height: 38, border: '1px solid var(--app-border)', borderRadius: 'var(--input-radius)',
               padding: '0 12px', fontSize: 14, background: 'var(--app-hover)',
               color: 'var(--app-text)', outline: 'none',
             }}
@@ -95,12 +98,14 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
           {/* All bookmarks */}
           <div onClick={async () => { await select(null); onClose() }} style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
+            padding: '10px 12px', borderRadius: 'var(--btn-radius)', cursor: 'pointer',
             fontSize: 14, color: selectedId === null ? 'var(--app-accent)' : 'var(--app-text2)',
             background: selectedId === null ? 'var(--accent-light, #EFF6FF)' : 'transparent',
             fontWeight: selectedId === null ? 500 : 400, marginBottom: 2,
           }}>
-            <span style={{ width: 18, display: 'flex', justifyContent: 'center', fontSize: 14 }}>⭐</span>
+            <span style={{ width: 18, display: 'flex', justifyContent: 'center' }}>
+              <Star size={16} strokeWidth={1.7} />
+            </span>
             <span style={{ flex: 1 }}>所有书签</span>
           </div>
 
@@ -119,7 +124,7 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
                   }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
+                    padding: '10px 12px', borderRadius: 'var(--btn-radius)', cursor: 'pointer',
                     fontSize: 14, color: isSelected ? 'var(--app-accent)' : 'var(--app-text2)',
                     background: isSelected ? 'var(--accent-light, #EFF6FF)' : 'transparent',
                     fontWeight: isSelected ? 500 : 400,
@@ -133,16 +138,20 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
                       fontSize: 10, color: 'var(--app-text3)',
                       transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)',
                       transition: 'transform 0.2s ease',
-                    }}>▶</span>
+                    }}>
+                      <ChevronRight size={14} strokeWidth={1.8} />
+                    </span>
                   ) : (
-                    <span style={{ width: 18, visibility: 'hidden' }}>▶</span>
+                    <span style={{ width: 18, visibility: 'hidden' }}>
+                      <ChevronRight size={14} strokeWidth={1.8} />
+                    </span>
                   )}
-                  <span style={{ fontSize: 14 }}>📁</span>
+                  <Folder size={16} strokeWidth={1.8} />
                   <span style={{ flex: 1 }}>{node.name}</span>
                   {hasCh && (
                     <span style={{
                       fontSize: 11, color: 'var(--app-text3)', background: 'var(--app-hover)',
-                      padding: '1px 6px', borderRadius: 8,
+                      padding: '1px 6px', borderRadius: 'var(--badge-radius)',
                     }}>{(childrenMap.get(node.id) || []).length}</span>
                   )}
                 </div>

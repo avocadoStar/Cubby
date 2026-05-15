@@ -191,7 +191,7 @@ export default function Toolbar() {
               placeholder={addBookmark.fetchingTitle ? "正在获取标题…" : "名称"}
               aria-label="收藏夹名称"
               aria-invalid={Boolean(addBookmark.titleError)}
-              className={`w-full h-9 px-3 rounded outline-none ${addBookmark.titleError ? 'mb-1' : 'mb-3'} bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]`}
+              className={`w-full h-9 px-3 rounded-input outline-none ${addBookmark.titleError ? 'mb-1' : 'mb-3'} bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]`}
               style={{ border: addBookmark.titleError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
             />
             {addBookmark.titleError && (
@@ -207,7 +207,7 @@ export default function Toolbar() {
               placeholder="URL"
               aria-label="收藏夹 URL"
               aria-invalid={Boolean(addBookmark.urlError || addBookmark.duplicateUrlError)}
-              className="w-full h-9 px-3 rounded outline-none mb-1 bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]"
+              className="w-full h-9 px-3 rounded-input outline-none mb-1 bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]"
               style={{ border: addBookmark.urlError || addBookmark.duplicateUrlError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
             />
             <div className="text-sm mb-3 min-h-5 text-app-danger">

@@ -37,6 +37,7 @@ describe('MobileAddModal', () => {
     expect(html).toContain('placeholder="名称"')
     expect(html).toContain('placeholder="URL"')
     expect(html).not.toContain('placeholder="文件夹名称"')
+    expect(html).toContain('border-radius:var(--input-radius)')
   })
 
   it('renders folder creation as an equal tab without bookmark url fields', () => {

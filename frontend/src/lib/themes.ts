@@ -22,7 +22,17 @@ export interface ThemeVars {
   '--search-highlight': string
   '--folder-icon-fill': string
   '--folder-icon-stroke': string
+  '--bg-texture': string
+  '--radius-xs': string
+  '--radius-sm': string
+  '--radius-md': string
+  '--radius-lg': string
+  '--radius-xl': string
+  '--radius-pill': string
   '--card-radius': string
+  '--btn-radius': string
+  '--input-radius': string
+  '--badge-radius': string
   '--card-gap': string
   '--card-border': string
   '--card-border-hover': string
@@ -34,6 +44,7 @@ export interface ThemeVars {
   '--input-shadow': string
   '--input-shadow-focus': string
   '--sidebar-border': string
+  '--sidebar-shadow': string
   '--tree-hover-bg': string
   '--tree-hover-shadow': string
   '--row-icon-bg': string
@@ -44,6 +55,7 @@ export interface ThemeVars {
   '--scrollbar-track': string
   '--scrollbar-thumb': string
   '--scrollbar-thumb-hover': string
+  '--shadow-sm': string
   // app aliases
   '--app-bg': string
   '--app-card': string
@@ -94,7 +106,7 @@ export const themes: Theme[] = [
     id: 'fluent-card',
     name: 'Fluent Card',
     vars: createVars({
-      '--bg': '#F3F4F6',
+      '--bg': '#F0F2F5',
       '--card-bg': '#FFFFFF',
       '--border': '#E5E7EB',
       '--border-hover': '#D1D5DB',
@@ -102,36 +114,48 @@ export const themes: Theme[] = [
       '--accent': '#3B82F6',
       '--accent-light': '#EFF6FF',
       '--text-on-accent': '#FFFFFF',
-      '--text-primary': '#111827',
-      '--text-secondary': '#4B5563',
-      '--text-tertiary': '#9CA3AF',
+      '--text-primary': '#0F172A',
+      '--text-secondary': '#334155',
+      '--text-tertiary': '#5B667A',
       '--danger': '#EF4444',
       '--danger-bg': '#FEF2F2',
       '--success-bg': '#F0FDF4',
       '--note-hover': '#F9FAFB',
       '--note-bg': '#FFFFFF',
       '--shadow': '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
+      '--shadow-sm': '0 1px 2px 0 rgba(15, 23, 42, 0.08)',
       '--shadow-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
       '--overlay': 'rgba(17, 24, 39, 0.4)',
       '--search-highlight': '#DBEAFE',
       '--folder-icon-fill': '#EFF6FF',
       '--folder-icon-stroke': '#3B82F6',
+      '--bg-texture': 'radial-gradient(at 18% 82%, rgba(59, 130, 246, 0.035) 0%, transparent 46%), radial-gradient(at 82% 18%, rgba(15, 23, 42, 0.028) 0%, transparent 42%)',
+      '--radius-xs': '3px',
+      '--radius-sm': '6px',
+      '--radius-md': '8px',
+      '--radius-lg': '12px',
+      '--radius-xl': '16px',
+      '--radius-pill': '999px',
       '--card-radius': '12px',
+      '--btn-radius': '8px',
+      '--input-radius': '8px',
+      '--badge-radius': '4px',
       '--card-gap': '8px',
       '--card-border': '1px solid #E5E7EB',
       '--card-border-hover': '1px solid #D1D5DB',
-      '--card-shadow-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+      '--card-shadow-hover': '0 8px 24px -8px rgba(15, 23, 42, 0.18), 0 2px 6px -2px rgba(15, 23, 42, 0.08)',
       '--row-shadow': 'none',
       '--input-bg': '#F9FAFB',
       '--input-border': '1px solid #E5E7EB',
       '--input-shadow': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
       '--input-shadow-focus': '0 0 0 2px rgba(59, 130, 246, 0.5)',
       '--sidebar-border': '1px solid #E5E7EB',
+      '--sidebar-shadow': 'inset -1px 0 0 rgba(255, 255, 255, 0.7), inset -8px 0 18px -18px rgba(15, 23, 42, 0.28)',
       '--tree-hover-bg': '#F3F4F6',
       '--tree-hover-shadow': 'none',
       '--row-icon-bg': '#F3F4F6',
       '--row-icon-shadow': 'none',
-      '--row-icon-radius': '6px',
+      '--row-icon-radius': '8px',
       '--checkbox-border': '2px solid #D1D5DB',
       '--divider-color': '#E5E7EB',
       '--scrollbar-track': '#F3F4F6',
@@ -160,12 +184,23 @@ export const themes: Theme[] = [
       '--note-hover': 'rgba(255, 255, 255, 0.4)',
       '--note-bg': '#E0E5EC',
       '--shadow': '9px 9px 16px rgba(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5)',
+      '--shadow-sm': '3px 3px 6px rgba(163, 177, 198, 0.35), -3px -3px 6px rgba(255, 255, 255, 0.45)',
       '--shadow-lg': '12px 12px 24px rgba(163, 177, 198, 0.7), -12px -12px 24px rgba(255, 255, 255, 0.6)',
       '--overlay': 'rgba(45, 55, 72, 0.4)',
       '--search-highlight': '#D1E3F8',
       '--folder-icon-fill': '#E0E5EC',
       '--folder-icon-stroke': '#4A90E2',
+      '--bg-texture': 'none',
+      '--radius-xs': '4px',
+      '--radius-sm': '8px',
+      '--radius-md': '10px',
+      '--radius-lg': '16px',
+      '--radius-xl': '20px',
+      '--radius-pill': '999px',
       '--card-radius': '16px',
+      '--btn-radius': '10px',
+      '--input-radius': '10px',
+      '--badge-radius': '8px',
       '--card-gap': '12px',
       '--card-border': '1px solid rgba(255, 255, 255, 0.2)',
       '--card-border-hover': '1px solid rgba(255, 255, 255, 0.4)',
@@ -176,6 +211,7 @@ export const themes: Theme[] = [
       '--input-shadow': 'inset 6px 6px 10px 0 rgba(163, 177, 198, 0.5), inset -6px -6px 10px 0 rgba(255, 255, 255, 0.5)',
       '--input-shadow-focus': 'inset 6px 6px 10px 0 rgba(163, 177, 198, 0.5), inset -6px -6px 10px 0 rgba(255, 255, 255, 0.5), 0 0 0 2px rgba(74, 144, 226, 0.3)',
       '--sidebar-border': 'transparent',
+      '--sidebar-shadow': 'var(--shadow)',
       '--tree-hover-bg': 'rgba(255, 255, 255, 0.4)',
       '--tree-hover-shadow': 'inset 3px 3px 6px rgba(163, 177, 198, 0.4), inset -3px -3px 6px rgba(255, 255, 255, 0.4)',
       '--row-icon-bg': '#E0E5EC',
