@@ -33,14 +33,9 @@ func (s *FolderService) Create(rawName string, parentID *string) (*model.Folder,
 	if err != nil {
 		return nil, err
 	}
-	for i := 0; i < 3; i++ {
-		f, err := s.repo.Create(name, parentID, sortKey)
-		if err == nil {
-			return f, nil
-		}
-		sortKey = lexorank.After(sortKey)
-	}
-	return nil, fmt.Errorf("failed to create folder after retries")
+	return createWithSortKeyRetry(sortKey, fmt.Errorf("failed to create folder after retries"), func(nextSortKey string) (*model.Folder, error) {
+		return s.repo.Create(name, parentID, nextSortKey)
+	})
 }
 
 func (s *FolderService) Update(id, rawName string, version int) (*model.Folder, error) {
@@ -64,12 +59,8 @@ func (s *FolderService) Restore(id string) (*model.Folder, error) {
 
 func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string, sortKeyOverride *string, version int) (*model.Folder, error) {
 	if parentID != nil {
-		isDesc, err := s.isDescendant(id, *parentID)
-		if err != nil {
-			return nil, fmt.Errorf("check cycle: %w", err)
-		}
-		if isDesc {
-			return nil, fmt.Errorf("cannot move folder into itself or its descendants")
+		if err := s.ensureCanMoveFolder(id, parentID); err != nil {
+			return nil, err
 		}
 	}
 	sortKey, err := s.sortKey.ComputeFolderSortKey(parentID, prevID, nextID, id)
@@ -77,6 +68,20 @@ func (s *FolderService) Move(id string, parentID *string, prevID, nextID *string
 		return nil, err
 	}
 	return s.repo.Move(id, parentID, sortKey, version)
+}
+
+func (s *FolderService) ensureCanMoveFolder(folderID string, targetParentID *string) error {
+	if targetParentID == nil {
+		return nil
+	}
+	isDesc, err := s.isDescendant(folderID, *targetParentID)
+	if err != nil {
+		return fmt.Errorf("check cycle: %w", err)
+	}
+	if isDesc {
+		return fmt.Errorf("cannot move folder into itself or its descendants")
+	}
+	return nil
 }
 
 // isDescendant checks whether folderID is an ancestor of targetParentID

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import ModalBase from '../ModalBase'
 import { useFolderStore } from '../../stores/folderStore'
 import { useBookmarkStore } from '../../stores/bookmarkStore'
@@ -7,10 +7,12 @@ import { useToastStore } from '../../stores/toastStore'
 import { api } from '../../services/api'
 import ImportModal from '../ImportModal'
 import MobileActionMenu from './MobileActionMenu'
-import { DUPLICATE_URL_MESSAGE, isDuplicateURLConflict, normalizeBookmarkUrlForSubmit, normalizeBookmarkUrlInput } from '../../lib/addBookmark'
-import { shouldFetchMetadata } from '../../lib/metadata'
+import { useAddBookmarkFlow } from '../../hooks/useAddBookmarkFlow'
 
 export type MobileAddMode = 'bookmark' | 'folder'
+
+const mergeMobileFetchedTitle = (currentTitle: string, fetchedTitle: string | null | undefined) =>
+  currentTitle ? currentTitle : fetchedTitle ?? ''
 
 interface MobileAddModalProps {
   mode: MobileAddMode
@@ -174,98 +176,50 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
   const [showAddBookmark, setShowAddBookmark] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [addMode, setAddMode] = useState<MobileAddMode>('bookmark')
-  const [title, setTitle] = useState('')
-  const [url, setUrl] = useState('')
-  const [icon, setIcon] = useState('')
   const [folderName, setFolderName] = useState('')
-  const [duplicateUrlError, setDuplicateUrlError] = useState('')
-  const [fetchingTitle, setFetchingTitle] = useState(false)
-  const [savingAdd, setSavingAdd] = useState(false)
-  const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const [savingFolder, setSavingFolder] = useState(false)
+  const addBookmark = useAddBookmarkFlow({
+    selectedId,
+    upsertOne,
+    mergeFetchedTitle: mergeMobileFetchedTitle,
+  })
+  const savingAdd = addMode === 'bookmark' ? addBookmark.saving : savingFolder
 
   const closeAddModal = (force = false) => {
     if (savingAdd && !force) return
-    clearTimeout(urlTimer.current)
+    addBookmark.reset(true)
     setShowAddBookmark(false)
     setAddMode('bookmark')
-    setTitle(''); setUrl(''); setIcon('')
     setFolderName('')
-    setDuplicateUrlError(''); setFetchingTitle(false)
-    setSavingAdd(false)
+    setSavingFolder(false)
   }
 
   const handleAddModeChange = (mode: MobileAddMode) => {
     if (savingAdd) return
     if (mode === 'folder') {
-      clearTimeout(urlTimer.current)
-      setFetchingTitle(false)
-      setDuplicateUrlError('')
+      addBookmark.clearTransient()
     }
     setAddMode(mode)
   }
 
   const handleUrlChange = (value: string) => {
-    setIcon('')
-    setDuplicateUrlError('')
-    setUrl(normalizeBookmarkUrlInput(value))
+    addBookmark.handleUrlChange(value)
   }
 
-  useEffect(() => {
-    const trimmedUrl = url.trim()
-    clearTimeout(urlTimer.current)
-    if (!shouldFetchMetadata(trimmedUrl)) {
-      setFetchingTitle(false)
-      return
-    }
-
-    let cancelled = false
-    urlTimer.current = setTimeout(async () => {
-      setFetchingTitle(true)
-      try {
-        const meta = await api.fetchMetadata(trimmedUrl)
-        if (cancelled) return
-        setTitle(prev => prev ? prev : meta.title)
-        setIcon(meta.icon ?? '')
-      } catch {
-        // Metadata is optional; users can still add the bookmark manually.
-      } finally {
-        if (!cancelled) setFetchingTitle(false)
-      }
-    }, 600)
-
-    return () => {
-      cancelled = true
-      clearTimeout(urlTimer.current)
-    }
-  }, [url])
-
   const handleAddBookmark = async () => {
-    if (savingAdd) return
-    if (!title.trim() || !url.trim()) return
-    const normalizedUrl = normalizeBookmarkUrlForSubmit(url)
-    setSavingAdd(true)
-    try {
-      const bookmark = await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
-      upsertOne(bookmark)
-    } catch (e) {
-      setSavingAdd(false)
-      if (isDuplicateURLConflict(e)) {
-        setDuplicateUrlError(DUPLICATE_URL_MESSAGE); return
-      }
-      throw e
-    }
-    closeAddModal(true)
+    const bookmark = await addBookmark.submit()
+    if (bookmark) closeAddModal(true)
   }
 
   const handleCreateFolder = async () => {
     if (savingAdd) return
     if (!folderName.trim()) return
-    setSavingAdd(true)
+    setSavingFolder(true)
     try {
       await create(folderName.trim(), selectedId)
       closeAddModal(true)
     } catch (e) {
-      setSavingAdd(false)
+      setSavingFolder(false)
       throw e
     }
   }
@@ -336,14 +290,14 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
       {showAddBookmark && (
         <MobileAddModal
           mode={addMode}
-          title={title}
-          url={url}
+          title={addBookmark.title}
+          url={addBookmark.url}
           folderName={folderName}
-          fetchingTitle={fetchingTitle}
+          fetchingTitle={addBookmark.fetchingTitle}
           saving={savingAdd}
-          duplicateUrlError={duplicateUrlError}
+          duplicateUrlError={addBookmark.duplicateUrlError}
           onModeChange={handleAddModeChange}
-          onTitleChange={setTitle}
+          onTitleChange={addBookmark.setTitle}
           onUrlChange={handleUrlChange}
           onFolderNameChange={setFolderName}
           onClose={closeAddModal}

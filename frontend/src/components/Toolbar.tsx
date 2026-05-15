@@ -6,12 +6,11 @@ import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useAuthStore } from '../stores/authStore'
 import { useThemeStore } from '../stores/themeStore'
 import { themes } from '../lib/themes'
-import { api } from '../services/api'
 import CreateFolderModal from './CreateFolderModal'
 import FontSizePopover from './FontSizePopover'
 import ModalBase from './ModalBase'
-import { DUPLICATE_URL_MESSAGE, hasFetchedBookmarkTitle, isDuplicateURLConflict, mergeFetchedBookmarkTitle, normalizeBookmarkUrlForSubmit, normalizeBookmarkUrlInput } from '../lib/addBookmark'
-import { shouldFetchMetadata } from '../lib/metadata'
+import { mergeFetchedBookmarkTitle } from '../lib/addBookmark'
+import { useAddBookmarkFlow } from '../hooks/useAddBookmarkFlow'
 
 export default function Toolbar() {
   const { selectedId } = useFolderStore()
@@ -22,53 +21,20 @@ export default function Toolbar() {
   const [showFontSize, setShowFontSize] = useState(false)
   const [showTheme, setShowTheme] = useState(false)
   const [showAddBookmark, setShowAddBookmark] = useState(false)
-  const [title, setTitle] = useState('')
-  const [url, setUrl] = useState('')
-  const [icon, setIcon] = useState('')
-  const [titleError, setTitleError] = useState('')
-  const [urlError, setUrlError] = useState('')
-  const [duplicateUrlError, setDuplicateUrlError] = useState('')
-  const [fetchingTitle, setFetchingTitle] = useState(false)
-  const [savingBookmark, setSavingBookmark] = useState(false)
-  const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const themeRef = useRef<HTMLDivElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
+  const addBookmark = useAddBookmarkFlow({
+    selectedId,
+    upsertOne,
+    mergeFetchedTitle: mergeFetchedBookmarkTitle,
+    clearTitleErrorOnFetchedTitle: true,
+  })
 
   const closeAddBookmarkModal = (force = false) => {
-    if (savingBookmark && !force) return
-    clearTimeout(urlTimer.current)
+    if (!addBookmark.reset(force)) return
     setShowAddBookmark(false)
-    setTitle('')
-    setUrl('')
-    setIcon('')
-    setTitleError('')
-    setUrlError('')
-    setDuplicateUrlError('')
-    setFetchingTitle(false)
-    setSavingBookmark(false)
   }
-
-  // Auto-fetch title when URL changes
-  useEffect(() => {
-    const trimmedUrl = url.trim()
-    if (!shouldFetchMetadata(trimmedUrl)) {
-      setFetchingTitle(false)
-      return
-    }
-    clearTimeout(urlTimer.current)
-    urlTimer.current = setTimeout(async () => {
-      setFetchingTitle(true)
-      try {
-        const meta = await api.fetchMetadata(trimmedUrl)
-        setTitle(prev => mergeFetchedBookmarkTitle(prev, meta.title))
-        if (hasFetchedBookmarkTitle(meta.title)) setTitleError('')
-        setIcon(meta.icon ?? '')
-      } catch { /* ignore fetch errors */ }
-      setFetchingTitle(false)
-    }, 600)
-    return () => clearTimeout(urlTimer.current)
-  }, [url])
 
   // Close theme popover on outside click
   useEffect(() => {
@@ -81,45 +47,19 @@ export default function Toolbar() {
   }, [showTheme])
 
   const handleUrlChange = (value: string) => {
-    setIcon('')
-    setUrlError('')
-    setDuplicateUrlError('')
-    setUrl(normalizeBookmarkUrlInput(value))
+    addBookmark.handleUrlChange(value)
   }
 
   const handleTitleChange = (value: string) => {
-    setTitleError('')
-    setTitle(value)
+    addBookmark.handleTitleChange(value)
   }
 
   const handleAddBookmark = async (event?: FormEvent<HTMLFormElement>) => {
-    event?.preventDefault()
-    const hasTitle = Boolean(title.trim())
-    const hasUrl = Boolean(url.trim())
-    setTitleError(hasTitle ? '' : '请输入收藏夹名称')
-    setUrlError(hasUrl ? '' : '请输入收藏夹 URL')
-    if (!hasTitle || !hasUrl) {
-      if (!hasTitle) {
-        titleInputRef.current?.focus()
-      } else {
-        urlInputRef.current?.focus()
-      }
-      return
-    }
-    const normalizedUrl = normalizeBookmarkUrlForSubmit(url)
-    setSavingBookmark(true)
-    try {
-      const bookmark = await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
-      upsertOne(bookmark)
-    } catch (e) {
-      setSavingBookmark(false)
-      if (isDuplicateURLConflict(e)) {
-        setDuplicateUrlError(DUPLICATE_URL_MESSAGE)
-        return
-      }
-      throw e
-    }
-    closeAddBookmarkModal(true)
+    const bookmark = await addBookmark.submit(event, {
+      onMissingTitle: () => titleInputRef.current?.focus(),
+      onMissingUrl: () => urlInputRef.current?.focus(),
+    })
+    if (bookmark) closeAddBookmarkModal(true)
   }
 
   const selectTheme = (id: string, currentTarget: HTMLElement, clientX: number, clientY: number) => {
@@ -228,49 +168,49 @@ export default function Toolbar() {
       </div>
 
       {showAddBookmark && (
-        <ModalBase title="添加收藏夹" onClose={closeAddBookmarkModal} width="360px" closeOnEscape={!savingBookmark} closeOnOverlayClick={false}>
+        <ModalBase title="添加收藏夹" onClose={closeAddBookmarkModal} width="360px" closeOnEscape={!addBookmark.saving} closeOnOverlayClick={false}>
           <form onSubmit={handleAddBookmark}>
             <input
               ref={titleInputRef}
-              value={title}
+              value={addBookmark.title}
               onChange={e => handleTitleChange(e.target.value)}
-              disabled={savingBookmark}
-              placeholder={fetchingTitle ? "正在获取标题…" : "名称"}
+              disabled={addBookmark.saving}
+              placeholder={addBookmark.fetchingTitle ? "正在获取标题…" : "名称"}
               aria-label="收藏夹名称"
-              aria-invalid={Boolean(titleError)}
-              className={`w-full h-9 px-3 rounded outline-none ${titleError ? 'mb-1' : 'mb-3'} bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]`}
-              style={{ border: titleError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
+              aria-invalid={Boolean(addBookmark.titleError)}
+              className={`w-full h-9 px-3 rounded outline-none ${addBookmark.titleError ? 'mb-1' : 'mb-3'} bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]`}
+              style={{ border: addBookmark.titleError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
             />
-            {titleError && (
+            {addBookmark.titleError && (
               <div className="text-sm mb-3 text-app-danger">
-                {titleError}
+                {addBookmark.titleError}
               </div>
             )}
             <input
               ref={urlInputRef}
-              value={url}
+              value={addBookmark.url}
               onChange={e => handleUrlChange(e.target.value)}
-              disabled={savingBookmark}
+              disabled={addBookmark.saving}
               placeholder="URL"
               aria-label="收藏夹 URL"
-              aria-invalid={Boolean(urlError || duplicateUrlError)}
+              aria-invalid={Boolean(addBookmark.urlError || addBookmark.duplicateUrlError)}
               className="w-full h-9 px-3 rounded outline-none mb-1 bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]"
-              style={{ border: urlError || duplicateUrlError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
+              style={{ border: addBookmark.urlError || addBookmark.duplicateUrlError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
             />
             <div className="text-sm mb-3 min-h-5 text-app-danger">
-              {urlError || duplicateUrlError || '\u00a0'}
+              {addBookmark.urlError || addBookmark.duplicateUrlError || '\u00a0'}
             </div>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => closeAddBookmarkModal()}
-                disabled={savingBookmark}
+                disabled={addBookmark.saving}
                 className="h-8 min-w-[72px] px-4 rounded text-sm cursor-default disabled:opacity-50 bg-app-card text-app-text shadow-app-base"
                 style={{ border: 'var(--input-border)' }}>
                 取消
               </button>
               <button type="submit"
-                disabled={savingBookmark || !title.trim() || !url.trim()}
+                disabled={addBookmark.saving || !addBookmark.title.trim() || !addBookmark.url.trim()}
                 className="inline-flex items-center justify-center gap-1.5 h-8 min-w-[88px] px-4 border-none rounded text-sm font-medium cursor-default disabled:opacity-50 bg-app-accent text-text-on-accent shadow-app-base">
-                {savingBookmark && (
+                {addBookmark.saving && (
                   <span
                     className="w-3 h-3 rounded-full border-2 border-t-transparent animate-spin"
                     style={{ borderColor: 'currentColor', borderTopColor: 'transparent' }}

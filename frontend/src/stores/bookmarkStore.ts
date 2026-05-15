@@ -7,7 +7,14 @@ import { useToastStore } from './toastStore'
 import { useSelectionStore } from './selectionStore'
 import { applyOptimisticBatchMoveBookmarkState, applyOptimisticBatchMoveFolderState, reconcileAfterBatchMove } from '../lib/optimisticUpdates'
 import { showMoveError } from '../lib/errorHandler'
-import { removeSetValue, sortBookmarksBySortKey, sortBookmarksBySortKeyThenId } from './bookmarkStoreHelpers'
+import {
+  removeBookmarkById,
+  removeSetValue,
+  replaceBookmarkNotes,
+  restoreBookmarkToList,
+  sortBookmarksBySortKeyThenId,
+  upsertChangedBookmark,
+} from './bookmarkStoreHelpers'
 
 let loadController: AbortController | null = null
 
@@ -55,13 +62,10 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
 
   upsertOne: (bookmark) => {
     set((state) => {
-      const exists = state.bookmarks.some((item) => item.id === bookmark.id)
-      const bookmarks = exists
-        ? state.bookmarks.map((item) => item.id === bookmark.id ? bookmark : item)
-        : [...state.bookmarks, bookmark]
+      const result = upsertChangedBookmark(state.bookmarks, bookmark)
       return {
-        bookmarks: sortBookmarksBySortKeyThenId(bookmarks),
-        recentlyChangedIds: new Set(state.recentlyChangedIds).add(bookmark.id),
+        bookmarks: result.bookmarks,
+        recentlyChangedIds: new Set([...state.recentlyChangedIds, ...result.changedIds]),
       }
     })
     globalThis.setTimeout(() => {
@@ -112,7 +116,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       if (undoClicked) return
       undoClicked = true
       set((s) => {
-        return { bookmarks: sortBookmarksBySortKey([...s.bookmarks, bookmark]), deletingIds: removeSetValue(s.deletingIds, id) }
+        return { bookmarks: restoreBookmarkToList(s.bookmarks, bookmark), deletingIds: removeSetValue(s.deletingIds, id) }
       })
     }
 
@@ -120,7 +124,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       if (undoClicked || done) return
       done = true
       set((s) => ({
-        bookmarks: s.bookmarks.filter((b) => b.id !== id),
+        bookmarks: removeBookmarkById(s.bookmarks, id),
         deletingIds: removeSetValue(s.deletingIds, id),
       }))
     }
@@ -139,7 +143,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
           api.restoreBookmark(id).then((restored) => {
             if (restored) {
               set((s) => {
-                return { bookmarks: sortBookmarksBySortKey([...s.bookmarks, restored]), deletingIds: removeSetValue(s.deletingIds, id) }
+                return { bookmarks: restoreBookmarkToList(s.bookmarks, restored), deletingIds: removeSetValue(s.deletingIds, id) }
               })
             }
           }).catch(() => {
@@ -158,18 +162,14 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   updateNotes: async (id, notes) => {
     const previous = get().bookmarks.find((b) => b.id === id)?.notes
     set((state) => ({
-      bookmarks: state.bookmarks.map((bookmark) => (
-        bookmark.id === id ? { ...bookmark, notes } : bookmark
-      )),
+      bookmarks: replaceBookmarkNotes(state.bookmarks, id, notes),
     }))
     try {
       await api.updateNotes(id, notes)
     } catch (e) {
       if (previous !== undefined) {
         set((state) => ({
-          bookmarks: state.bookmarks.map((bookmark) => (
-            bookmark.id === id ? { ...bookmark, notes: previous } : bookmark
-          )),
+          bookmarks: replaceBookmarkNotes(state.bookmarks, id, previous),
         }))
       }
       throw e

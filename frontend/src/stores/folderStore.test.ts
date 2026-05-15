@@ -3,6 +3,10 @@ import { useFolderStore } from './folderStore'
 import { api } from '../services/api'
 import type { Folder } from '../types'
 
+const toastMock = vi.hoisted(() => ({
+  show: vi.fn(),
+}))
+
 vi.mock('../services/api', () => ({
   api: {
     getFolders: vi.fn(),
@@ -24,7 +28,7 @@ vi.mock('../lib/sortKeys', () => ({
 vi.mock('./toastStore', () => ({
   useToastStore: {
     getState: vi.fn(() => ({
-      show: vi.fn(),
+      show: toastMock.show,
     })),
   },
 }))
@@ -51,6 +55,7 @@ describe('folderStore', () => {
       selectedId: null,
       visibleNodes: [],
     })
+    toastMock.show.mockReset()
   })
 
   describe('loadChildren', () => {
@@ -97,6 +102,65 @@ describe('folderStore', () => {
       expect(state.folderMap.get('f2')).toEqual(created)
       expect(state.childrenMap.get(null)).toEqual(['f2', 'f1'])
       expect(state.visibleNodes.map((item) => item.node.id)).toEqual(['f2', 'f1'])
+    })
+
+    it('marks the parent as having children after creating a child folder', async () => {
+      const parent = makeFolder({ id: 'parent', has_children: false })
+      const created = makeFolder({ id: 'child', parent_id: 'parent', sort_key: 'a' })
+      vi.mocked(api.createFolder).mockResolvedValue(created)
+      useFolderStore.setState({
+        folderMap: new Map([['parent', parent]]),
+        childrenMap: new Map([[null, ['parent']], ['parent', []]]),
+      })
+
+      await useFolderStore.getState().create('Child', 'parent')
+
+      expect(useFolderStore.getState().folderMap.get('parent')?.has_children).toBe(true)
+      expect(useFolderStore.getState().childrenMap.get('parent')).toEqual(['child'])
+    })
+  })
+
+  describe('deleteOne', () => {
+    it('removes a folder optimistically and exposes an undo toast after delete succeeds', async () => {
+      const folder = makeFolder({ id: 'child', parent_id: 'parent' })
+      vi.mocked(api.deleteFolder).mockResolvedValue(undefined)
+      vi.mocked(api.restoreFolder).mockResolvedValue(folder)
+      useFolderStore.setState({
+        folderMap: new Map([['child', folder]]),
+        childrenMap: new Map([['parent', ['child']]]),
+      })
+
+      useFolderStore.getState().deleteOne('child')
+      expect(useFolderStore.getState().folderMap.has('child')).toBe(false)
+      expect(useFolderStore.getState().childrenMap.get('parent')).toEqual([])
+
+      await Promise.resolve()
+
+      expect(api.deleteFolder).toHaveBeenCalledWith('child')
+      expect(toastMock.show).toHaveBeenCalledWith(expect.objectContaining({
+        message: '已删除 "Test Folder"',
+        onUndo: expect.any(Function),
+      }))
+    })
+
+    it('restores the local folder when delete fails', async () => {
+      const folder = makeFolder({ id: 'child', parent_id: 'parent' })
+      vi.mocked(api.deleteFolder).mockRejectedValue(new Error('network'))
+      vi.mocked(api.restoreFolder).mockResolvedValue(folder)
+      vi.mocked(api.getFolders).mockResolvedValue([folder])
+      useFolderStore.setState({
+        folderMap: new Map([['child', folder]]),
+        childrenMap: new Map([['parent', ['child']]]),
+      })
+
+      useFolderStore.getState().deleteOne('child')
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(api.restoreFolder).toHaveBeenCalledWith('child')
+      expect(useFolderStore.getState().folderMap.get('child')).toEqual(folder)
     })
   })
 

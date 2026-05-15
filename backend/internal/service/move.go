@@ -33,50 +33,53 @@ func (s *MoveService) BatchMove(items []BatchMoveItem) (*repository.BatchMoveRes
 	repoItems := make([]repository.BatchMoveItem, 0, len(items))
 	pending := make([]repository.SortableSibling, 0, len(items))
 	for _, item := range items {
-		if item.ID == "" {
-			return nil, fmt.Errorf("move item id required")
-		}
-
-		var sortKey string
-		var err error
-		switch item.Kind {
-		case "folder":
-			if item.ParentID != nil {
-				isDesc, err := s.folderSvc.isDescendant(item.ID, *item.ParentID)
-				if err != nil {
-					return nil, fmt.Errorf("check cycle: %w", err)
-				}
-				if isDesc {
-					return nil, fmt.Errorf("cannot move folder into itself or its descendants")
-				}
-			}
-			sortKey, err = s.sortKey.ComputeBatchSortKey(item.ParentID, item.PrevID, item.NextID, item.ID, pending)
-		case "bookmark":
-			sortKey, err = s.sortKey.ComputeBatchSortKey(item.ParentID, item.PrevID, item.NextID, item.ID, pending)
-		default:
-			return nil, fmt.Errorf("unsupported move kind %q", item.Kind)
-		}
+		repoItem, pendingItem, err := s.prepareBatchMoveItem(item, pending)
 		if err != nil {
 			return nil, err
 		}
-		if sortKey == "" {
-			return nil, fmt.Errorf("move item sort_key generation failed")
-		}
+		repoItems = append(repoItems, repoItem)
+		pending = append(pending, pendingItem)
+	}
 
-		repoItems = append(repoItems, repository.BatchMoveItem{
+	return s.repo.BatchMove(repoItems)
+}
+
+func (s *MoveService) prepareBatchMoveItem(
+	item BatchMoveItem,
+	pending []repository.SortableSibling,
+) (repository.BatchMoveItem, repository.SortableSibling, error) {
+	if item.ID == "" {
+		return repository.BatchMoveItem{}, repository.SortableSibling{}, fmt.Errorf("move item id required")
+	}
+
+	switch item.Kind {
+	case "folder":
+		if err := s.folderSvc.ensureCanMoveFolder(item.ID, item.ParentID); err != nil {
+			return repository.BatchMoveItem{}, repository.SortableSibling{}, err
+		}
+	case "bookmark":
+	default:
+		return repository.BatchMoveItem{}, repository.SortableSibling{}, fmt.Errorf("unsupported move kind %q", item.Kind)
+	}
+
+	sortKey, err := s.sortKey.ComputeBatchSortKey(item.ParentID, item.PrevID, item.NextID, item.ID, pending)
+	if err != nil {
+		return repository.BatchMoveItem{}, repository.SortableSibling{}, err
+	}
+	if sortKey == "" {
+		return repository.BatchMoveItem{}, repository.SortableSibling{}, fmt.Errorf("move item sort_key generation failed")
+	}
+
+	return repository.BatchMoveItem{
 			Kind:     item.Kind,
 			ID:       item.ID,
 			ParentID: item.ParentID,
 			SortKey:  sortKey,
 			Version:  item.Version,
-		})
-		pending = append(pending, repository.SortableSibling{
+		}, repository.SortableSibling{
 			Kind:     item.Kind,
 			ID:       item.ID,
 			ParentID: item.ParentID,
 			SortKey:  sortKey,
-		})
-	}
-
-	return s.repo.BatchMove(repoItems)
+		}, nil
 }

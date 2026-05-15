@@ -2,9 +2,10 @@ import { create } from 'zustand'
 import type { Folder } from '../types'
 import { api } from '../services/api'
 import { computeSortKeyFromNeighbors } from '../lib/sortKeys'
-import { buildVisibleNodes, getAncestorChain, rebuildChildrenMapAfterMove } from '../lib/folderTree'
+import { buildVisibleNodes, getAncestorChain } from '../lib/folderTree'
 import { showMoveError } from '../lib/errorHandler'
 import { useToastStore } from './toastStore'
+import { addCreatedFolderToMaps, applyOptimisticFolderMoveToMaps, removeFolderFromMaps, setFolderInMap } from './folderStoreHelpers'
 
 interface FolderState {
   folderMap: Map<string, Folder>
@@ -117,27 +118,7 @@ export const useFolderStore = create<FolderState>((set, get) => ({
   create: async (name, parentId) => {
     const created = await api.createFolder(name, parentId)
     set((state) => {
-      const folderMap = new Map(state.folderMap)
-      const childrenMap = new Map(state.childrenMap)
-      folderMap.set(created.id, created)
-      const siblings = (childrenMap.get(parentId) ?? []).filter((id) => id !== created.id)
-      siblings.push(created.id)
-      siblings.sort((a, b) => {
-        const af = folderMap.get(a)
-        const bf = folderMap.get(b)
-        if (!af || !bf) return a.localeCompare(b)
-        if (af.sort_key < bf.sort_key) return -1
-        if (af.sort_key > bf.sort_key) return 1
-        return af.id.localeCompare(bf.id)
-      })
-      childrenMap.set(parentId, siblings)
-      if (parentId !== null) {
-        const parent = folderMap.get(parentId)
-        if (parent) {
-          folderMap.set(parentId, { ...parent, has_children: true })
-        }
-      }
-      return { folderMap, childrenMap }
+      return addCreatedFolderToMaps(state.folderMap, state.childrenMap, created, parentId)
     })
     get().rebuildVisible()
   },
@@ -145,9 +126,7 @@ export const useFolderStore = create<FolderState>((set, get) => ({
   rename: async (id, name, version) => {
     const updated = await api.updateFolder(id, name, version)
     set((state) => {
-      const folderMap = new Map(state.folderMap)
-      folderMap.set(id, updated)
-      return { folderMap }
+      return { folderMap: setFolderInMap(state.folderMap, updated) }
     })
     get().rebuildVisible()
   },
@@ -158,13 +137,7 @@ export const useFolderStore = create<FolderState>((set, get) => ({
 
     // Remove from childrenMap so it disappears from sidebar immediately
     set((s) => {
-      const folderMap = new Map(s.folderMap)
-      folderMap.delete(id)
-      const childrenMap = new Map(s.childrenMap)
-      for (const [pid, children] of childrenMap) {
-        childrenMap.set(pid, children.filter((cid) => cid !== id))
-      }
-      return { folderMap, childrenMap }
+      return removeFolderFromMaps(s.folderMap, s.childrenMap, id)
     })
     get().rebuildVisible()
 
@@ -176,9 +149,7 @@ export const useFolderStore = create<FolderState>((set, get) => ({
       api.restoreFolder(id).then((restored) => {
         if (restored) {
           set((s) => {
-            const folderMap = new Map(s.folderMap)
-            folderMap.set(id, restored)
-            return { folderMap }
+            return { folderMap: setFolderInMap(s.folderMap, restored) }
           })
           // Reload parent to refresh children ordering
           get().loadChildren(restored.parent_id)
@@ -187,9 +158,7 @@ export const useFolderStore = create<FolderState>((set, get) => ({
       }).catch(() => {
         // Re-add locally if restore fails
         set((s) => {
-          const folderMap = new Map(s.folderMap)
-          folderMap.set(id, folder)
-          return { folderMap }
+          return { folderMap: setFolderInMap(s.folderMap, folder) }
         })
         const parentId = folder.parent_id
         get().loadChildren(parentId)
@@ -220,32 +189,22 @@ export const useFolderStore = create<FolderState>((set, get) => ({
       visibleNodes: get().visibleNodes,
     }
     const folder = snapshot.folderMap.get(id)
-    const oldParentId = folder?.parent_id ?? null
     const keyFor = (itemId: string | null) => itemId ? snapshot.folderMap.get(itemId)?.sort_key ?? '' : ''
     const optimisticSortKey = sortKey
       ?? computeSortKeyFromNeighbors(keyFor(prevId), keyFor(nextId))
 
     if (folder && optimisticSortKey) {
       set((state) => {
-        const folderMap = new Map(state.folderMap)
-        const childrenMap = rebuildChildrenMapAfterMove(state.childrenMap, id, oldParentId, newParentId, prevId, nextId)
-        const movedFolder = { ...folder, parent_id: newParentId, sort_key: optimisticSortKey, version }
-        folderMap.set(id, movedFolder)
-
-        if (oldParentId !== null) {
-          const oldParent = folderMap.get(oldParentId)
-          if (oldParent && childrenMap.has(oldParentId)) {
-            folderMap.set(oldParentId, { ...oldParent, has_children: (childrenMap.get(oldParentId) ?? []).length > 0 })
-          }
-        }
-        if (newParentId !== null) {
-          const newParent = folderMap.get(newParentId)
-          if (newParent) {
-            folderMap.set(newParentId, { ...newParent, has_children: true })
-          }
-        }
-
-        return { folderMap, childrenMap }
+        return applyOptimisticFolderMoveToMaps(
+          state.folderMap,
+          state.childrenMap,
+          folder,
+          newParentId,
+          prevId,
+          nextId,
+          optimisticSortKey,
+          version,
+        )
       })
       get().rebuildVisible()
     }
@@ -259,9 +218,7 @@ export const useFolderStore = create<FolderState>((set, get) => ({
         version,
       })
       set((state) => {
-        const folderMap = new Map(state.folderMap)
-        folderMap.set(id, moved)
-        return { folderMap }
+        return { folderMap: setFolderInMap(state.folderMap, moved) }
       })
       get().rebuildVisible()
     } catch (e) {

@@ -178,3 +178,60 @@ func TestBatchMoveGeneratesDenseBetweenKeysForMultipleFolders(t *testing.T) {
 		t.Fatalf("expected dense keys between a and b, got first=%q second=%q", movedFirst.SortKey, movedSecond.SortKey)
 	}
 }
+
+func TestBatchMoveRejectsFolderCycle(t *testing.T) {
+	database := db.MustOpen(filepath.Join(t.TempDir(), "cubby.db"))
+	defer database.Close()
+
+	folderRepo := repository.NewFolderRepo(database)
+	bookmarkRepo := repository.NewBookmarkRepo(database)
+	sortKeySvc := NewSortKeyService(bookmarkRepo, folderRepo)
+	folderSvc := NewFolderService(folderRepo, bookmarkRepo, sortKeySvc)
+	moveSvc := NewMoveService(repository.NewMoveRepo(database), folderSvc, sortKeySvc)
+
+	parent, err := folderSvc.Create("Parent", nil)
+	if err != nil {
+		t.Fatalf("create parent: %v", err)
+	}
+	child, err := folderSvc.Create("Child", &parent.ID)
+	if err != nil {
+		t.Fatalf("create child: %v", err)
+	}
+
+	_, err = moveSvc.BatchMove([]BatchMoveItem{{
+		Kind:     "folder",
+		ID:       parent.ID,
+		ParentID: &child.ID,
+		Version:  parent.Version,
+	}})
+	if err == nil {
+		t.Fatal("expected moving a folder into its descendant to fail")
+	}
+}
+
+func TestBatchMoveRejectsMissingPreviousNeighbor(t *testing.T) {
+	database := db.MustOpen(filepath.Join(t.TempDir(), "cubby.db"))
+	defer database.Close()
+
+	folderRepo := repository.NewFolderRepo(database)
+	bookmarkRepo := repository.NewBookmarkRepo(database)
+	sortKeySvc := NewSortKeyService(bookmarkRepo, folderRepo)
+	folderSvc := NewFolderService(folderRepo, bookmarkRepo, sortKeySvc)
+	bookmarkSvc := NewBookmarkService(bookmarkRepo, sortKeySvc)
+	moveSvc := NewMoveService(repository.NewMoveRepo(database), folderSvc, sortKeySvc)
+
+	bookmark, err := bookmarkSvc.Create("Bookmark", "https://example.com/missing-prev", nil)
+	if err != nil {
+		t.Fatalf("create bookmark: %v", err)
+	}
+
+	_, err = moveSvc.BatchMove([]BatchMoveItem{{
+		Kind:    "bookmark",
+		ID:      bookmark.ID,
+		PrevID:  ptr("missing"),
+		Version: bookmark.Version,
+	}})
+	if err == nil {
+		t.Fatal("expected missing previous neighbor to fail")
+	}
+}

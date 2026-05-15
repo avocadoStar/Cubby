@@ -64,4 +64,51 @@ describe('MobileAddModal', () => {
     expect(html).toContain('placeholder="文件夹名称"')
     expect(html).not.toContain('placeholder="URL"')
   })
+
+  it('renders duplicate URL feedback in bookmark mode', () => {
+    const html = renderToStaticMarkup(
+      <MobileAddModal
+        mode="bookmark"
+        title="Example"
+        url="https://example.com"
+        folderName=""
+        fetchingTitle={false}
+        saving={false}
+        duplicateUrlError="已存在"
+        onModeChange={noop}
+        onTitleChange={noop}
+        onUrlChange={noop}
+        onFolderNameChange={noop}
+        onClose={noop}
+        onSubmitBookmark={noop}
+        onSubmitFolder={noop}
+      />,
+    )
+
+    expect(html).toContain('已存在')
+  })
+
+  it('disables controls while saving so the modal cannot submit twice', () => {
+    const html = renderToStaticMarkup(
+      <MobileAddModal
+        mode="bookmark"
+        title="Example"
+        url="https://example.com"
+        folderName=""
+        fetchingTitle={false}
+        saving={true}
+        duplicateUrlError=""
+        onModeChange={noop}
+        onTitleChange={noop}
+        onUrlChange={noop}
+        onFolderNameChange={noop}
+        onClose={noop}
+        onSubmitBookmark={noop}
+        onSubmitFolder={noop}
+      />,
+    )
+
+    expect(html).toMatch(/<input[^>]+disabled=""/)
+    expect(html).toMatch(/<button type="submit"[^>]+disabled=""/)
+  })
 })

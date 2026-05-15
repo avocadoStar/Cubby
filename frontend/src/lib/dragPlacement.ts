@@ -40,29 +40,8 @@ export function computeSingleFolderDrop(
   const draggedFolder = ctx.folderMap.get(activeId)
   if (!draggedFolder) return null
 
-  const localSortKeys = new Map<string, string>()
-  ctx.folderMap.forEach((f, id) => localSortKeys.set(id, f.sort_key))
-  ctx.bookmarks.forEach(b => localSortKeys.set(b.id, b.sort_key))
-
-  const fallbackItemsForParent = (pid: string | null): UnifiedSortableItem[] => [
-    ...((ctx.childrenMap.get(pid) ?? [])
-      .map(id => ctx.folderMap.get(id))
-      .filter((f): f is Folder => Boolean(f))
-      .map(f => ({ id: f.id, parentId: f.parent_id, sortKey: f.sort_key }))),
-    ...ctx.bookmarks
-      .filter(b => b.folder_id === pid)
-      .map(b => ({ id: b.id, parentId: b.folder_id, sortKey: b.sort_key })),
-  ]
-
-  const siblingsOf = (pid: string | null) =>
-    getUnifiedSiblings(ctx.renderedItems, fallbackItemsForParent(pid), pid, activeId)
-
-  const getSortKey = (id: string | null) => id ? localSortKeys.get(id) ?? '' : ''
-  const moveSortKey = (prev: string | null, next: string | null) =>
-    computeSortKeyFromNeighbors(getSortKey(prev), getSortKey(next))
-
-  const targetId = normalizeOverId(overId)
-  const targetItem = findTargetItem(targetId, ctx)
+  const helpers = buildDropHelpers(ctx, activeId)
+  const targetItem = helpers.findTarget(overId)
 
   let newParentId: string | null
   let prevId: string | null
@@ -70,27 +49,27 @@ export function computeSingleFolderDrop(
 
   if (!targetItem) {
     newParentId = ctx.selectedId
-    const s = siblingsOf(ctx.selectedId)
+    const s = helpers.siblingsOf(ctx.selectedId)
     ;({ prevId, nextId } = computePlacement(s, s.length))
   } else if (targetItem.kind === 'folder' && dropPosition === 'inside') {
     newParentId = targetItem.folder.id
-    const s = siblingsOf(newParentId)
+    const s = helpers.siblingsOf(newParentId)
     ;({ prevId, nextId } = computePlacement(s, s.length))
   } else if (targetItem.kind === 'bookmark') {
     newParentId = targetItem.bookmark.folder_id
-    const s = siblingsOf(newParentId)
+    const s = helpers.siblingsOf(newParentId)
     const ti = s.indexOf(targetItem.bookmark.id)
     const ii = ti === -1 ? s.length : dropPosition === 'before' ? ti : ti + 1
     ;({ prevId, nextId } = computePlacement(s, ii))
   } else {
     newParentId = targetItem.folder.parent_id
-    const s = siblingsOf(newParentId)
+    const s = helpers.siblingsOf(newParentId)
     const ti = s.indexOf(targetItem.folder.id)
     const ii = ti === -1 ? s.length : dropPosition === 'before' ? ti : ti + 1
     ;({ prevId, nextId } = computePlacement(s, ii))
   }
 
-  const sortKey = moveSortKey(prevId, nextId)
+  const sortKey = helpers.moveSortKey(prevId, nextId)
   return { newParentId, prevId, nextId, sortKey }
 }
 
@@ -109,59 +88,38 @@ export function computeSingleBookmarkDrop(
   const draggedBookmark = ctx.bookmarks.find(b => b.id === activeId)
   if (!draggedBookmark) return null
 
-  const localSortKeys = new Map<string, string>()
-  ctx.folderMap.forEach((f, id) => localSortKeys.set(id, f.sort_key))
-  ctx.bookmarks.forEach(b => localSortKeys.set(b.id, b.sort_key))
-
-  const fallbackItemsForParent = (pid: string | null): UnifiedSortableItem[] => [
-    ...((ctx.childrenMap.get(pid) ?? [])
-      .map(id => ctx.folderMap.get(id))
-      .filter((f): f is Folder => Boolean(f))
-      .map(f => ({ id: f.id, parentId: f.parent_id, sortKey: f.sort_key }))),
-    ...ctx.bookmarks
-      .filter(b => b.folder_id === pid)
-      .map(b => ({ id: b.id, parentId: b.folder_id, sortKey: b.sort_key })),
-  ]
-
-  const siblingsOf = (pid: string | null) =>
-    getUnifiedSiblings(ctx.renderedItems, fallbackItemsForParent(pid), pid, activeId)
-
-  const getSortKey = (id: string | null) => id ? localSortKeys.get(id) ?? '' : ''
-  const moveSortKey = (prev: string | null, next: string | null) =>
-    computeSortKeyFromNeighbors(getSortKey(prev), getSortKey(next))
-
-  const targetId = normalizeOverId(overId)
-  const targetItem = findTargetItem(targetId, ctx)
+  const helpers = buildDropHelpers(ctx, activeId)
+  const targetItem = helpers.findTarget(overId)
 
   let newFolderId: string | null = ctx.selectedId
   let prevId: string | null
   let nextId: string | null
 
   if (!targetItem) {
-    const s = siblingsOf(ctx.selectedId)
+    const s = helpers.siblingsOf(ctx.selectedId)
     ;({ prevId, nextId } = computePlacement(s, s.length))
   } else if (targetItem.kind === 'folder') {
     if (dropPosition === 'inside') {
       newFolderId = targetItem.folder.id
-      const s = siblingsOf(newFolderId)
+      const s = helpers.siblingsOf(newFolderId)
       ;({ prevId, nextId } = computePlacement(s, s.length))
     } else {
       newFolderId = targetItem.folder.parent_id
-      const s = siblingsOf(newFolderId)
+      const s = helpers.siblingsOf(newFolderId)
       const ti = s.indexOf(targetItem.folder.id)
       const ii = ti === -1 ? s.length : dropPosition === 'before' ? ti : ti + 1
       ;({ prevId, nextId } = computePlacement(s, ii))
-      if (prevId && nextId && getSortKey(prevId) === getSortKey(nextId)) nextId = null
+      if (prevId && nextId && helpers.getSortKey(prevId) === helpers.getSortKey(nextId)) nextId = null
     }
   } else {
     newFolderId = targetItem.bookmark.folder_id
-    const s = siblingsOf(newFolderId)
+    const s = helpers.siblingsOf(newFolderId)
     const ti = s.indexOf(targetItem.bookmark.id)
     const ii = dropPosition === 'before' ? (ti === -1 ? s.length : ti) : (ti === -1 ? s.length : ti + 1)
     ;({ prevId, nextId } = computePlacement(s, ii))
   }
 
-  const sortKey = moveSortKey(prevId, nextId)
+  const sortKey = helpers.moveSortKey(prevId, nextId)
   return { newFolderId, prevId, nextId, sortKey }
 }
 
@@ -177,26 +135,8 @@ export function computeMultiDragDrop(
 ): MultiDragDrop | null {
   const { overId, dropPosition } = dragState
 
-  const localSortKeys = new Map<string, string>()
-  ctx.folderMap.forEach((f, id) => localSortKeys.set(id, f.sort_key))
-  ctx.bookmarks.forEach(b => localSortKeys.set(b.id, b.sort_key))
-
-  const fallbackItemsForParent = (pid: string | null): UnifiedSortableItem[] => [
-    ...((ctx.childrenMap.get(pid) ?? [])
-      .map(id => ctx.folderMap.get(id))
-      .filter((f): f is Folder => Boolean(f))
-      .map(f => ({ id: f.id, parentId: f.parent_id, sortKey: f.sort_key }))),
-    ...ctx.bookmarks
-      .filter(b => b.folder_id === pid)
-      .map(b => ({ id: b.id, parentId: b.folder_id, sortKey: b.sort_key })),
-  ]
-
-  const targetId = normalizeOverId(overId)
-  const targetItem = findTargetItem(targetId, ctx)
-
-  const getSortKey = (id: string | null) => id ? localSortKeys.get(id) ?? '' : ''
-  const moveSortKey = (prev: string | null, next: string | null) =>
-    computeSortKeyFromNeighbors(getSortKey(prev), getSortKey(next))
+  const helpers = buildDropHelpers(ctx, '')
+  const targetItem = helpers.findTarget(overId)
 
   const destParentId = (): string | null => {
     if (!targetItem) return ctx.selectedId
@@ -223,7 +163,7 @@ export function computeMultiDragDrop(
   const draggedIds = new Set(effectiveDragIds.map(sid => sid.startsWith('bookmark:') ? sid.slice('bookmark:'.length) : sid))
 
   const siblingsExcluding = (pid: string | null, excludeIds: Set<string>) =>
-    getUnifiedSiblings(ctx.renderedItems, fallbackItemsForParent(pid), pid, '')
+    helpers.siblingsOf(pid, '')
       .filter(sid => !excludeIds.has(sid))
 
   const siblings = siblingsExcluding(dp, draggedIds)
@@ -236,12 +176,12 @@ export function computeMultiDragDrop(
   }
 
   let { prevId, nextId } = computePlacement(siblings, insertIdx)
-  if (prevId && nextId && getSortKey(prevId) === getSortKey(nextId)) nextId = null
+  if (prevId && nextId && helpers.getSortKey(prevId) === helpers.getSortKey(nextId)) nextId = null
 
   const batchItems: BatchMoveItem[] = []
   for (const selId of effectiveDragIds) {
     const strippedId = selId.startsWith('bookmark:') ? selId.slice('bookmark:'.length) : selId
-    const sortKey = moveSortKey(prevId, nextId)
+    const sortKey = helpers.moveSortKey(prevId, nextId)
     if (selId.startsWith('bookmark:')) {
       const bookmark = ctx.bookmarks.find(bk => bk.id === strippedId)
       if (bookmark) {
@@ -253,7 +193,7 @@ export function computeMultiDragDrop(
         batchItems.push({ kind: 'folder', id: strippedId, parent_id: dp, prev_id: prevId, next_id: nextId, optimistic_sort_key: sortKey, version: folder.version })
       }
     }
-    if (sortKey) localSortKeys.set(strippedId, sortKey)
+    if (sortKey) helpers.setSortKey(strippedId, sortKey)
     prevId = strippedId
   }
 
@@ -264,6 +204,34 @@ function normalizeOverId(overId: string): string {
   if (overId.startsWith('droppable:sidebar:')) return overId.slice('droppable:sidebar:'.length)
   if (overId.startsWith('droppable:')) return overId.slice('droppable:'.length)
   return overId
+}
+
+function buildDropHelpers(ctx: DropContext, activeId: string) {
+  const localSortKeys = new Map<string, string>()
+  ctx.folderMap.forEach((f, id) => localSortKeys.set(id, f.sort_key))
+  ctx.bookmarks.forEach(b => localSortKeys.set(b.id, b.sort_key))
+
+  const fallbackItemsForParent = (pid: string | null): UnifiedSortableItem[] => [
+    ...((ctx.childrenMap.get(pid) ?? [])
+      .map(id => ctx.folderMap.get(id))
+      .filter((f): f is Folder => Boolean(f))
+      .map(f => ({ id: f.id, parentId: f.parent_id, sortKey: f.sort_key }))),
+    ...ctx.bookmarks
+      .filter(b => b.folder_id === pid)
+      .map(b => ({ id: b.id, parentId: b.folder_id, sortKey: b.sort_key })),
+  ]
+
+  const getSortKey = (id: string | null) => id ? localSortKeys.get(id) ?? '' : ''
+
+  return {
+    getSortKey,
+    setSortKey: (id: string, sortKey: string) => localSortKeys.set(id, sortKey),
+    siblingsOf: (pid: string | null, excludeId = activeId) =>
+      getUnifiedSiblings(ctx.renderedItems, fallbackItemsForParent(pid), pid, excludeId),
+    moveSortKey: (prev: string | null, next: string | null) =>
+      computeSortKeyFromNeighbors(getSortKey(prev), getSortKey(next)),
+    findTarget: (overId: string) => findTargetItem(normalizeOverId(overId), ctx),
+  }
 }
 
 function findTargetItem(targetId: string, ctx: DropContext): ListItem | undefined {

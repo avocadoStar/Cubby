@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { Bookmark } from '../types'
-import { removeSetValue, sortBookmarksBySortKey, sortBookmarksBySortKeyThenId } from './bookmarkStoreHelpers'
+import {
+  removeBookmarkById,
+  removeSetValue,
+  replaceBookmarkNotes,
+  restoreBookmarkToList,
+  sortBookmarksBySortKey,
+  sortBookmarksBySortKeyThenId,
+  upsertChangedBookmark,
+} from './bookmarkStoreHelpers'
 
 function bookmark(id: string, sortKey: string): Bookmark {
   return {
@@ -37,5 +45,33 @@ describe('bookmark store helpers', () => {
 
     expect(Array.from(result)).toEqual(['b'])
     expect(Array.from(source)).toEqual(['a', 'b'])
+  })
+
+  it('upserts bookmarks and reports the changed id', () => {
+    const source = [bookmark('a', 'a')]
+    const changed = bookmark('b', 'z')
+
+    const result = upsertChangedBookmark(source, changed)
+
+    expect(result.bookmarks.map((item) => item.id)).toEqual(['a', 'b'])
+    expect(Array.from(result.changedIds)).toEqual(['b'])
+  })
+
+  it('replaces notes without changing other bookmarks', () => {
+    const source = [bookmark('a', 'a'), bookmark('b', 'b')]
+
+    const result = replaceBookmarkNotes(source, 'b', 'new notes')
+
+    expect(result.find((item) => item.id === 'b')?.notes).toBe('new notes')
+    expect(result.find((item) => item.id === 'a')?.notes).toBe('')
+  })
+
+  it('removes and restores bookmarks through pure list helpers', () => {
+    const source = [bookmark('a', 'a'), bookmark('b', 'b')]
+    const removed = removeBookmarkById(source, 'a')
+    const restored = restoreBookmarkToList(removed, source[0])
+
+    expect(removed.map((item) => item.id)).toEqual(['b'])
+    expect(restored.map((item) => item.id)).toEqual(['a', 'b'])
   })
 })

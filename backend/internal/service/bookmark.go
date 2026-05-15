@@ -1,7 +1,6 @@
 package service
 
 import (
-	"cubby/internal/lexorank"
 	"cubby/internal/model"
 	"cubby/internal/repository"
 )
@@ -47,14 +46,9 @@ func (s *BookmarkService) Create(title, rawURL string, folderID *string, icon ..
 	if len(icon) > 0 {
 		iconValue = sanitizeBookmarkIcon(icon[0])
 	}
-	for i := 0; i < 3; i++ {
-		b, err := s.repo.Create(title, validatedURL, folderID, sortKey, iconValue)
-		if err == nil {
-			return b, nil
-		}
-		sortKey = lexorank.After(sortKey)
-	}
-	return nil, ErrConflict
+	return createWithSortKeyRetry(sortKey, ErrConflict, func(nextSortKey string) (*model.Bookmark, error) {
+		return s.repo.Create(title, validatedURL, folderID, nextSortKey, iconValue)
+	})
 }
 
 func (s *BookmarkService) Update(id, rawTitle, rawURL string, version int) (*model.Bookmark, error) {

@@ -58,11 +58,11 @@ func MustOpen(path string) *sql.DB {
 
 func migrate(db *sql.DB) {
 	mustExec(db, schemaDDL)
-	addBookmarkCompatibilityColumns(db)
-	rebuildSortKeyUniqueIndexes(db)
+	migrateBookmarkCompatibilityColumns(db)
+	migrateSortKeyUniqueness(db)
 }
 
-func addBookmarkCompatibilityColumns(db *sql.DB) {
+func migrateBookmarkCompatibilityColumns(db *sql.DB) {
 	if _, err := db.Exec(`ALTER TABLE bookmark ADD COLUMN notes TEXT NOT NULL DEFAULT ''`); err != nil {
 		if !isDuplicateColumnError(err) {
 			panic(err)
@@ -75,7 +75,7 @@ func addBookmarkCompatibilityColumns(db *sql.DB) {
 	}
 }
 
-func rebuildSortKeyUniqueIndexes(db *sql.DB) {
+func migrateSortKeyUniqueness(db *sql.DB) {
 	mustExec(db, `DROP INDEX IF EXISTS idx_folder_parent_sort_unique`)
 	mustExec(db, `DROP INDEX IF EXISTS idx_bookmark_folder_sort_unique`)
 	if err := repairDuplicateSortKeys(db, "folder", "parent_id"); err != nil {
