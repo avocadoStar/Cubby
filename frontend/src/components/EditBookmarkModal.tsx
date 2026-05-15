@@ -3,6 +3,7 @@ import type { Bookmark } from '../types'
 import { api } from '../services/api'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import ModalBase from './ModalBase'
+import Button from './Button'
 
 export default function EditBookmarkModal({ bookmark, onClose, onSaved }: {
   bookmark: Bookmark
@@ -45,9 +46,8 @@ export default function EditBookmarkModal({ bookmark, onClose, onSaved }: {
           disabled={saving}
           placeholder="URL" className="w-full h-9 px-3 rounded outline-none mb-4 bg-input-bg border border-input-border text-app-text shadow-input-base focus:shadow-input-focus transition-shadow text-sm" />
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={() => closeModal()} disabled={saving} className="h-8 px-4 rounded text-sm cursor-default bg-app-card border border-input-border text-app-text shadow-app-base disabled:opacity-50">取消</button>
-          <button type="submit" disabled={saving || !title.trim() || !url.trim()}
-            className="h-8 px-4 border-none rounded text-sm font-medium cursor-default disabled:opacity-50 bg-app-accent text-text-on-accent shadow-app-base">{saving ? '保存中...' : '保存'}</button>
+          <Button variant="secondary" onClick={() => closeModal()} disabled={saving}>取消</Button>
+          <Button variant="primary" type="submit" loading={saving} disabled={saving || !title.trim() || !url.trim()}>保存</Button>
         </div>
       </form>
     </ModalBase>

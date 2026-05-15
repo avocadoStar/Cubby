@@ -11,7 +11,7 @@ export default function Breadcrumb() {
         <span key={p.id ?? 'root'} className="flex items-center">
           {i > 0 && <span className="mx-0.5" style={{ color: 'var(--app-text3)' }}>/</span>}
           <span
-            className="px-1 rounded-sm cursor-default"
+            className="px-1 rounded-sm cursor-pointer"
             style={{ color: i === path.length - 1 ? 'var(--app-text)' : 'var(--app-accent)' }}
             onClick={() => useFolderStore.getState().select(p.id)}
           >

@@ -1,6 +1,7 @@
 import { useState, type FocusEvent } from 'react'
 import { useFolderStore } from '../stores/folderStore'
 import ModalBase from './ModalBase'
+import Button from './Button'
 
 const INPUT_STYLE: React.CSSProperties = {
   border: 'var(--input-border)',
@@ -25,10 +26,17 @@ export default function RenameFolderModal({ folderId, onClose }: {
   const folder = useFolderStore.getState().folderMap.get(folderId)
   const [name, setName] = useState(folder?.name ?? '')
 
+  const [saving, setSaving] = useState(false)
+
   const submit = async () => {
-    if (!name.trim() || !folder) return
-    await useFolderStore.getState().rename(folderId, name.trim(), folder.version)
-    onClose()
+    if (!name.trim() || !folder || saving) return
+    setSaving(true)
+    try {
+      await useFolderStore.getState().rename(folderId, name.trim(), folder.version)
+      onClose()
+    } catch {
+      setSaving(false)
+    }
   }
 
   if (!folder) return null
@@ -46,14 +54,8 @@ export default function RenameFolderModal({ folderId, onClose }: {
         onBlur={handleBlur}
       />
       <div className="flex justify-end gap-2">
-        <button onClick={onClose} className="h-10 px-5 rounded text-body cursor-default"
-          style={{ border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', color: 'var(--app-text)' }}>
-          取消
-        </button>
-        <button onClick={submit} disabled={!name.trim()} className="h-10 px-5 border-none rounded text-body font-medium cursor-default disabled:opacity-50"
-          style={{ background: 'var(--app-accent)', boxShadow: 'var(--shadow)', color: 'var(--text-on-accent)' }}>
-          保存
-        </button>
+        <Button variant="secondary" onClick={onClose} disabled={saving}>取消</Button>
+        <Button variant="primary" onClick={submit} loading={saving} disabled={!name.trim() || saving}>保存</Button>
       </div>
     </ModalBase>
   )

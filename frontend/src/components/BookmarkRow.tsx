@@ -45,7 +45,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
       data-context="bookmark"
       data-id={bookmark.id}
       data-deleting={isDeleting ? 'true' : undefined}
-      className="bookmark-delete-motion flex items-center px-2 rounded select-none cursor-default"
+      className="bookmark-delete-motion flex items-center px-2 rounded select-none cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)]"
       style={{
         height: 38,
         opacity: isDeleting ? 0 : isDragging ? 0.3 : 1,
@@ -72,6 +72,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
       onClick={() => openExternalURL(bookmark.url)}
       {...listeners}
       {...attributes}
+      tabIndex={0}
     >
       <RowCheckbox checked={isSelected} ariaLabel={t('bookmark.selectAria')} onToggle={() => toggleSelect(bookmark.id)} />
       <div
@@ -108,7 +109,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         <>
           <div className="flex-shrink-0" style={{ width: 1, alignSelf: 'stretch', background: hovered ? 'var(--divider-color)' : 'transparent', margin: '0 6px' }} />
           <button
-            className="flex-shrink-0 flex items-center justify-center rounded cursor-default border-none"
+            className="flex-shrink-0 flex items-center justify-center rounded cursor-pointer border-none"
             style={{
               width: 26, height: 26, opacity: hovered ? 1 : 0.35,
               color: bookmark.notes ? 'var(--app-accent)' : 'var(--app-text3)',

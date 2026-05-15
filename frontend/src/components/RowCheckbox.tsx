@@ -10,7 +10,7 @@ export default function RowCheckbox({ checked, ariaLabel, onToggle }: RowCheckbo
       role="checkbox"
       aria-checked={checked}
       aria-label={ariaLabel}
-      className="flex-shrink-0 mr-2.5 flex items-center justify-center cursor-default"
+      className="flex-shrink-0 mr-2.5 flex items-center justify-center cursor-pointer"
       style={{
         width: 18, height: 18,
         borderRadius: '50%',

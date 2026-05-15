@@ -3,6 +3,7 @@ import { api } from '../services/api'
 import { useFolderStore } from '../stores/folderStore'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import ModalBase from './ModalBase'
+import Button from './Button'
 
 type Status = 'idle' | 'importing' | 'done' | 'error'
 
@@ -109,9 +110,9 @@ export default function ImportModal({ onClose, width = '440px', compact = false 
             共导入 {result?.bookmarks ?? 0} 条书签
             {(result?.folders ?? 0) > 0 && `, ${result!.folders} 个文件夹`}
           </p>
-          <button onClick={handleDone} className="mt-5 h-10 px-6 rounded text-body font-medium cursor-default border border-app-accent text-app-accent shadow-app-base hover:bg-accent-light transition-colors duration-150">
+          <Button variant="ghost" size="lg" className="mt-5" style={{ color: 'var(--app-accent)', border: '1px solid var(--app-accent)' }} onClick={handleDone}>
             完成
-          </button>
+          </Button>
         </div>
       )}
 
@@ -125,12 +126,8 @@ export default function ImportModal({ onClose, width = '440px', compact = false 
           <p className="text-body font-medium mb-2 text-app-danger">导入失败</p>
           <p className="text-caption mb-5 max-h-16 overflow-auto text-app-text2">{error}</p>
           <div className="flex justify-center gap-2">
-            <button onClick={handleClose} className="h-10 px-5 rounded text-body cursor-default bg-app-card border border-input-border text-app-text shadow-app-base">
-              取消
-            </button>
-            <button onClick={handleRetry} className="h-10 px-5 border-none rounded text-body font-medium cursor-default bg-app-accent text-text-on-accent shadow-app-base">
-              重试
-            </button>
+            <Button variant="secondary" size="lg" onClick={handleClose}>取消</Button>
+            <Button variant="primary" size="lg" onClick={handleRetry}>重试</Button>
           </div>
         </div>
       )}

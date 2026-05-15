@@ -57,7 +57,7 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
       <div onClick={handleClose} style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         background: 'rgba(0,0,0,0.4)', zIndex: 70,
-        opacity: open ? 1 : 0, transition: 'opacity 0.25s ease',
+        opacity: open ? 1 : 0, transition: `opacity var(--motion-duration-normal) var(--motion-easing-standard)`,
         pointerEvents: open ? 'auto' : 'none',
       }} />
 
@@ -67,9 +67,9 @@ export default function MobileBottomSheet({ bookmark, onClose }: {
         zIndex: 71,
         background: 'var(--app-card)',
         borderTopLeftRadius: 16, borderTopRightRadius: 16,
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
+        boxShadow: 'var(--shadow-lg)',
         transform: open ? 'translateY(0)' : 'translateY(100%)',
-        transition: 'transform 0.25s ease',
+        transition: `transform var(--motion-duration-normal) var(--motion-easing-standard)`,
         height: '60vh',
         display: 'flex', flexDirection: 'column',
       }}>

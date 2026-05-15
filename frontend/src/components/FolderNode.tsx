@@ -58,7 +58,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       ref={setNodeRef}
       data-context="folder"
       data-id={node.id}
-      className="flex items-center cursor-default rounded select-none"
+      className="flex items-center cursor-pointer rounded select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)]"
       style={{
         height: 32,
         paddingLeft: 8 + depth * 20,
@@ -83,6 +83,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       onClick={() => select(node.id)}
       {...listeners}
       {...attributes}
+      tabIndex={0}
     >
       <span
         className="flex-shrink-0 flex items-center justify-center"

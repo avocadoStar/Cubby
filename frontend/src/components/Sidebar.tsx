@@ -24,7 +24,7 @@ function AllBookmarksDroppable({
     <div
       ref={setNodeRef}
       data-id="all-bookmarks"
-      className="flex items-center h-8 mx-1 px-2 rounded cursor-default select-none"
+      className="flex items-center h-8 mx-1 px-2 rounded cursor-pointer select-none"
       style={{
         margin: '0 4px',
         background: isSelected ? 'var(--accent-light)' : 'transparent',
@@ -144,7 +144,7 @@ export default function Sidebar() {
             />
             {query && (
               <div
-                className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full cursor-default"
+                className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full cursor-pointer"
                 style={{ background: 'var(--app-text3)', color: 'var(--text-on-accent)' }}
                 onClick={() => {
                   setQuery('')

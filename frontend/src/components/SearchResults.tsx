@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { highlightMatches } from '../lib/highlight'
 import { useSearchStore } from '../stores/searchStore'
 import { useFolderStore } from '../stores/folderStore'
@@ -15,6 +16,7 @@ interface SearchResultsProps {
 
 export default function SearchResults({ query, results }: SearchResultsProps) {
   const loading = useSearchStore(s => s.loading)
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 
   return (
     <>
@@ -29,19 +31,20 @@ export default function SearchResults({ query, results }: SearchResultsProps) {
       </div>
       <div className="flex-1" style={{ overflow: 'auto' }}>
         <div style={{ paddingTop: 4 }}>
-          {results.map((r) => (
+          {results.map((r, idx) => (
             <div
               key={`${r.kind}-${r.id}`}
-              className="flex items-center mx-1 px-2 rounded select-none cursor-default"
-              style={{ height: 32, borderRadius: 'var(--card-radius)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--app-hover)'
-                e.currentTarget.style.boxShadow = 'var(--tree-hover-shadow)'
+              className="flex items-center mx-1 px-2 rounded select-none cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)]"
+              style={{
+                height: 32,
+                borderRadius: 'var(--card-radius)',
+                background: hoveredIdx === idx ? 'var(--app-hover)' : 'transparent',
+                boxShadow: hoveredIdx === idx ? 'var(--tree-hover-shadow)' : 'none',
+                transition: 'background 0.12s ease, box-shadow 0.12s ease',
               }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
+              onMouseEnter={() => setHoveredIdx(idx)}
+              onMouseLeave={() => setHoveredIdx(null)}
+              tabIndex={0}
               onClick={() => {
                 if (r.kind === 'folder') {
                   useSearchStore.getState().clearSearch()

@@ -53,7 +53,7 @@ export default function FontSizePopover({ onClose }: { onClose: () => void }) {
         {PRESETS.map((p) => (
           <button
             key={p.key}
-            className="flex-1 h-8 rounded text-body cursor-default border"
+            className="flex-1 h-8 rounded text-body cursor-pointer border"
             style={{
               borderColor: preset === p.key ? 'var(--app-accent)' : 'var(--app-border)',
               background: preset === p.key ? 'var(--accent-light)' : 'var(--app-bg)',

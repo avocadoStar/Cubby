@@ -176,7 +176,7 @@ function DesktopMainLayout() {
             <SearchResults query={searchQuery} results={searchResults} />
           ) : (
           <>
-          <div className="flex-1" ref={scrollRef} style={{ overflow: 'auto' }}>
+          <div className="flex-1 theme-scrollbar" ref={scrollRef} style={{ overflow: 'auto' }}>
             {loading && items.length === 0 ? (
               <ListSkeleton />
             ) : (

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useSelectionStore } from '../stores/selectionStore'
+import Button from './Button'
 
 export default function BatchActionBar() {
   const { selectedIds, selectedFolderIds, clearSelection } = useSelectionStore()
@@ -26,31 +27,13 @@ export default function BatchActionBar() {
         <>
           <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--app-accent)', borderTopColor: 'transparent' }} />
           <span style={{ color: 'var(--app-text2)' }}>正在删除…</span>
-          <button
-            className="h-7 px-3.5 rounded text-body cursor-default"
-            style={{ border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', color: 'var(--app-text3)' }}
-            disabled
-          >
-            取消
-          </button>
+          <Button variant="secondary" size="sm" disabled>取消</Button>
         </>
       ) : (
         <>
           <span style={{ color: 'var(--app-text)' }}>已选择 {count} 项</span>
-          <button
-            className="h-7 px-3.5 border-none rounded text-body font-medium cursor-default"
-            style={{ background: 'var(--app-accent)', boxShadow: 'var(--shadow)', color: 'var(--text-on-accent)' }}
-            onClick={handleDelete}
-          >
-            删除
-          </button>
-          <button
-            className="h-7 px-3.5 rounded text-body cursor-default"
-            style={{ border: 'var(--input-border)', boxShadow: 'var(--shadow)', background: 'var(--app-card)', color: 'var(--app-text)' }}
-            onClick={clearSelection}
-          >
-            取消
-          </button>
+          <Button variant="primary" size="sm" onClick={handleDelete}>删除</Button>
+          <Button variant="secondary" size="sm" onClick={clearSelection}>取消</Button>
         </>
       )}
     </div>

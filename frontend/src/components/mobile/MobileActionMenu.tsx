@@ -82,7 +82,7 @@ export default function MobileActionMenu({
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         background: 'rgba(0,0,0,0.32)', zIndex: 40,
         opacity: animated ? 1 : 0,
-        transition: 'opacity 0.2s ease',
+        transition: `opacity var(--motion-duration-normal) var(--motion-easing-standard)`,
         pointerEvents: animated ? 'auto' : 'none',
       }} />
 
@@ -93,14 +93,14 @@ export default function MobileActionMenu({
           position: 'absolute', top: 52, right: 8, zIndex: 41,
           background: 'var(--app-card)',
           borderRadius: 10,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08)',
+          boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--app-border)',
           minWidth: 180,
           overflow: 'hidden',
           transformOrigin: 'top right',
           transform: animated ? 'scale(1)' : 'scale(0.92)',
           opacity: animated ? 1 : 0,
-          transition: 'transform 0.18s ease, opacity 0.18s ease',
+          transition: `transform var(--motion-duration-fast) var(--motion-easing-enter), opacity var(--motion-duration-fast) var(--motion-easing-enter)`,
         }}
       >
         {items.map((item, i) => (
@@ -114,7 +114,7 @@ export default function MobileActionMenu({
               color: item.danger ? 'var(--app-danger)' : 'var(--app-text)',
               borderBottom: i < items.length - 1 ? '1px solid var(--divider-color)' : 'none',
               background: 'transparent',
-              transition: 'background 0.12s ease',
+              transition: `background var(--motion-duration-instant) var(--motion-easing-standard)`,
             }}
             onTouchStart={(e) => {
               (e.currentTarget as HTMLElement).style.background = 'var(--app-hover)'

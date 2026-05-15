@@ -9,7 +9,7 @@ export default function RowDeleteButton({ hovered, ariaLabel, onDelete }: RowDel
     <div
       role="button"
       aria-label={ariaLabel}
-      className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-default"
+      className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-pointer"
       style={{ opacity: hovered ? 1 : 0.35, color: hovered ? 'var(--app-danger)' : 'var(--app-text3)' }}
       onClick={(e) => { e.stopPropagation(); onDelete() }}
     >

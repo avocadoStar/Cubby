@@ -121,7 +121,7 @@ export default function MobileBookmarkItem({ bookmark, isDeleting = false, onOpe
         <button disabled={isDeleting} onClick={handleOpenNotes} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: 2, width: 72, height: '100%', border: 'none', cursor: 'pointer',
-          fontSize: 10, fontWeight: 500, color: '#fff', background: '#8B5CF6',
+          fontSize: 10, fontWeight: 500, color: '#fff', background: 'var(--app-accent)',
         }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -177,7 +177,7 @@ export default function MobileBookmarkItem({ bookmark, isDeleting = false, onOpe
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{bookmark.title}</span>
         {bookmark.notes && (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--app-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
           </svg>

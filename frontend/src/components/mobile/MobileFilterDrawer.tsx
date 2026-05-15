@@ -40,7 +40,7 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
       <div onClick={onClose} style={{
         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
         background: 'rgba(0,0,0,0.4)', zIndex: 50,
-        opacity: animated ? 1 : 0, transition: 'opacity 0.25s ease',
+        opacity: animated ? 1 : 0, transition: `opacity var(--motion-duration-normal) var(--motion-easing-standard)`,
         pointerEvents: animated ? 'auto' : 'none',
       }} />
 
@@ -51,7 +51,7 @@ export default function MobileFilterDrawer({ open, onClose }: { open: boolean; o
           position: 'absolute', top: 0, right: 0, bottom: 0, width: '100%',
           background: 'var(--app-card)', zIndex: 51,
           transform: animated ? 'translateX(0)' : 'translateX(100%)',
-          transition: 'transform 0.25s ease',
+          transition: `transform var(--motion-duration-normal) var(--motion-easing-standard)`,
           display: 'flex', flexDirection: 'column',
         }}
       >

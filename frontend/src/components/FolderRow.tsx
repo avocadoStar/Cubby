@@ -32,7 +32,7 @@ const FolderRowComponent = memo(function FolderRowComponent({
     <div
       data-context="folder"
       data-id={folder.id}
-      className="flex items-center px-2 select-none cursor-default"
+      className="flex items-center px-2 select-none cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)]"
       style={{
         height: 38,
         borderRadius: 'var(--card-radius)',
@@ -45,6 +45,7 @@ const FolderRowComponent = memo(function FolderRowComponent({
         outlineOffset: -1,
         touchAction: 'none',
       }}
+      tabIndex={0}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onNavigate}
