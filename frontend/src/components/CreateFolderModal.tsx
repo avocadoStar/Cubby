@@ -5,26 +5,40 @@ import ModalBase from './ModalBase'
 export default function CreateFolderModal({ parentId, onClose }: { parentId: string | null; onClose: () => void }) {
   const [name, setName] = useState('')
   const [nameError, setNameError] = useState('')
+  const [saving, setSaving] = useState(false)
   const { create } = useFolderStore()
   const nameInputRef = useRef<HTMLInputElement>(null)
 
+  const closeModal = (force = false) => {
+    if (saving && !force) return
+    onClose()
+  }
+
   const handleSubmit = async (event?: FormEvent<HTMLFormElement>) => {
     event?.preventDefault()
+    if (saving) return
     if (!name.trim()) {
       setNameError('请输入文件夹名称')
       nameInputRef.current?.focus()
       return
     }
-    await create(name.trim(), parentId)
-    onClose()
+    setSaving(true)
+    try {
+      await create(name.trim(), parentId)
+      closeModal(true)
+    } catch (e) {
+      setSaving(false)
+      throw e
+    }
   }
 
   return (
-    <ModalBase title="新建文件夹" onClose={onClose} width="320px" closeOnEscape closeOnOverlayClick={false}>
+    <ModalBase title="新建文件夹" onClose={closeModal} width="320px" closeOnEscape={!saving} closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit}>
         <input
           ref={nameInputRef}
           value={name}
+          disabled={saving}
           onChange={(e) => {
             setNameError('')
             setName(e.target.value)
@@ -41,11 +55,11 @@ export default function CreateFolderModal({ parentId, onClose }: { parentId: str
           </div>
         )}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="h-8 px-4 rounded text-sm cursor-default bg-app-card text-app-text shadow-app-base" style={{ border: 'var(--input-border)' }}>
+          <button type="button" onClick={() => closeModal()} disabled={saving} className="h-8 px-4 rounded text-sm cursor-default bg-app-card text-app-text shadow-app-base disabled:opacity-50" style={{ border: 'var(--input-border)' }}>
             取消
           </button>
-          <button type="submit" className="h-8 px-4 border-none rounded text-sm font-medium cursor-default bg-app-accent text-text-on-accent shadow-app-base">
-            创建
+          <button type="submit" disabled={saving || !name.trim()} className="h-8 px-4 border-none rounded text-sm font-medium cursor-default disabled:opacity-50 bg-app-accent text-text-on-accent shadow-app-base">
+            {saving ? '创建中...' : '创建'}
           </button>
         </div>
       </form>

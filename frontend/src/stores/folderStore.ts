@@ -17,6 +17,7 @@ interface FolderState {
   select: (id: string | null) => Promise<void>
   rebuildVisible: () => void
   create: (name: string, parentId: string | null) => Promise<void>
+  rename: (id: string, name: string, version: number) => Promise<void>
   deleteOne: (id: string) => void
   moveFolder: (
     id: string,
@@ -114,8 +115,41 @@ export const useFolderStore = create<FolderState>((set, get) => ({
   },
 
   create: async (name, parentId) => {
-    await api.createFolder(name, parentId)
-    await get().loadChildren(parentId)
+    const created = await api.createFolder(name, parentId)
+    set((state) => {
+      const folderMap = new Map(state.folderMap)
+      const childrenMap = new Map(state.childrenMap)
+      folderMap.set(created.id, created)
+      const siblings = (childrenMap.get(parentId) ?? []).filter((id) => id !== created.id)
+      siblings.push(created.id)
+      siblings.sort((a, b) => {
+        const af = folderMap.get(a)
+        const bf = folderMap.get(b)
+        if (!af || !bf) return a.localeCompare(b)
+        if (af.sort_key < bf.sort_key) return -1
+        if (af.sort_key > bf.sort_key) return 1
+        return af.id.localeCompare(bf.id)
+      })
+      childrenMap.set(parentId, siblings)
+      if (parentId !== null) {
+        const parent = folderMap.get(parentId)
+        if (parent) {
+          folderMap.set(parentId, { ...parent, has_children: true })
+        }
+      }
+      return { folderMap, childrenMap }
+    })
+    get().rebuildVisible()
+  },
+
+  rename: async (id, name, version) => {
+    const updated = await api.updateFolder(id, name, version)
+    set((state) => {
+      const folderMap = new Map(state.folderMap)
+      folderMap.set(id, updated)
+      return { folderMap }
+    })
+    get().rebuildVisible()
   },
 
   deleteOne: (id) => {

@@ -14,9 +14,17 @@ interface SearchResultsProps {
 }
 
 export default function SearchResults({ query, results }: SearchResultsProps) {
+  const loading = useSearchStore(s => s.loading)
+
   return (
     <>
-      <div className="px-4 py-2 text-body border-b" style={{ color: 'var(--app-text2)', borderColor: 'var(--divider-color)' }}>
+      <div className="px-4 py-2 text-body border-b flex items-center gap-2" style={{ color: 'var(--app-text2)', borderColor: 'var(--divider-color)' }}>
+        {loading && (
+          <span
+            className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin"
+            style={{ borderColor: 'var(--app-accent)', borderTopColor: 'transparent' }}
+          />
+        )}
         找到了与"<span className="font-medium" style={{ color: 'var(--app-text)' }}>{query}</span>"相符的 {results.length} 结果
       </div>
       <div className="flex-1" style={{ overflow: 'auto' }}>

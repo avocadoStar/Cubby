@@ -45,8 +45,13 @@ export default function ImportModal({ onClose, width = '440px', compact = false 
   }
 
   const handleDone = async () => {
-    await useFolderStore.getState().loadChildren(null)
-    await useBookmarkStore.getState().load(null)
+    const folderStore = useFolderStore.getState()
+    const selectedId = folderStore.selectedId
+    await folderStore.loadChildren(null)
+    if (selectedId !== null) {
+      await folderStore.loadChildren(selectedId)
+    }
+    await useBookmarkStore.getState().load(selectedId, { mode: 'refresh' })
     onClose()
   }
 

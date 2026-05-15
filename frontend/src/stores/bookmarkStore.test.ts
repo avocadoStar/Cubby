@@ -63,6 +63,7 @@ describe('bookmarkStore', () => {
       bookmarks: [],
       loading: false,
       deletingIds: new Set(),
+      recentlyChangedIds: new Set(),
     })
     useSelectionStore.setState({
       selectedIds: new Set(),
@@ -98,6 +99,27 @@ describe('bookmarkStore', () => {
       const state = useBookmarkStore.getState()
       expect(state.bookmarks).toEqual(bookmarks)
       expect(state.loading).toBe(false)
+    })
+
+    it('keeps existing bookmarks during refresh loads', async () => {
+      const previous = [makeBookmark({ id: 'old' })]
+      let resolveBookmarks!: (bookmarks: Bookmark[]) => void
+      vi.mocked(api.getBookmarks).mockReturnValue(new Promise((resolve) => {
+        resolveBookmarks = resolve
+      }))
+      useBookmarkStore.setState({ bookmarks: previous, loading: false })
+
+      const loading = useBookmarkStore.getState().load('folder1', { mode: 'refresh' })
+
+      expect(useBookmarkStore.getState().bookmarks).toEqual(previous)
+      expect(useBookmarkStore.getState().loading).toBe(true)
+
+      const latest = [makeBookmark({ id: 'latest' })]
+      resolveBookmarks(latest)
+      await loading
+
+      expect(useBookmarkStore.getState().bookmarks).toEqual(latest)
+      expect(useBookmarkStore.getState().loading).toBe(false)
     })
 
     it('clears selection on load', async () => {
@@ -158,6 +180,30 @@ describe('bookmarkStore', () => {
 
       expect(api.updateNotes).toHaveBeenCalledWith('b1', 'mobile note')
       expect(useBookmarkStore.getState().bookmarks[0].notes).toBe('mobile note')
+    })
+  })
+
+  describe('upsertOne', () => {
+    it('inserts bookmarks in sort order and marks them as recently changed', () => {
+      const first = makeBookmark({ id: 'b1', sort_key: 'n' })
+      const inserted = makeBookmark({ id: 'b0', sort_key: 'a' })
+      useBookmarkStore.setState({ bookmarks: [first] })
+
+      useBookmarkStore.getState().upsertOne(inserted)
+
+      const state = useBookmarkStore.getState()
+      expect(state.bookmarks.map((bookmark) => bookmark.id)).toEqual(['b0', 'b1'])
+      expect(state.recentlyChangedIds.has('b0')).toBe(true)
+    })
+
+    it('replaces an existing bookmark without duplicating it', () => {
+      const original = makeBookmark({ id: 'b1', title: 'Old', sort_key: 'n' })
+      const updated = makeBookmark({ id: 'b1', title: 'New', sort_key: 'n' })
+      useBookmarkStore.setState({ bookmarks: [original] })
+
+      useBookmarkStore.getState().upsertOne(updated)
+
+      expect(useBookmarkStore.getState().bookmarks).toEqual([updated])
     })
   })
 })

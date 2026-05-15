@@ -18,6 +18,7 @@ interface MobileAddModalProps {
   url: string
   folderName: string
   fetchingTitle: boolean
+  saving: boolean
   duplicateUrlError: string
   onModeChange: (mode: MobileAddMode) => void
   onTitleChange: (value: string) => void
@@ -34,6 +35,7 @@ export function MobileAddModal({
   url,
   folderName,
   fetchingTitle,
+  saving,
   duplicateUrlError,
   onModeChange,
   onTitleChange,
@@ -44,7 +46,7 @@ export function MobileAddModal({
   onSubmitFolder,
 }: MobileAddModalProps) {
   const isBookmark = mode === 'bookmark'
-  const canSubmit = isBookmark ? Boolean(title.trim() && url.trim()) : Boolean(folderName.trim())
+  const canSubmit = !saving && (isBookmark ? Boolean(title.trim() && url.trim()) : Boolean(folderName.trim()))
   const fieldStyle = {
     width: '100%',
     height: 38,
@@ -66,7 +68,7 @@ export function MobileAddModal({
     color: active ? 'var(--app-text)' : 'var(--app-text2)',
     fontSize: 14,
     fontWeight: active ? 600 : 400,
-    cursor: 'pointer',
+    cursor: saving ? 'default' : 'pointer',
     boxShadow: active ? 'var(--shadow-sm)' : 'none',
     transition: 'background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease',
   })
@@ -79,7 +81,7 @@ export function MobileAddModal({
   }
 
   return (
-    <ModalBase title="添加" onClose={onClose} width="340px" closeOnEscape>
+    <ModalBase title="添加" onClose={onClose} width="340px" closeOnEscape={!saving}>
       <form onSubmit={handleSubmit}>
         <div
           role="group"
@@ -93,10 +95,10 @@ export function MobileAddModal({
             marginBottom: 16,
           }}
         >
-          <button type="button" aria-pressed={isBookmark} onClick={() => onModeChange('bookmark')} style={tabStyle(isBookmark)}>
+          <button type="button" aria-pressed={isBookmark} disabled={saving} onClick={() => onModeChange('bookmark')} style={tabStyle(isBookmark)}>
             书签
           </button>
-          <button type="button" aria-pressed={!isBookmark} onClick={() => onModeChange('folder')} style={tabStyle(!isBookmark)}>
+          <button type="button" aria-pressed={!isBookmark} disabled={saving} onClick={() => onModeChange('folder')} style={tabStyle(!isBookmark)}>
             文件夹
           </button>
         </div>
@@ -106,6 +108,7 @@ export function MobileAddModal({
             <input
               value={title}
               onChange={e => onTitleChange(e.target.value)}
+              disabled={saving}
               placeholder={fetchingTitle ? '正在获取标题…' : '名称'}
               aria-label="名称"
               style={{ ...fieldStyle, marginBottom: 12 }}
@@ -113,18 +116,20 @@ export function MobileAddModal({
             <input
               value={url}
               onChange={e => onUrlChange(e.target.value)}
+              disabled={saving}
               placeholder="URL"
               aria-label="URL"
-              style={{ ...fieldStyle, marginBottom: duplicateUrlError ? 6 : 16 }}
+              style={{ ...fieldStyle, marginBottom: 6 }}
             />
-            {duplicateUrlError && (
-              <div style={{ fontSize: 13, color: 'var(--app-danger)', marginBottom: 12 }}>{duplicateUrlError}</div>
-            )}
+            <div style={{ fontSize: 13, color: 'var(--app-danger)', minHeight: 18, marginBottom: 12 }}>
+              {duplicateUrlError || '\u00a0'}
+            </div>
           </>
         ) : (
           <input
             value={folderName}
             onChange={e => onFolderNameChange(e.target.value)}
+            disabled={saving}
             placeholder="文件夹名称"
             aria-label="文件夹名称"
             style={{ ...fieldStyle, marginBottom: 16 }}
@@ -132,16 +137,29 @@ export function MobileAddModal({
         )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button type="button" onClick={onClose} style={{
-            height: 32, padding: '0 16px', borderRadius: 8, fontSize: 13,
+          <button type="button" onClick={() => onClose()} disabled={saving} style={{
+            height: 32, minWidth: 72, padding: '0 16px', borderRadius: 8, fontSize: 13,
             border: 'var(--input-border)', background: 'var(--app-card)',
-            color: 'var(--app-text)', cursor: 'pointer',
+            color: 'var(--app-text)', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.5 : 1,
           }}>取消</button>
           <button type="submit" disabled={!canSubmit} style={{
-            height: 32, padding: '0 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+            height: 32, minWidth: 88, padding: '0 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
             border: 'none', background: 'var(--app-accent)', color: '#fff',
-            cursor: 'pointer', opacity: canSubmit ? 1 : 0.5,
-          }}>添加</button>
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            cursor: saving ? 'default' : 'pointer', opacity: canSubmit ? 1 : 0.5,
+          }}>
+            {saving && (
+              <span style={{
+                width: 12,
+                height: 12,
+                borderRadius: 999,
+                border: '2px solid currentColor',
+                borderTopColor: 'transparent',
+                animation: 'spin 1s linear infinite',
+              }} />
+            )}
+            <span>{isBookmark ? '添加' : '创建'}</span>
+          </button>
         </div>
       </form>
     </ModalBase>
@@ -150,7 +168,7 @@ export function MobileAddModal({
 
 export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { selectedId, create } = useFolderStore()
-  const { load } = useBookmarkStore()
+  const { upsertOne } = useBookmarkStore()
   const logout = useAuthStore(s => s.logout)
   const [showMenu, setShowMenu] = useState(false)
   const [showAddBookmark, setShowAddBookmark] = useState(false)
@@ -162,18 +180,22 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
   const [folderName, setFolderName] = useState('')
   const [duplicateUrlError, setDuplicateUrlError] = useState('')
   const [fetchingTitle, setFetchingTitle] = useState(false)
+  const [savingAdd, setSavingAdd] = useState(false)
   const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  const closeAddModal = () => {
+  const closeAddModal = (force = false) => {
+    if (savingAdd && !force) return
     clearTimeout(urlTimer.current)
     setShowAddBookmark(false)
     setAddMode('bookmark')
     setTitle(''); setUrl(''); setIcon('')
     setFolderName('')
     setDuplicateUrlError(''); setFetchingTitle(false)
+    setSavingAdd(false)
   }
 
   const handleAddModeChange = (mode: MobileAddMode) => {
+    if (savingAdd) return
     if (mode === 'folder') {
       clearTimeout(urlTimer.current)
       setFetchingTitle(false)
@@ -218,24 +240,34 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
   }, [url])
 
   const handleAddBookmark = async () => {
+    if (savingAdd) return
     if (!title.trim() || !url.trim()) return
     const normalizedUrl = normalizeBookmarkUrlForSubmit(url)
+    setSavingAdd(true)
     try {
-      await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
+      const bookmark = await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
+      upsertOne(bookmark)
     } catch (e) {
+      setSavingAdd(false)
       if (isDuplicateURLConflict(e)) {
         setDuplicateUrlError(DUPLICATE_URL_MESSAGE); return
       }
       throw e
     }
-    await load(selectedId)
-    closeAddModal()
+    closeAddModal(true)
   }
 
   const handleCreateFolder = async () => {
+    if (savingAdd) return
     if (!folderName.trim()) return
-    await create(folderName.trim(), selectedId)
-    closeAddModal()
+    setSavingAdd(true)
+    try {
+      await create(folderName.trim(), selectedId)
+      closeAddModal(true)
+    } catch (e) {
+      setSavingAdd(false)
+      throw e
+    }
   }
 
   const handleExport = async () => {
@@ -308,6 +340,7 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
           url={url}
           folderName={folderName}
           fetchingTitle={fetchingTitle}
+          saving={savingAdd}
           duplicateUrlError={duplicateUrlError}
           onModeChange={handleAddModeChange}
           onTitleChange={setTitle}

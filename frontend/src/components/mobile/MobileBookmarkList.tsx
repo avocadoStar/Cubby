@@ -24,7 +24,7 @@ export function MobileBookmarkListContent({
   onDeleteBookmark,
 }: MobileBookmarkListContentProps) {
   return (
-    <div style={{ flex: 1, overflow: 'auto', background: 'var(--app-bg)', WebkitOverflowScrolling: 'touch' }}>
+    <div style={{ flex: 1, overflow: 'auto', background: 'var(--app-bg)', WebkitOverflowScrolling: 'touch', position: 'relative' }}>
       {loading && items.length === 0 ? (
         <div style={{
           display: 'flex', justifyContent: 'center', alignItems: 'center',
@@ -72,6 +72,39 @@ export function MobileBookmarkListContent({
             }}>暂无书签</div>
           )}
         </>
+      )}
+      {loading && items.length > 0 && (
+        <div
+          aria-label="加载中"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            paddingTop: 12,
+            background: 'rgba(255, 255, 255, 0.24)',
+            backdropFilter: 'blur(1px)',
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            height: 30,
+            padding: '0 12px',
+            borderRadius: 999,
+            border: 'var(--input-border)',
+            background: 'var(--app-card)',
+            color: 'var(--app-text2)',
+            boxShadow: 'var(--shadow-lg)',
+            fontSize: 13,
+          }}>
+            <span className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--app-accent)', borderTopColor: 'transparent' }} />
+            <span>加载中...</span>
+          </div>
+        </div>
       )}
     </div>
   )

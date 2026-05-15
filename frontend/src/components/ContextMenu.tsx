@@ -1,6 +1,5 @@
 import { useState, useEffect, type CSSProperties } from 'react'
 import { useBookmarkStore } from '../stores/bookmarkStore'
-import { useFolderStore } from '../stores/folderStore'
 import { useContextMenu } from '../hooks/useContextMenu'
 import { useContextActions } from '../hooks/useContextActions'
 import EditBookmarkModal from './EditBookmarkModal'
@@ -76,9 +75,6 @@ export default function ContextMenu() {
           <EditBookmarkModal
             bookmark={bm}
             onClose={() => setEditingBookmark(null)}
-            onSaved={async () => {
-              await useBookmarkStore.getState().load(useFolderStore.getState().selectedId)
-            }}
           />
         )
       })()}

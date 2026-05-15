@@ -16,6 +16,7 @@ function openExternalURL(url: string) {
 const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpenNotes?: () => void }) => {
   const isSelected = useSelectionStore(s => s.selectedIds.has(bookmark.id))
   const isDeleting = useBookmarkStore(s => s.deletingIds.has(bookmark.id))
+  const isRecentlyChanged = useBookmarkStore(s => s.recentlyChangedIds.has(bookmark.id))
   const toggleSelect = useSelectionStore(s => s.toggleSelect)
   const deleteOne = useBookmarkStore(s => s.deleteOne)
   const [hovered, setHovered] = useState(false)
@@ -53,9 +54,10 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         borderRadius: 'var(--card-radius)',
         border: highlight ? 'var(--card-border-hover)' : 'var(--card-border)',
         boxShadow: isSelected || isOverInside ? 'var(--input-shadow)' : hovered ? 'var(--card-shadow-hover)' : 'var(--row-shadow)',
-        transition: isDeleting ? 'opacity 0.2s ease-out, height 0.2s ease-out, margin 0.2s ease-out' : 'border-color 0.15s, box-shadow 0.15s',
+        transition: isDeleting ? 'opacity 0.2s ease-out, height 0.2s ease-out, margin 0.2s ease-out' : 'background 0.2s ease, border-color 0.15s, box-shadow 0.15s',
         background: isOverInside ? 'var(--accent-light)'
           : isSelected ? 'var(--accent-light)'
+          : isRecentlyChanged ? 'var(--accent-light)'
           : hovered ? 'var(--app-hover)'
           : 'var(--app-card)',
         outline: isOverInside ? '1px solid var(--app-accent)' : undefined,

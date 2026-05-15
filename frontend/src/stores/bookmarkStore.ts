@@ -15,7 +15,9 @@ interface BookmarkState {
   bookmarks: Bookmark[]
   loading: boolean
   deletingIds: Set<string>
-  load: (folderId?: string | null) => Promise<void>
+  recentlyChangedIds: Set<string>
+  load: (folderId?: string | null, options?: { mode?: 'replace' | 'refresh' }) => Promise<void>
+  upsertOne: (bookmark: Bookmark) => void
   deleteSelected: () => Promise<void>
   deleteOne: (id: string) => void
   updateNotes: (id: string, notes: string) => Promise<void>
@@ -27,12 +29,17 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
   bookmarks: [],
   loading: false,
   deletingIds: new Set(),
+  recentlyChangedIds: new Set(),
 
-  load: async (folderId) => {
+  load: async (folderId, options) => {
     loadController?.abort()
     loadController = new AbortController()
     const controller = loadController
-    set({ bookmarks: [], loading: true })
+    if (options?.mode === 'refresh') {
+      set({ loading: true })
+    } else {
+      set({ bookmarks: [], loading: true })
+    }
     try {
       const bookmarks = await api.getBookmarks(folderId, controller.signal)
       if (loadController !== controller) return
@@ -44,6 +51,24 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       set({ loading: false })
       throw e
     }
+  },
+
+  upsertOne: (bookmark) => {
+    set((state) => {
+      const exists = state.bookmarks.some((item) => item.id === bookmark.id)
+      const bookmarks = exists
+        ? state.bookmarks.map((item) => item.id === bookmark.id ? bookmark : item)
+        : [...state.bookmarks, bookmark]
+      return {
+        bookmarks: sortBookmarksBySortKeyThenId(bookmarks),
+        recentlyChangedIds: new Set(state.recentlyChangedIds).add(bookmark.id),
+      }
+    })
+    globalThis.setTimeout(() => {
+      set((state) => ({
+        recentlyChangedIds: removeSetValue(state.recentlyChangedIds, bookmark.id),
+      }))
+    }, 900)
   },
 
   deleteSelected: async () => {
@@ -61,7 +86,7 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     useSelectionStore.getState().clearSelection()
     const folderStore = useFolderStore.getState()
     const currentFolderId = folderStore.selectedId
-    await get().load(currentFolderId)
+    await get().load(currentFolderId, { mode: 'refresh' })
     await folderStore.loadChildren(currentFolderId)
     await folderStore.loadChildren(null)
   },

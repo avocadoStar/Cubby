@@ -7,6 +7,7 @@ vi.mock('../services/api', () => ({
   api: {
     getFolders: vi.fn(),
     createFolder: vi.fn(),
+    updateFolder: vi.fn(),
     deleteFolder: vi.fn(),
     restoreFolder: vi.fn(),
     moveFolder: vi.fn(),
@@ -76,6 +77,44 @@ describe('folderStore', () => {
       await useFolderStore.getState().loadChildren('p1')
 
       expect(useFolderStore.getState().folderMap.get('p1')?.has_children).toBe(true)
+    })
+  })
+
+  describe('create', () => {
+    it('adds the created folder locally and rebuilds visible nodes', async () => {
+      const created = makeFolder({ id: 'f2', name: 'Created', parent_id: null, sort_key: 'a' })
+      const existing = makeFolder({ id: 'f1', parent_id: null, sort_key: 'n' })
+      vi.mocked(api.createFolder).mockResolvedValue(created)
+      useFolderStore.setState({
+        folderMap: new Map([['f1', existing]]),
+        childrenMap: new Map([[null, ['f1']]]),
+      })
+
+      await useFolderStore.getState().create('Created', null)
+
+      expect(api.createFolder).toHaveBeenCalledWith('Created', null)
+      const state = useFolderStore.getState()
+      expect(state.folderMap.get('f2')).toEqual(created)
+      expect(state.childrenMap.get(null)).toEqual(['f2', 'f1'])
+      expect(state.visibleNodes.map((item) => item.node.id)).toEqual(['f2', 'f1'])
+    })
+  })
+
+  describe('rename', () => {
+    it('updates the folder locally and rebuilds visible nodes', async () => {
+      const original = makeFolder({ id: 'f1', name: 'Old' })
+      const updated = makeFolder({ id: 'f1', name: 'New', version: 2 })
+      vi.mocked(api.updateFolder).mockResolvedValue(updated)
+      useFolderStore.setState({
+        folderMap: new Map([['f1', original]]),
+        childrenMap: new Map([[null, ['f1']]]),
+      })
+
+      await useFolderStore.getState().rename('f1', 'New', 1)
+
+      expect(api.updateFolder).toHaveBeenCalledWith('f1', 'New', 1)
+      expect(useFolderStore.getState().folderMap.get('f1')).toEqual(updated)
+      expect(useFolderStore.getState().visibleNodes[0].node.name).toBe('New')
     })
   })
 

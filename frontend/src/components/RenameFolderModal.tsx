@@ -1,6 +1,5 @@
 import { useState, type FocusEvent } from 'react'
 import { useFolderStore } from '../stores/folderStore'
-import { api } from '../services/api'
 import ModalBase from './ModalBase'
 
 const INPUT_STYLE: React.CSSProperties = {
@@ -28,8 +27,7 @@ export default function RenameFolderModal({ folderId, onClose }: {
 
   const submit = async () => {
     if (!name.trim() || !folder) return
-    await api.updateFolder(folderId, name.trim(), folder.version)
-    await useFolderStore.getState().loadChildren(folder.parent_id)
+    await useFolderStore.getState().rename(folderId, name.trim(), folder.version)
     onClose()
   }
 

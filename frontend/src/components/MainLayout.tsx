@@ -84,6 +84,34 @@ function ListSkeleton() {
   )
 }
 
+function ListLoadingOverlay() {
+  return (
+    <div
+      aria-label={t('main.loading')}
+      className="absolute inset-0 z-10 flex justify-center pt-4 pointer-events-none"
+      style={{
+        background: 'rgba(255, 255, 255, 0.28)',
+        backdropFilter: 'blur(1px)',
+      }}
+    >
+      <div
+        className="inline-flex items-center gap-2 h-8 px-3 rounded-full text-sm shadow-app-lg"
+        style={{
+          background: 'var(--app-card)',
+          border: 'var(--input-border)',
+          color: 'var(--app-text2)',
+        }}
+      >
+        <span
+          className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin"
+          style={{ borderColor: 'var(--app-accent)', borderTopColor: 'transparent' }}
+        />
+        <span>{t('main.loading')}</span>
+      </div>
+    </div>
+  )
+}
+
 export default function MainLayout() {
   const isMobile = useIsMobile()
 
@@ -149,52 +177,55 @@ function DesktopMainLayout() {
           ) : (
           <>
           <div className="flex-1" ref={scrollRef} style={{ overflow: 'auto' }}>
-            {loading ? (
+            {loading && items.length === 0 ? (
               <ListSkeleton />
             ) : (
-            <div style={{ height: rowVirtualizer.getTotalSize() + 8, position: 'relative' }}>
-              {rowVirtualizer.getVirtualItems().map((vi) => {
-                const item = items[vi.index]
-                const wrapperStyle: React.CSSProperties = {
-                  position: 'absolute',
-                  top: 8,
-                  left: 0,
-                  width: '100%',
-                  height: vi.size,
-                  transform: `translateY(${vi.start}px)`,
-                }
+            <div style={{ position: 'relative', minHeight: '100%' }}>
+              <div style={{ height: rowVirtualizer.getTotalSize() + 8, position: 'relative' }}>
+                {rowVirtualizer.getVirtualItems().map((vi) => {
+                  const item = items[vi.index]
+                  const wrapperStyle: React.CSSProperties = {
+                    position: 'absolute',
+                    top: 8,
+                    left: 0,
+                    width: '100%',
+                    height: vi.size,
+                    transform: `translateY(${vi.start}px)`,
+                  }
 
-                if (item.kind === 'folder') {
+                  if (item.kind === 'folder') {
+                    return (
+                      <ItemDroppable
+                        key={item.folder.id}
+                        item={item}
+                        activeId={activeId}
+                        folderMap={folderMap}
+                        style={wrapperStyle}
+                      >
+                        <DraggableFolderRow
+                          folder={item.folder}
+                          isFolderSelected={selectedFolderIds.has(item.folder.id)}
+                          onToggleSelect={() => toggleFolderSelect(item.folder.id)}
+                          onNavigate={() => select(item.folder.id)}
+                          onDelete={() => useFolderStore.getState().deleteOne(item.folder.id)}
+                        />
+                      </ItemDroppable>
+                    )
+                  }
                   return (
                     <ItemDroppable
-                      key={item.folder.id}
+                      key={item.bookmark.id}
                       item={item}
                       activeId={activeId}
                       folderMap={folderMap}
                       style={wrapperStyle}
                     >
-                      <DraggableFolderRow
-                        folder={item.folder}
-                        isFolderSelected={selectedFolderIds.has(item.folder.id)}
-                        onToggleSelect={() => toggleFolderSelect(item.folder.id)}
-                        onNavigate={() => select(item.folder.id)}
-                        onDelete={() => useFolderStore.getState().deleteOne(item.folder.id)}
-                      />
+                      <BookmarkRow bookmark={item.bookmark} onOpenNotes={() => setNotesBookmarkId(prev => prev === item.bookmark.id ? null : item.bookmark.id)} />
                     </ItemDroppable>
                   )
-                }
-                return (
-                  <ItemDroppable
-                    key={item.bookmark.id}
-                    item={item}
-                    activeId={activeId}
-                    folderMap={folderMap}
-                    style={wrapperStyle}
-                  >
-                    <BookmarkRow bookmark={item.bookmark} onOpenNotes={() => setNotesBookmarkId(prev => prev === item.bookmark.id ? null : item.bookmark.id)} />
-                  </ItemDroppable>
-                )
-              })}
+                })}
+              </div>
+              {loading && <ListLoadingOverlay />}
             </div>
             )}
           </div>

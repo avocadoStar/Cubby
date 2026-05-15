@@ -15,7 +15,7 @@ import { shouldFetchMetadata } from '../lib/metadata'
 
 export default function Toolbar() {
   const { selectedId } = useFolderStore()
-  const { load } = useBookmarkStore()
+  const { upsertOne } = useBookmarkStore()
   const logout = useAuthStore(s => s.logout)
   const { themeId, setTheme } = useThemeStore()
   const [showCreateFolder, setShowCreateFolder] = useState(false)
@@ -29,12 +29,14 @@ export default function Toolbar() {
   const [urlError, setUrlError] = useState('')
   const [duplicateUrlError, setDuplicateUrlError] = useState('')
   const [fetchingTitle, setFetchingTitle] = useState(false)
+  const [savingBookmark, setSavingBookmark] = useState(false)
   const urlTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const themeRef = useRef<HTMLDivElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const urlInputRef = useRef<HTMLInputElement>(null)
 
-  const closeAddBookmarkModal = () => {
+  const closeAddBookmarkModal = (force = false) => {
+    if (savingBookmark && !force) return
     clearTimeout(urlTimer.current)
     setShowAddBookmark(false)
     setTitle('')
@@ -44,6 +46,7 @@ export default function Toolbar() {
     setUrlError('')
     setDuplicateUrlError('')
     setFetchingTitle(false)
+    setSavingBookmark(false)
   }
 
   // Auto-fetch title when URL changes
@@ -104,17 +107,19 @@ export default function Toolbar() {
       return
     }
     const normalizedUrl = normalizeBookmarkUrlForSubmit(url)
+    setSavingBookmark(true)
     try {
-      await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
+      const bookmark = await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
+      upsertOne(bookmark)
     } catch (e) {
+      setSavingBookmark(false)
       if (isDuplicateURLConflict(e)) {
         setDuplicateUrlError(DUPLICATE_URL_MESSAGE)
         return
       }
       throw e
     }
-    await load(selectedId)
-    closeAddBookmarkModal()
+    closeAddBookmarkModal(true)
   }
 
   const selectTheme = (id: string, currentTarget: HTMLElement, clientX: number, clientY: number) => {
@@ -223,12 +228,13 @@ export default function Toolbar() {
       </div>
 
       {showAddBookmark && (
-        <ModalBase title="添加收藏夹" onClose={closeAddBookmarkModal} width="360px" closeOnEscape closeOnOverlayClick={false}>
+        <ModalBase title="添加收藏夹" onClose={closeAddBookmarkModal} width="360px" closeOnEscape={!savingBookmark} closeOnOverlayClick={false}>
           <form onSubmit={handleAddBookmark}>
             <input
               ref={titleInputRef}
               value={title}
               onChange={e => handleTitleChange(e.target.value)}
+              disabled={savingBookmark}
               placeholder={fetchingTitle ? "正在获取标题…" : "名称"}
               aria-label="收藏夹名称"
               aria-invalid={Boolean(titleError)}
@@ -244,31 +250,33 @@ export default function Toolbar() {
               ref={urlInputRef}
               value={url}
               onChange={e => handleUrlChange(e.target.value)}
+              disabled={savingBookmark}
               placeholder="URL"
               aria-label="收藏夹 URL"
               aria-invalid={Boolean(urlError || duplicateUrlError)}
-              className={`w-full h-9 px-3 rounded outline-none ${urlError || duplicateUrlError ? 'mb-1' : 'mb-4'} bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]`}
+              className="w-full h-9 px-3 rounded outline-none mb-1 bg-input-bg text-app-text shadow-input-base transition-shadow text-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-text2)]"
               style={{ border: urlError || duplicateUrlError ? '1px solid var(--app-danger)' : 'var(--input-border)' }}
             />
-            {urlError && (
-              <div className="text-sm mb-4 text-app-danger">
-                {urlError}
-              </div>
-            )}
-            {!urlError && duplicateUrlError && (
-              <div className="text-sm mb-4 text-app-danger">
-                {duplicateUrlError}
-              </div>
-            )}
+            <div className="text-sm mb-3 min-h-5 text-app-danger">
+              {urlError || duplicateUrlError || '\u00a0'}
+            </div>
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={closeAddBookmarkModal}
-                className="h-8 px-4 rounded text-sm cursor-default bg-app-card text-app-text shadow-app-base"
+              <button type="button" onClick={() => closeAddBookmarkModal()}
+                disabled={savingBookmark}
+                className="h-8 min-w-[72px] px-4 rounded text-sm cursor-default disabled:opacity-50 bg-app-card text-app-text shadow-app-base"
                 style={{ border: 'var(--input-border)' }}>
                 取消
               </button>
               <button type="submit"
-                className="h-8 px-4 border-none rounded text-sm font-medium cursor-default bg-app-accent text-text-on-accent shadow-app-base">
-                添加
+                disabled={savingBookmark || !title.trim() || !url.trim()}
+                className="inline-flex items-center justify-center gap-1.5 h-8 min-w-[88px] px-4 border-none rounded text-sm font-medium cursor-default disabled:opacity-50 bg-app-accent text-text-on-accent shadow-app-base">
+                {savingBookmark && (
+                  <span
+                    className="w-3 h-3 rounded-full border-2 border-t-transparent animate-spin"
+                    style={{ borderColor: 'currentColor', borderTopColor: 'transparent' }}
+                  />
+                )}
+                <span>添加</span>
               </button>
             </div>
           </form>
