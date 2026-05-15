@@ -11,6 +11,7 @@ import type { ListItem } from '../MainLayout'
 interface MobileBookmarkListContentProps {
   items: ListItem[]
   loading: boolean
+  deletingBookmarkIds?: Set<string>
   onSelectFolder: (id: string) => void | Promise<void>
   onOpenNotes: (id: string) => void
   onDeleteBookmark: (id: string) => void | Promise<void>
@@ -19,6 +20,7 @@ interface MobileBookmarkListContentProps {
 export function MobileBookmarkListContent({
   items,
   loading,
+  deletingBookmarkIds = new Set(),
   onSelectFolder,
   onOpenNotes,
   onDeleteBookmark,
@@ -59,6 +61,7 @@ export function MobileBookmarkListContent({
               <MobileBookmarkItem
                 key={item.bookmark.id}
                 bookmark={item.bookmark}
+                isDeleting={deletingBookmarkIds.has(item.bookmark.id)}
                 onOpenNotes={() => onOpenNotes(item.bookmark.id)}
                 onDelete={() => onDeleteBookmark(item.bookmark.id)}
               />
@@ -115,6 +118,7 @@ export default function MobileBookmarkList({ onOpenNotes }: { onOpenNotes: (id: 
   const { query: searchQuery, results: searchResults } = useSearchStore()
   const isSearching = searchQuery !== ''
   const { items, load, loading } = useListItems(selectedId)
+  const deletingBookmarkIds = useBookmarkStore(s => s.deletingIds)
 
   useEffect(() => { load(selectedId) }, [load, selectedId])
 
@@ -130,6 +134,7 @@ export default function MobileBookmarkList({ onOpenNotes }: { onOpenNotes: (id: 
     <MobileBookmarkListContent
       items={items}
       loading={loading}
+      deletingBookmarkIds={deletingBookmarkIds}
       onSelectFolder={select}
       onOpenNotes={onOpenNotes}
       onDeleteBookmark={(id) => useBookmarkStore.getState().deleteOne(id)}

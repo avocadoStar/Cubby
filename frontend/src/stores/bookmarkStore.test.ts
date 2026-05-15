@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useBookmarkStore } from './bookmarkStore'
+import { DELETE_ANIMATION_MS, useBookmarkStore } from './bookmarkStore'
 import { useSelectionStore } from './selectionStore'
 import { api } from '../services/api'
 import type { Bookmark } from '../types'
+
+const toastMock = vi.hoisted(() => ({
+  show: vi.fn(),
+}))
 
 vi.mock('../services/api', () => ({
   api: {
@@ -37,7 +41,7 @@ vi.mock('./folderStore', () => ({
 vi.mock('./toastStore', () => ({
   useToastStore: {
     getState: vi.fn(() => ({
-      show: vi.fn(),
+      show: toastMock.show,
     })),
   },
 }))
@@ -58,7 +62,9 @@ const makeBookmark = (overrides: Partial<Bookmark> = {}): Bookmark => ({
 
 describe('bookmarkStore', () => {
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
+    toastMock.show.mockReset()
     useBookmarkStore.setState({
       bookmarks: [],
       loading: false,
@@ -204,6 +210,71 @@ describe('bookmarkStore', () => {
       useBookmarkStore.getState().upsertOne(updated)
 
       expect(useBookmarkStore.getState().bookmarks).toEqual([updated])
+    })
+  })
+
+  describe('deleteOne', () => {
+    it('keeps the bookmark until the delete animation finishes', async () => {
+      vi.useFakeTimers()
+      const bookmark = makeBookmark({ id: 'b1' })
+      useBookmarkStore.setState({ bookmarks: [bookmark] })
+      vi.mocked(api.deleteBookmark).mockResolvedValue(undefined)
+
+      useBookmarkStore.getState().deleteOne('b1')
+      await Promise.resolve()
+
+      expect(useBookmarkStore.getState().bookmarks).toEqual([bookmark])
+      expect(useBookmarkStore.getState().deletingIds.has('b1')).toBe(true)
+      expect(toastMock.show).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(DELETE_ANIMATION_MS)
+
+      expect(useBookmarkStore.getState().bookmarks).toEqual([])
+      expect(useBookmarkStore.getState().deletingIds.has('b1')).toBe(false)
+      expect(toastMock.show).toHaveBeenCalledWith(expect.objectContaining({
+        message: '已删除 "Test"',
+        onUndo: expect.any(Function),
+      }))
+    })
+
+    it('waits for the API before showing the undo toast', async () => {
+      vi.useFakeTimers()
+      let resolveDelete!: () => void
+      const bookmark = makeBookmark({ id: 'b1' })
+      useBookmarkStore.setState({ bookmarks: [bookmark] })
+      vi.mocked(api.deleteBookmark).mockReturnValue(new Promise((resolve) => {
+        resolveDelete = () => resolve(undefined)
+      }))
+
+      useBookmarkStore.getState().deleteOne('b1')
+      vi.advanceTimersByTime(DELETE_ANIMATION_MS)
+
+      expect(useBookmarkStore.getState().bookmarks).toEqual([])
+      expect(toastMock.show).not.toHaveBeenCalled()
+
+      resolveDelete()
+      await Promise.resolve()
+
+      expect(toastMock.show).toHaveBeenCalledTimes(1)
+    })
+
+    it('restores the bookmark without duplication when delete fails before animation completes', async () => {
+      vi.useFakeTimers()
+      const bookmark = makeBookmark({ id: 'b1' })
+      useBookmarkStore.setState({ bookmarks: [bookmark] })
+      vi.mocked(api.deleteBookmark).mockRejectedValue(new Error('network'))
+
+      useBookmarkStore.getState().deleteOne('b1')
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(useBookmarkStore.getState().bookmarks).toEqual([bookmark])
+      expect(useBookmarkStore.getState().deletingIds.has('b1')).toBe(false)
+
+      vi.advanceTimersByTime(DELETE_ANIMATION_MS)
+
+      expect(useBookmarkStore.getState().bookmarks).toEqual([bookmark])
+      expect(toastMock.show).not.toHaveBeenCalled()
     })
   })
 })

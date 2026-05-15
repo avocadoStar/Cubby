@@ -17,6 +17,7 @@ import {
 } from './bookmarkStoreHelpers'
 
 let loadController: AbortController | null = null
+export const DELETE_ANIMATION_MS = 220
 
 interface BookmarkState {
   bookmarks: Bookmark[]
@@ -99,11 +100,10 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     const bookmark = get().bookmarks.find((b) => b.id === id)
     if (!bookmark) return
 
-    // Start fade-out animation
     set((s) => ({
       deletingIds: new Set(s.deletingIds).add(id),
     }))
-    // Remove from selection if present
+
     const sel = useSelectionStore.getState()
     if (sel.selectedIds.has(id)) {
       sel.toggleSelect(id)
@@ -111,12 +111,24 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
 
     let undoClicked = false
     let done = false
+    let apiSucceeded = false
+    let animationDone = false
+    let toastShown = false
+    const deleteTimer = globalThis.setTimeout(() => {
+      animationDone = true
+      finishDelete()
+      showDeleteToast()
+    }, DELETE_ANIMATION_MS)
 
     const finishUndo = () => {
+      globalThis.clearTimeout(deleteTimer)
       if (undoClicked) return
       undoClicked = true
       set((s) => {
-        return { bookmarks: restoreBookmarkToList(s.bookmarks, bookmark), deletingIds: removeSetValue(s.deletingIds, id) }
+        const bookmarks = s.bookmarks.some((b) => b.id === id)
+          ? s.bookmarks
+          : restoreBookmarkToList(s.bookmarks, bookmark)
+        return { bookmarks, deletingIds: removeSetValue(s.deletingIds, id) }
       })
     }
 
@@ -129,17 +141,15 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       }))
     }
 
-    // Call delete API immediately
-    api.deleteBookmark(id).then(() => {
-      if (undoClicked) return
-      finishDelete()
-      // Show undo toast (API succeeded)
+    const showDeleteToast = () => {
+      if (!apiSucceeded || !animationDone || undoClicked || toastShown) return
+      toastShown = true
       useToastStore.getState().show({
         message: `已删除 "${bookmark.title}"`,
         onUndo: () => {
           if (undoClicked) return  // prevent double-click
           undoClicked = true
-          // Restore via backend
+          globalThis.clearTimeout(deleteTimer)
           api.restoreBookmark(id).then((restored) => {
             if (restored) {
               set((s) => {
@@ -147,14 +157,18 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
               })
             }
           }).catch(() => {
-            // Restore failed — undo the undo, allow finishDelete
             undoClicked = false
             finishDelete()
           })
         },
       })
+    }
+
+    api.deleteBookmark(id).then(() => {
+      if (undoClicked) return
+      apiSucceeded = true
+      showDeleteToast()
     }).catch(() => {
-      // API failed — re-add bookmark
       finishUndo()
     })
   },

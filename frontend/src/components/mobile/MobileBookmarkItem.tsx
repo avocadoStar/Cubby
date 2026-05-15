@@ -5,11 +5,12 @@ const ACTION_WIDTH = 144
 
 interface MobileBookmarkItemProps {
   bookmark: Bookmark
+  isDeleting?: boolean
   onOpenNotes: () => void
   onDelete: () => void
 }
 
-export default function MobileBookmarkItem({ bookmark, onOpenNotes, onDelete }: MobileBookmarkItemProps) {
+export default function MobileBookmarkItem({ bookmark, isDeleting = false, onOpenNotes, onDelete }: MobileBookmarkItemProps) {
   const [offset, setOffset] = useState(0)
   const [snapping, setSnapping] = useState(false)
   const startXRef = useRef(0)
@@ -19,15 +20,17 @@ export default function MobileBookmarkItem({ bookmark, onOpenNotes, onDelete }: 
   const swipingRef = useRef(false)
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (isDeleting) return
     startXRef.current = e.touches[0].clientX
     startYRef.current = e.touches[0].clientY
     offsetRef.current = 0
     directionRef.current = null
     swipingRef.current = false
     setSnapping(false)
-  }, [])
+  }, [isDeleting])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (isDeleting) return
     const dx = e.touches[0].clientX - startXRef.current
     const dy = e.touches[0].clientY - startYRef.current
 
@@ -43,9 +46,10 @@ export default function MobileBookmarkItem({ bookmark, onOpenNotes, onDelete }: 
       offsetRef.current = newOffset
       setOffset(newOffset)
     }
-  }, [])
+  }, [isDeleting])
 
   const handleTouchEnd = useCallback(() => {
+    if (isDeleting) return
     if (!swipingRef.current) { directionRef.current = null; return }
     swipingRef.current = false
     directionRef.current = null
@@ -57,12 +61,13 @@ export default function MobileBookmarkItem({ bookmark, onOpenNotes, onDelete }: 
       setOffset(0)
       offsetRef.current = 0
     }
-  }, [])
+  }, [isDeleting])
 
   // Mouse events for desktop testing
   const mouseDownRef = useRef(false)
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (isDeleting) return
     mouseDownRef.current = true
     startXRef.current = e.clientX
     startYRef.current = e.clientY
@@ -71,7 +76,7 @@ export default function MobileBookmarkItem({ bookmark, onOpenNotes, onDelete }: 
     swipingRef.current = false
     setSnapping(false)
     e.preventDefault()
-  }, [offset])
+  }, [isDeleting, offset])
 
   const closeSwipe = useCallback(() => {
     setSnapping(true)
@@ -82,23 +87,38 @@ export default function MobileBookmarkItem({ bookmark, onOpenNotes, onDelete }: 
   }, [])
 
   const handleOpenNotes = useCallback(() => {
+    if (isDeleting) return
     closeSwipe()
     onOpenNotes()
-  }, [closeSwipe, onOpenNotes])
+  }, [closeSwipe, isDeleting, onOpenNotes])
 
   const handleDelete = useCallback(() => {
+    if (isDeleting) return
     closeSwipe()
     onDelete()
-  }, [closeSwipe, onDelete])
+  }, [closeSwipe, isDeleting, onDelete])
 
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', background: 'var(--app-card)', borderBottom: '1px solid var(--divider-color)' }}>
+    <div
+      data-deleting={isDeleting ? 'true' : undefined}
+      className="bookmark-delete-motion"
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        background: 'var(--app-card)',
+        borderBottom: '1px solid var(--divider-color)',
+        opacity: isDeleting ? 0 : 1,
+        transform: isDeleting ? 'translateX(10px) scale(0.985)' : 'translateX(0) scale(1)',
+        transition: 'opacity 0.22s ease-out, transform 0.22s ease-out',
+        pointerEvents: isDeleting ? 'none' : undefined,
+      }}
+    >
       {/* Action buttons */}
       <div style={{
         position: 'absolute', top: 0, right: 0, bottom: 0,
         display: 'flex', zIndex: 1,
       }}>
-        <button onClick={handleOpenNotes} style={{
+        <button disabled={isDeleting} onClick={handleOpenNotes} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: 2, width: 72, height: '100%', border: 'none', cursor: 'pointer',
           fontSize: 10, fontWeight: 500, color: '#fff', background: '#8B5CF6',
@@ -112,7 +132,7 @@ export default function MobileBookmarkItem({ bookmark, onOpenNotes, onDelete }: 
           </svg>
           <span>笔记</span>
         </button>
-        <button onClick={handleDelete} style={{
+        <button disabled={isDeleting} onClick={handleDelete} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: 2, width: 72, height: '100%', border: 'none', cursor: 'pointer',
           fontSize: 10, fontWeight: 500, color: '#fff', background: 'var(--app-danger)',

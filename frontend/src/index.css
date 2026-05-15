@@ -81,6 +81,10 @@ body {
   .login-sunny-background {
     display: none;
   }
+
+  .bookmark-delete-motion {
+    transition: none !important;
+  }
 }
 
 .text-body { font-size: var(--fs-body); line-height: 1.5; }

@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MobileBookmarkListContent } from './MobileBookmarkList'
 import type { Bookmark, Folder } from '../../types'
+import { useBookmarkStore } from '../../stores/bookmarkStore'
 
 vi.mock('../../services/api', () => ({
   api: {
@@ -43,6 +44,15 @@ const makeFolder = (overrides: Partial<Folder>): Folder => ({
 })
 
 describe('MobileBookmarkList', () => {
+  afterEach(() => {
+    useBookmarkStore.setState({
+      bookmarks: [],
+      loading: false,
+      deletingIds: new Set(),
+      recentlyChangedIds: new Set(),
+    })
+  })
+
   it('renders folders and bookmarks in shared sort order on mobile', () => {
     const folder = makeFolder({ id: 'f1', name: 'Middle Folder', sort_key: 'm' })
     const firstBookmark = makeBookmark({ id: 'b1', title: 'Alpha Bookmark', sort_key: 'a' })
@@ -69,5 +79,22 @@ describe('MobileBookmarkList', () => {
     expect(alphaIndex).toBeGreaterThanOrEqual(0)
     expect(folderIndex).toBeGreaterThan(alphaIndex)
     expect(omegaIndex).toBeGreaterThan(folderIndex)
+  })
+
+  it('marks a mobile bookmark item while it is deleting', () => {
+    const bookmark = makeBookmark({ id: 'b1', title: 'Deleting Bookmark' })
+    const html = renderToStaticMarkup(
+      <MobileBookmarkListContent
+        items={[{ kind: 'bookmark', bookmark }]}
+        loading={false}
+        deletingBookmarkIds={new Set(['b1'])}
+        onSelectFolder={vi.fn()}
+        onOpenNotes={vi.fn()}
+        onDeleteBookmark={vi.fn()}
+      />,
+    )
+
+    expect(html).toContain('data-deleting="true"')
+    expect(html).toContain('bookmark-delete-motion')
   })
 })

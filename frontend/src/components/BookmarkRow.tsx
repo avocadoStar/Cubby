@@ -44,17 +44,19 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
       ref={setNodeRef}
       data-context="bookmark"
       data-id={bookmark.id}
-      className="flex items-center px-2 rounded select-none cursor-default"
+      data-deleting={isDeleting ? 'true' : undefined}
+      className="bookmark-delete-motion flex items-center px-2 rounded select-none cursor-default"
       style={{
-        height: isDeleting ? 0 : 38,
+        height: 38,
         opacity: isDeleting ? 0 : isDragging ? 0.3 : 1,
-        marginBottom: isDeleting ? 0 : 'var(--card-gap)',
+        transform: isDeleting ? 'translateX(10px) scale(0.985)' : 'translateX(0) scale(1)',
+        marginBottom: 'var(--card-gap)',
         marginLeft: 45, marginRight: 45,
         overflow: 'hidden',
         borderRadius: 'var(--card-radius)',
         border: highlight ? 'var(--card-border-hover)' : 'var(--card-border)',
         boxShadow: isSelected || isOverInside ? 'var(--input-shadow)' : hovered ? 'var(--card-shadow-hover)' : 'var(--row-shadow)',
-        transition: isDeleting ? 'opacity 0.2s ease-out, height 0.2s ease-out, margin 0.2s ease-out' : 'background 0.2s ease, border-color 0.15s, box-shadow 0.15s',
+        transition: 'opacity 0.22s ease-out, transform 0.22s ease-out, background 0.2s ease, border-color 0.15s, box-shadow 0.15s',
         background: isOverInside ? 'var(--accent-light)'
           : isSelected ? 'var(--accent-light)'
           : isRecentlyChanged ? 'var(--accent-light)'
@@ -63,6 +65,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         outline: isOverInside ? '1px solid var(--app-accent)' : undefined,
         outlineOffset: -1,
         touchAction: 'none',
+        pointerEvents: isDeleting ? 'none' : undefined,
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
