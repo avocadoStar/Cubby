@@ -10,7 +10,7 @@ import { api } from '../services/api'
 import CreateFolderModal from './CreateFolderModal'
 import FontSizePopover from './FontSizePopover'
 import ModalBase from './ModalBase'
-import { DUPLICATE_URL_MESSAGE, isDuplicateURLConflict, normalizeBookmarkUrlForSubmit, normalizeBookmarkUrlInput } from '../lib/addBookmark'
+import { DUPLICATE_URL_MESSAGE, hasFetchedBookmarkTitle, isDuplicateURLConflict, mergeFetchedBookmarkTitle, normalizeBookmarkUrlForSubmit, normalizeBookmarkUrlInput } from '../lib/addBookmark'
 import { shouldFetchMetadata } from '../lib/metadata'
 
 export default function Toolbar() {
@@ -58,8 +58,8 @@ export default function Toolbar() {
       setFetchingTitle(true)
       try {
         const meta = await api.fetchMetadata(trimmedUrl)
-        setTitle(prev => prev ? prev : meta.title)
-        if (meta.title) setTitleError('')
+        setTitle(prev => mergeFetchedBookmarkTitle(prev, meta.title))
+        if (hasFetchedBookmarkTitle(meta.title)) setTitleError('')
         setIcon(meta.icon ?? '')
       } catch { /* ignore fetch errors */ }
       setFetchingTitle(false)
