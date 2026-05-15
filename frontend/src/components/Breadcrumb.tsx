@@ -1,16 +1,9 @@
 import { useFolderStore } from '../stores/folderStore'
+import { buildBreadcrumbPath } from '../lib/breadcrumb'
 
 export default function Breadcrumb() {
   const { selectedId, folderMap } = useFolderStore()
-
-  const path: { id: string | null; name: string }[] = [{ id: null, name: '收藏夹' }]
-  let current = selectedId
-  while (current) {
-    const f = folderMap.get(current)
-    if (!f) break
-    path.unshift({ id: f.id, name: f.name })
-    current = f.parent_id
-  }
+  const path = buildBreadcrumbPath(selectedId, folderMap)
 
   return (
     <div className="flex items-center text-body">
