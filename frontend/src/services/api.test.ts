@@ -65,3 +65,27 @@ describe('api export requests', () => {
     expect(blob).not.toHaveBeenCalled()
   })
 })
+
+describe('api preview session requests', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    storage.clear()
+  })
+
+  it('creates a mobile preview session', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      src: 'http://localhost:8081/preview/sessions/preview-id',
+      expires_at: '2026-05-16T12:00:00Z',
+    })))
+
+    await expect(api.createPreviewSession('https://example.com', 'mobile')).resolves.toEqual({
+      src: 'http://localhost:8081/preview/sessions/preview-id',
+      expires_at: '2026-05-16T12:00:00Z',
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/preview-sessions', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ url: 'https://example.com', mode: 'mobile' }),
+    }))
+  })
+})

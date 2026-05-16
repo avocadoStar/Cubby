@@ -19,6 +19,7 @@ func SetupRoutes(
 	exportSvc *service.ExportService,
 	metadataSvc *service.MetadataService,
 	moveSvc *service.MoveService,
+	previewSvc *service.PreviewService,
 	cfg *config.Config,
 ) {
 	authH := NewAuthHandler(authSvc)
@@ -28,6 +29,7 @@ func SetupRoutes(
 	importExportH := NewImportExportHandler(importSvc, exportSvc)
 	metadataH := NewMetadataHandler(metadataSvc)
 	moveH := NewMoveHandler(moveSvc)
+	previewH := NewPreviewHandler(previewSvc)
 
 	api := r.Group("/api")
 
@@ -63,9 +65,12 @@ func SetupRoutes(
 		// Search
 		protected.GET("/search", searchH.Search)
 		protected.GET("/metadata", metadataH.Fetch)
+		protected.POST("/preview-sessions", previewH.CreateSession)
 
 		// Import/Export
 		protected.POST("/import", importExportH.Import)
 		protected.GET("/export", importExportH.Export)
 	}
+
+	r.GET("/preview/sessions/:id", previewH.Proxy)
 }

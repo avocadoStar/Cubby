@@ -3,7 +3,9 @@ package config
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -23,6 +25,7 @@ type Config struct {
 	Password       string   `yaml:"password"`
 	AllowedOrigins []string `yaml:"allowed_origins"`
 	TrustedProxies []string `yaml:"trusted_proxies"`
+	PreviewOrigin  string   `yaml:"preview_origin"`
 }
 
 func Load() (*Config, error) {
@@ -46,6 +49,17 @@ func Load() (*Config, error) {
 	if cfg.BackendPort == "" {
 		cfg.BackendPort = defaultBackendPort
 	}
+	if previewOrigin := os.Getenv("PREVIEW_ORIGIN"); previewOrigin != "" {
+		cfg.PreviewOrigin = previewOrigin
+	}
+	if cfg.PreviewOrigin == "" {
+		cfg.PreviewOrigin = "http://localhost:" + cfg.BackendPort
+	}
+	previewOrigin, err := normalizePreviewOrigin(cfg.PreviewOrigin)
+	if err != nil {
+		return nil, err
+	}
+	cfg.PreviewOrigin = previewOrigin
 	if cfg.DBPath == "" {
 		cfg.DBPath = defaultDBPath
 	}
@@ -71,6 +85,18 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func normalizePreviewOrigin(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return "", fmt.Errorf("config: preview_origin must be an absolute http or https origin")
+	}
+	if (parsed.Path != "" && parsed.Path != "/") || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("config: preview_origin must not include a path, query, or fragment")
+	}
+	return parsed.Scheme + "://" + parsed.Host, nil
 }
 
 func resolveDefaultConfigPath() string {

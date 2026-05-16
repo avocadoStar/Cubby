@@ -2,6 +2,13 @@ import type { Folder, Bookmark, SearchResultItem, MoveRequest, BatchMoveItem, Ba
 import { request, requestBlob } from './httpClient'
 export { ConflictError } from './apiErrors'
 
+export type PreviewMode = 'mobile'
+
+export interface PreviewSession {
+  src: string
+  expires_at: string
+}
+
 export const api = {
   // Auth
   login: (password: string) =>
@@ -104,6 +111,12 @@ export const api = {
   // Import
   fetchMetadata: (url: string) =>
     request<{ title: string; icon: string }>(`/metadata?url=${encodeURIComponent(url)}`),
+
+  createPreviewSession: (url: string, mode: PreviewMode) =>
+    request<PreviewSession>('/preview-sessions', {
+      method: 'POST',
+      body: JSON.stringify({ url, mode }),
+    }),
 
   importBookmarks: (file: File) => {
     const form = new FormData()

@@ -70,3 +70,8 @@ type batchMoveRequest struct {
 type loginRequest struct {
 	Password string `json:"password"`
 }
+
+type createPreviewSessionRequest struct {
+	URL  string `json:"url"`
+	Mode string `json:"mode"`
+}

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import PreviewPanel from './PreviewPanel'
+import PreviewPanel, { compatibleMobilePreviewSandbox } from './PreviewPanel'
 import type { Bookmark } from '../types'
 
 const bookmark: Bookmark = {
@@ -17,12 +17,18 @@ const bookmark: Bookmark = {
 }
 
 describe('PreviewPanel', () => {
-  it('renders the iframe preview without the Cubby fallback warning', () => {
+  it('renders mobile preview controls by default', () => {
     const html = renderToStaticMarkup(
       <PreviewPanel bookmark={bookmark} onClose={() => {}} />,
     )
 
-    expect(html).toContain('src="https://example.com"')
-    expect(html).not.toContain('该网站可能不允许嵌入预览')
+    expect(html).toContain('Mobile view')
+    expect(html).toContain('Desktop view')
+    expect(html).toContain('Open preview in new tab')
+    expect(html).not.toContain('site may not allow embedded previews')
+  })
+
+  it('uses the compatible mobile preview sandbox', () => {
+    expect(compatibleMobilePreviewSandbox).toBe('allow-scripts allow-same-origin allow-forms allow-popups')
   })
 })

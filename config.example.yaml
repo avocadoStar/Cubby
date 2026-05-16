@@ -7,6 +7,10 @@ backend_port: "8080"
 # 前端开发服务器端口
 frontend_port: "5173"
 
+# Preview iframe origin. Leave empty to default to http://localhost:<backend_port>.
+# In production, set this to a separate origin such as https://preview.example.com.
+preview_origin: ""
+
 # SQLite 数据库文件路径
 db_path: "cubby.db"
 

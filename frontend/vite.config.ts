@@ -26,7 +26,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: frontendPort,
-    proxy: { '/api': `http://localhost:${backendPort}` }
+    proxy: {
+      '/api': `http://localhost:${backendPort}`,
+    }
   },
   build: {
     rollupOptions: {

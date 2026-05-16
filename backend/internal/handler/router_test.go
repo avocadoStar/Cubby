@@ -40,8 +40,9 @@ func setupTestRouter(t *testing.T) *gin.Engine {
 	importSvc := service.NewImportService(folderRepo, bookmarkRepo)
 	exportSvc := service.NewExportService(folderSvc, bookmarkSvc)
 	metadataSvc := service.NewMetadataService()
+	previewSvc := service.NewPreviewService()
 
-	SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, exportSvc, metadataSvc, moveSvc, cfg)
+	SetupRoutes(r, authSvc, folderSvc, bookmarkSvc, searchSvc, importSvc, exportSvc, metadataSvc, moveSvc, previewSvc, cfg)
 	return r
 }
 
@@ -70,6 +71,7 @@ func TestProtectedRoutesRequireAuth(t *testing.T) {
 		{"GET", "/api/bookmarks"},
 		{"GET", "/api/search?q=test"},
 		{"GET", "/api/metadata?url=https://example.com"},
+		{"POST", "/api/preview-sessions"},
 		{"GET", "/api/export"},
 	}
 

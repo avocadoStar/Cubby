@@ -30,6 +30,7 @@ type appServices struct {
 	exporter *service.ExportService
 	metadata *service.MetadataService
 	move     *service.MoveService
+	preview  *service.PreviewService
 }
 
 func main() {
@@ -90,6 +91,7 @@ func buildServices(cfg *config.Config, database *sql.DB) (*appServices, error) {
 	importSvc := service.NewImportService(folderRepo, bookmarkRepo)
 	exportSvc := service.NewExportService(folderSvc, bookmarkSvc)
 	metadataSvc := service.NewMetadataService()
+	previewSvc := service.NewPreviewService(cfg.PreviewOrigin)
 
 	return &appServices{
 		auth:     authSvc,
@@ -100,6 +102,7 @@ func buildServices(cfg *config.Config, database *sql.DB) (*appServices, error) {
 		exporter: exportSvc,
 		metadata: metadataSvc,
 		move:     moveSvc,
+		preview:  previewSvc,
 	}, nil
 }
 
@@ -126,6 +129,7 @@ func buildRouter(cfg *config.Config, database *sql.DB) (*gin.Engine, error) {
 		services.exporter,
 		services.metadata,
 		services.move,
+		services.preview,
 		cfg,
 	)
 	setupFrontendRoutes(r, resolveFrontendDist())
