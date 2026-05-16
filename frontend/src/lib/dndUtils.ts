@@ -26,7 +26,17 @@ export function pointerClosestCenter(args: Parameters<CollisionDetection>[0]) {
     return r && pointerCoordinates.x >= r.left && pointerCoordinates.x <= r.left + r.width
       && pointerCoordinates.y >= r.top && pointerCoordinates.y <= r.top + r.height
   })
-  const candidates = within.length > 0 ? within : droppableContainers
+  // If no rect contains the pointer, prefer droppables in the same column (X overlap)
+  let candidates: typeof droppableContainers
+  if (within.length > 0) {
+    candidates = within
+  } else {
+    const xMatch = droppableContainers.filter(c => {
+      const r = c.rect.current
+      return r && pointerCoordinates.x >= r.left && pointerCoordinates.x <= r.left + r.width
+    })
+    candidates = xMatch.length > 0 ? xMatch : droppableContainers
+  }
 
   let closestDistance = Infinity
   let closestId: string | null = null
