@@ -102,7 +102,7 @@ export default function MobileBookmarkItem({ bookmark, isDeleting = false, onOpe
   return (
     <div
       data-deleting={isDeleting ? 'true' : undefined}
-      className="bookmark-delete-motion relative overflow-hidden bg-app-card border-b border-divider"
+      className="bookmark-delete-motion relative overflow-hidden bg-app-card"
       style={{
         opacity: isDeleting ? 0 : 1,
         transform: isDeleting ? 'translateX(10px) scale(0.985)' : 'translateX(0) scale(1)',
@@ -136,6 +136,9 @@ export default function MobileBookmarkItem({ bookmark, isDeleting = false, onOpe
           transition: snapping ? 'transform 0.2s ease' : 'none',
           willChange: 'transform',
           touchAction: 'pan-y',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          boxShadow: '0 1px 0 0 var(--app-card)',
         }}
       >
         {bookmark.icon ? (
@@ -154,6 +157,10 @@ export default function MobileBookmarkItem({ bookmark, isDeleting = false, onOpe
           </svg>
         )}
       </div>
+
+      {/* Divider on top of all layers to avoid compositing gap bleed-through */}
+      <div className="absolute bottom-0 left-0 right-0 z-3 pointer-events-none"
+        style={{ height: '1px', background: 'var(--divider-color)' }} />
     </div>
   )
 }
