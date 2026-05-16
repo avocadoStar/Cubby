@@ -46,6 +46,41 @@ describe('api move requests', () => {
   })
 })
 
+describe('api bookmark requests', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    storage.clear()
+  })
+
+  it('sends fetched description as notes when creating a bookmark', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      id: 'b1',
+      title: 'Bookmark',
+      url: 'https://example.com',
+      icon: '',
+      folder_id: null,
+      sort_key: 'n',
+      version: 1,
+      notes: 'Fetched description',
+      created_at: '',
+      updated_at: '',
+    })))
+
+    await api.createBookmark('Bookmark', 'https://example.com', null, '', 'Fetched description')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/bookmarks', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        title: 'Bookmark',
+        url: 'https://example.com',
+        folder_id: null,
+        icon: '',
+        notes: 'Fetched description',
+      }),
+    }))
+  })
+})
+
 describe('api export requests', () => {
   afterEach(() => {
     vi.restoreAllMocks()

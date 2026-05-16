@@ -21,8 +21,9 @@ func NewMetadataService() *MetadataService {
 }
 
 type Metadata struct {
-	Title string `json:"title"`
-	Icon  string `json:"icon"`
+	Title       string `json:"title"`
+	Icon        string `json:"icon"`
+	Description string `json:"description"`
 }
 
 type metadataHTTPClientFactory func(targetIP string) *http.Client
@@ -86,8 +87,9 @@ func (s *MetadataService) FetchTitle(rawURL string) (*Metadata, error) {
 	if title == "" {
 		title = rawURL
 	}
+	description := extractDescription(html)
 	icon := s.fetchIcon(parsed, html)
-	return &Metadata{Title: title, Icon: icon}, nil
+	return &Metadata{Title: title, Icon: icon, Description: description}, nil
 }
 
 func newMetadataHTTPClient(targetIP string) *http.Client {

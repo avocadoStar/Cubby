@@ -56,14 +56,10 @@ func (r *bookmarkRepo) ExistsActiveURL(url string) (bool, error) {
 	return exists, nil
 }
 
-func (r *bookmarkRepo) Create(title, url string, folderID *string, sortKey string, icon ...string) (*model.Bookmark, error) {
+func (r *bookmarkRepo) Create(title, url string, folderID *string, sortKey, icon, notes string) (*model.Bookmark, error) {
 	id := uuid.New().String()
-	iconValue := ""
-	if len(icon) > 0 {
-		iconValue = icon[0]
-	}
-	_, err := r.DB.Exec(`INSERT INTO bookmark (id,title,url,icon,folder_id,sort_key) VALUES (?,?,?,?,?,?)`,
-		id, title, url, iconValue, folderID, sortKey)
+	_, err := r.DB.Exec(`INSERT INTO bookmark (id,title,url,icon,folder_id,sort_key,notes) VALUES (?,?,?,?,?,?,?)`,
+		id, title, url, icon, folderID, sortKey, notes)
 	if err != nil {
 		return nil, err
 	}

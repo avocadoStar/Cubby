@@ -5,6 +5,7 @@ type createBookmarkRequest struct {
 	Title    string  `json:"title"`
 	URL      string  `json:"url"`
 	Icon     string  `json:"icon"`
+	Notes    string  `json:"notes"`
 	FolderID *string `json:"folder_id"`
 }
 

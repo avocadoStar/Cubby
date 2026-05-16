@@ -8,6 +8,7 @@ import (
 )
 
 var titleRe = regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
+var metaTagRe = regexp.MustCompile(`(?is)<meta\b[^>]*>`)
 var linkTagRe = regexp.MustCompile(`(?is)<link\b[^>]*>`)
 var attrRe = regexp.MustCompile(`(?is)\s([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)`)
 
@@ -17,6 +18,24 @@ func extractTitle(html string) string {
 		return strings.TrimSpace(match[1])
 	}
 	return ""
+}
+
+func extractDescription(htmlText string) string {
+	var openGraphDescription string
+	for _, tag := range metaTagRe.FindAllString(htmlText, -1) {
+		attrs := parseTagAttrs(tag)
+		content := strings.TrimSpace(html.UnescapeString(attrs["content"]))
+		if content == "" {
+			continue
+		}
+		if strings.EqualFold(attrs["name"], "description") {
+			return content
+		}
+		if openGraphDescription == "" && strings.EqualFold(attrs["property"], "og:description") {
+			openGraphDescription = content
+		}
+	}
+	return openGraphDescription
 }
 
 func iconCandidates(baseURL *url.URL, htmlText string) []string {

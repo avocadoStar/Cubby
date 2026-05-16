@@ -48,12 +48,8 @@ func (r *stubBookmarkRepo) ExistsActiveURL(url string) (bool, error) {
 	return false, nil
 }
 
-func (r *stubBookmarkRepo) Create(title, url string, folderID *string, sortKey string, icon ...string) (*model.Bookmark, error) {
-	iconValue := ""
-	if len(icon) > 0 {
-		iconValue = icon[0]
-	}
-	b := model.Bookmark{ID: "new-" + sortKey, Title: title, URL: url, Icon: iconValue, FolderID: folderID, SortKey: sortKey}
+func (r *stubBookmarkRepo) Create(title, url string, folderID *string, sortKey, icon, notes string) (*model.Bookmark, error) {
+	b := model.Bookmark{ID: "new-" + sortKey, Title: title, URL: url, Icon: icon, FolderID: folderID, SortKey: sortKey, Notes: notes}
 	r.items[b.ID] = b
 	return &b, nil
 }

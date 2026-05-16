@@ -50,10 +50,10 @@ export const api = {
   getBookmarks: (folderId?: string | null, signal?: AbortSignal) =>
     request<Bookmark[]>(`/bookmarks${folderId ? `?folder_id=${folderId}` : ''}`, { signal }),
 
-  createBookmark: (title: string, url: string, folderId?: string | null, icon?: string) =>
+  createBookmark: (title: string, url: string, folderId?: string | null, icon?: string, notes?: string) =>
     request<Bookmark>('/bookmarks', {
       method: 'POST',
-      body: JSON.stringify({ title, url, folder_id: folderId, icon }),
+      body: JSON.stringify({ title, url, folder_id: folderId, icon, notes }),
     }),
 
   updateBookmark: (id: string, title: string, url: string, version: number) =>
@@ -110,7 +110,7 @@ export const api = {
 
   // Import
   fetchMetadata: (url: string) =>
-    request<{ title: string; icon: string }>(`/metadata?url=${encodeURIComponent(url)}`),
+    request<{ title: string; icon: string; description: string }>(`/metadata?url=${encodeURIComponent(url)}`),
 
   createPreviewSession: (url: string, mode: PreviewMode) =>
     request<PreviewSession>('/preview-sessions', {

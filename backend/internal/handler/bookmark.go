@@ -30,7 +30,10 @@ func (h *BookmarkHandler) Create(c *gin.Context) {
 		return
 	}
 
-	b, err := h.svc.Create(req.Title, req.URL, req.FolderID, req.Icon)
+	b, err := h.svc.Create(req.Title, req.URL, req.FolderID, service.BookmarkCreateOptions{
+		Icon:  req.Icon,
+		Notes: req.Notes,
+	})
 	if err != nil {
 		handleServiceError(c, err)
 		return

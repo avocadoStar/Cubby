@@ -87,7 +87,7 @@ func TestHTMLExportIncludesBookmarkIcon(t *testing.T) {
 	importSvc := service.NewImportService(folderRepo, bookmarkRepo)
 
 	icon := "data:image/png;base64,aWNvbg=="
-	if _, err := bookmarkSvc.Create("With Icon", "https://example.com", nil, icon); err != nil {
+	if _, err := bookmarkSvc.Create("With Icon", "https://example.com", nil, service.BookmarkCreateOptions{Icon: icon}); err != nil {
 		t.Fatalf("create bookmark: %v", err)
 	}
 

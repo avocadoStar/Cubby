@@ -58,7 +58,7 @@ func TestFetchTitleReturnsLinkedIcon(t *testing.T) {
 				case "/":
 					return &http.Response{
 						StatusCode: http.StatusOK,
-						Body:       io.NopCloser(strings.NewReader(`<html><head><title>Example</title><link rel="icon" href="/favicon.png"></head></html>`)),
+						Body:       io.NopCloser(strings.NewReader(`<html><head><title>Example</title><meta name="description" content=" Example description "><link rel="icon" href="/favicon.png"></head></html>`)),
 						Request:    req,
 					}, nil
 				case "/favicon.png":
@@ -81,6 +81,9 @@ func TestFetchTitleReturnsLinkedIcon(t *testing.T) {
 	}
 	if meta.Title != "Example" {
 		t.Fatalf("expected title Example, got %q", meta.Title)
+	}
+	if meta.Description != "Example description" {
+		t.Fatalf("expected description Example description, got %q", meta.Description)
 	}
 	if meta.Icon != "data:image/png;base64,aWNvbg==" {
 		t.Fatalf("expected favicon data URI, got %q", meta.Icon)

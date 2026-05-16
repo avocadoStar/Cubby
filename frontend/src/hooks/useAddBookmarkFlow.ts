@@ -32,6 +32,7 @@ export function useAddBookmarkFlow({
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [icon, setIcon] = useState('')
+  const [description, setDescription] = useState('')
   const [titleError, setTitleError] = useState('')
   const [urlError, setUrlError] = useState('')
   const [duplicateUrlError, setDuplicateUrlError] = useState('')
@@ -53,6 +54,7 @@ export function useAddBookmarkFlow({
     setTitle('')
     setUrl('')
     setIcon('')
+    setDescription('')
     setTitleError('')
     setUrlError('')
     setDuplicateUrlError('')
@@ -80,6 +82,7 @@ export function useAddBookmarkFlow({
           setTitleError('')
         }
         setIcon(meta.icon ?? '')
+        setDescription(meta.description ?? '')
       } catch {
         // Metadata is optional; users can still add the bookmark manually.
       } finally {
@@ -95,6 +98,7 @@ export function useAddBookmarkFlow({
 
   const handleUrlChange = (value: string) => {
     setIcon('')
+    setDescription('')
     setUrlError('')
     setDuplicateUrlError('')
     setUrl(normalizeBookmarkUrlInput(value))
@@ -125,7 +129,7 @@ export function useAddBookmarkFlow({
     const normalizedUrl = normalizeBookmarkUrlForSubmit(url)
     setSaving(true)
     try {
-      const bookmark = await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon)
+      const bookmark = await api.createBookmark(title.trim(), normalizedUrl, selectedId, icon, description)
       upsertOne(bookmark)
       return bookmark
     } catch (e) {

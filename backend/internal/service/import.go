@@ -111,7 +111,7 @@ func (s *ImportService) ImportHTML(reader io.Reader) (*ImportResult, error) {
 			nextBookmarkSortKey[sk] = sortKey
 
 			icon := sanitizeBookmarkIcon(html.UnescapeString(attrs["icon"]))
-			_, err := s.bookmarkRepo.Create(title, href, folderID, sortKey, icon)
+			_, err := s.bookmarkRepo.Create(title, href, folderID, sortKey, icon, "")
 			if err != nil {
 				result.Errors++
 				continue

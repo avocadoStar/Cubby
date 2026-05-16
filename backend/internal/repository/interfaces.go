@@ -23,7 +23,7 @@ type BookmarkRepo interface {
 	List(folderID *string) ([]model.Bookmark, error)
 	GetByID(id string) (*model.Bookmark, error)
 	ExistsActiveURL(url string) (bool, error)
-	Create(title, url string, folderID *string, sortKey string, icon ...string) (*model.Bookmark, error)
+	Create(title, url string, folderID *string, sortKey, icon, notes string) (*model.Bookmark, error)
 	Update(id, title, url string, version int) (*model.Bookmark, error)
 	SoftDelete(id string) error
 	Restore(id string) (*model.Bookmark, error)

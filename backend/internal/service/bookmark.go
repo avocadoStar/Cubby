@@ -12,6 +12,11 @@ type BookmarkService struct {
 	sortKey *SortKeyService
 }
 
+type BookmarkCreateOptions struct {
+	Icon  string
+	Notes string
+}
+
 func NewBookmarkService(repo repository.BookmarkRepo, sortKey *SortKeyService) *BookmarkService {
 	return &BookmarkService{repo: repo, sortKey: sortKey}
 }
@@ -20,7 +25,7 @@ func (s *BookmarkService) List(folderID *string) ([]model.Bookmark, error) {
 	return s.repo.List(folderID)
 }
 
-func (s *BookmarkService) Create(title, rawURL string, folderID *string, icon ...string) (*model.Bookmark, error) {
+func (s *BookmarkService) Create(title, rawURL string, folderID *string, options ...BookmarkCreateOptions) (*model.Bookmark, error) {
 	title, err := validateBookmarkTitle(title)
 	if err != nil {
 		return nil, err
@@ -42,12 +47,13 @@ func (s *BookmarkService) Create(title, rawURL string, folderID *string, icon ..
 	if err != nil {
 		return nil, err
 	}
-	iconValue := ""
-	if len(icon) > 0 {
-		iconValue = sanitizeBookmarkIcon(icon[0])
+	createOptions := BookmarkCreateOptions{}
+	if len(options) > 0 {
+		createOptions = options[0]
 	}
+	iconValue := sanitizeBookmarkIcon(createOptions.Icon)
 	return createWithSortKeyRetry(sortKey, ErrConflict, func(nextSortKey string) (*model.Bookmark, error) {
-		return s.repo.Create(title, validatedURL, folderID, nextSortKey, iconValue)
+		return s.repo.Create(title, validatedURL, folderID, nextSortKey, iconValue, createOptions.Notes)
 	})
 }
 
