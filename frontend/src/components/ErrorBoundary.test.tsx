@@ -1,10 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import ErrorBoundary from './ErrorBoundary'
-
-function ThrowingComponent(): never {
-  throw new Error('test error')
-}
 
 describe('ErrorBoundary', () => {
   it('renders children when no error', () => {
@@ -23,11 +19,6 @@ describe('ErrorBoundary', () => {
   })
 
   it('error UI contains retry and refresh buttons', () => {
-    const html = renderToStaticMarkup(
-      <ErrorBoundary>
-        <span />
-      </ErrorBoundary>,
-    )
     // Error UI is not rendered in SSR static markup since state starts clean
     // but we verify getDerivedStateFromError produces the right state
     const state = ErrorBoundary.getDerivedStateFromError(new Error('崩溃'))

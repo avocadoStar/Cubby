@@ -56,7 +56,6 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
   return (
     <div
       ref={setNodeRef}
-      role="treeitem"
       aria-expanded={hasChildren ? isExpanded : undefined}
       aria-selected={isSelected}
       data-context="folder"
@@ -84,6 +83,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
       onClick={() => select(node.id)}
       {...listeners}
       {...attributes}
+      role="treeitem"
       tabIndex={0}
     >
       <span
