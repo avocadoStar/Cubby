@@ -96,4 +96,13 @@ describe('neumorphic interaction hooks', () => {
     expect(bookmarkHtml).toContain('neumorphic-row')
     expect(folderHtml).toContain('neumorphic-row')
   })
+
+  it('renders a dedicated bookmark preview action when provided', () => {
+    const bookmarkHtml = renderToStaticMarkup(
+      <BookmarkRow bookmark={bookmark} onOpenPreview={() => {}} />,
+    )
+
+    expect(bookmarkHtml).toContain('aria-label="Preview bookmark"')
+    expect(bookmarkHtml).toContain('data-bookmark-preview-action="true"')
+  })
 })

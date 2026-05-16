@@ -26,15 +26,19 @@ function MenuDivider() {
   return <div className="border-t my-0.5 border-divider" />
 }
 
-export default function ContextMenu() {
+interface ContextMenuProps {
+  onPreviewBookmark?: (bookmarkId: string) => void
+}
+
+export default function ContextMenu({ onPreviewBookmark }: ContextMenuProps) {
   const { menu, target, menuRef, closeMenu } = useContextMenu()
   const { openUrl, handleCopyLink, handleDelete } = useContextActions(target, closeMenu)
   const [editingBookmark, setEditingBookmark] = useState<string | null>(null)
   const [renamingFolder, setRenamingFolder] = useState<string | null>(null)
 
-  const [localOpen, setLocalOpen] = useState(false)
-  const [animated, setAnimated] = useState(false)
-  const [pos, setPos] = useState({ x: 0, y: 0 })
+  const [localOpen, setLocalOpen] = useState(() => menu !== null)
+  const [animated, setAnimated] = useState(() => menu !== null)
+  const [pos, setPos] = useState(() => ({ x: menu?.x ?? 0, y: menu?.y ?? 0 }))
   const rafRef = useRef<number | null>(null)
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -64,7 +68,7 @@ export default function ContextMenu() {
         closeTimerRef.current = null
       }, prefersReducedMotion ? 0 : motionDurationMs.fast)
     }
-  }, [menu])
+  }, [localOpen, menu])
 
   const closeWithAnimation = (fn?: () => void) => {
     setAnimated(false)
@@ -106,6 +110,9 @@ export default function ContextMenu() {
           {isBookmark && (
             <>
               <MenuBtn onClick={() => closeWithAnimation(() => { if (targetId) setEditingBookmark(targetId) })} label="编辑" />
+              {onPreviewBookmark && (
+                <MenuBtn onClick={() => closeWithAnimation(() => { if (targetId) onPreviewBookmark(targetId) })} label="预览" />
+              )}
               <MenuBtn onClick={() => closeWithAnimation(handleCopyLink)} label="复制链接" />
               <MenuDivider />
               <MenuBtn onClick={() => closeWithAnimation(() => openUrl('_blank'))} label="在新标签页中打开" />

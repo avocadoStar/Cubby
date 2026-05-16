@@ -37,6 +37,8 @@ import ItemDroppable from './ItemDroppable'
 import DraggableFolderRow from './FolderRow'
 import SearchResults from './SearchResults'
 import NotesPanel from './NotesPanel'
+import PreviewPanel from './PreviewPanel'
+import { getSidePanelBookmark, type SidePanelState } from './sidePanelState'
 
 function ListSkeleton() {
   return (
@@ -100,7 +102,7 @@ function DesktopMainLayout() {
   const { activeItem, activeId } = useDndStore()
   const { query: searchQuery, results: searchResults } = useSearchStore()
   const isSearching = searchQuery !== ''
-  const [notesBookmarkId, setNotesBookmarkId] = useState<string | null>(null)
+  const [sidePanel, setSidePanel] = useState<SidePanelState>(null)
 
   const { items, renderedItems, subFolderIds, load, loading } = useListItems(selectedId)
   const bookmarks = useBookmarkStore(s => s.bookmarks)
@@ -143,7 +145,7 @@ function DesktopMainLayout() {
       onDragCancel={handleDragCancel}
     >
       <div className="flex h-screen relative bg-app-bg">
-        <ContextMenu />
+        <ContextMenu onPreviewBookmark={(bookmarkId) => setSidePanel({ type: 'preview', bookmarkId })} />
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <Toolbar />
@@ -196,7 +198,11 @@ function DesktopMainLayout() {
                       folderMap={folderMap}
                       style={wrapperStyle}
                     >
-                      <BookmarkRow bookmark={item.bookmark} onOpenNotes={() => setNotesBookmarkId(prev => prev === item.bookmark.id ? null : item.bookmark.id)} />
+                      <BookmarkRow
+                        bookmark={item.bookmark}
+                        onOpenNotes={() => setSidePanel(prev => prev?.type === 'notes' && prev.bookmarkId === item.bookmark.id ? null : { type: 'notes', bookmarkId: item.bookmark.id })}
+                        onOpenPreview={() => setSidePanel(prev => prev?.type === 'preview' && prev.bookmarkId === item.bookmark.id ? null : { type: 'preview', bookmarkId: item.bookmark.id })}
+                      />
                     </ItemDroppable>
                   )
                 })}
@@ -208,7 +214,8 @@ function DesktopMainLayout() {
           </>
           )}
         </div>
-        <NotesPanel bookmark={notesBookmarkId ? bookmarks.find(b => b.id === notesBookmarkId) ?? null : null} onClose={() => setNotesBookmarkId(null)} />
+        <NotesPanel bookmark={sidePanel?.type === 'notes' ? getSidePanelBookmark(sidePanel, bookmarks) : null} onClose={() => setSidePanel(null)} />
+        <PreviewPanel bookmark={sidePanel?.type === 'preview' ? getSidePanelBookmark(sidePanel, bookmarks) : null} onClose={() => setSidePanel(null)} />
       </div>
 
       <DragOverlay dropAnimation={null} modifiers={[dragOverlayTopLeftModifier]}>

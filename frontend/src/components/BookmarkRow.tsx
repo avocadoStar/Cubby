@@ -4,6 +4,7 @@ import { useBookmarkStore } from '../stores/bookmarkStore'
 import { useSelectionStore } from '../stores/selectionStore'
 import { useDndStore } from '../stores/dndStore'
 import { useDraggable } from '@dnd-kit/core'
+import { Eye } from 'lucide-react'
 import RowCheckbox from './RowCheckbox'
 import RowDeleteButton from './RowDeleteButton'
 import { t } from '../i18n'
@@ -13,7 +14,13 @@ function openExternalURL(url: string) {
   if (opened) opened.opener = null
 }
 
-const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpenNotes?: () => void }) => {
+interface BookmarkRowProps {
+  bookmark: Bookmark
+  onOpenNotes?: () => void
+  onOpenPreview?: () => void
+}
+
+const BookmarkRow = memo(({ bookmark, onOpenNotes, onOpenPreview }: BookmarkRowProps) => {
   const isSelected = useSelectionStore(s => s.selectedIds.has(bookmark.id))
   const isDeleting = useBookmarkStore(s => s.deletingIds.has(bookmark.id))
   const isRecentlyChanged = useBookmarkStore(s => s.recentlyChangedIds.has(bookmark.id))
@@ -92,6 +99,25 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes }: { bookmark: Bookmark; onOpe
         {bookmark.created_at.slice(0, 10)}
       </span>
       <RowDeleteButton hovered={hovered} ariaLabel={t('bookmark.deleteAria')} onDelete={() => deleteOne(bookmark.id)} />
+      {onOpenPreview && (
+        <>
+          <div className="flex-shrink-0 w-px self-stretch mx-1.5" style={{ background: hovered ? 'var(--divider-color)' : 'transparent' }} />
+          <button
+            type="button"
+            aria-label="Preview bookmark"
+            data-bookmark-preview-action="true"
+            className="flex-shrink-0 flex items-center justify-center rounded cursor-pointer border-none w-[26px] h-[26px] bg-transparent text-app-text2 hover:bg-app-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--app-accent)]"
+            style={{ opacity: hovered ? 1 : 0.35 }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpenPreview()
+            }}
+          >
+            <Eye size={15} aria-hidden="true" />
+          </button>
+        </>
+      )}
       {onOpenNotes && (
         <>
           <div className="flex-shrink-0 w-px self-stretch mx-1.5" style={{ background: hovered ? 'var(--divider-color)' : 'transparent' }} />
