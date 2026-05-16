@@ -208,7 +208,7 @@ export default function Toolbar() {
               {addBookmark.urlError || addBookmark.duplicateUrlError || '\u00a0'}
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => closeAddBookmarkModal()} disabled={addBookmark.saving}>取消</Button>
+              <Button variant="secondary" type="button" onClick={() => closeAddBookmarkModal()} disabled={addBookmark.saving}>取消</Button>
               <Button variant="primary" type="submit" loading={addBookmark.saving} disabled={addBookmark.saving || !addBookmark.title.trim() || !addBookmark.url.trim()}>添加</Button>
             </div>
           </form>
