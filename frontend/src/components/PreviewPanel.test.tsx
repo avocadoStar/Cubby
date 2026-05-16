@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import PreviewPanel, { compatibleMobilePreviewSandbox } from './PreviewPanel'
+import PreviewPanel from './PreviewPanel'
+import { calculatePreviewPanelWidth, compatibleMobilePreviewSandbox } from './previewPanelResize'
 import type { Bookmark } from '../types'
 
 const bookmark: Bookmark = {
@@ -30,5 +31,12 @@ describe('PreviewPanel', () => {
 
   it('uses the compatible mobile preview sandbox', () => {
     expect(compatibleMobilePreviewSandbox).toBe('allow-scripts allow-same-origin allow-forms allow-popups')
+  })
+
+  it('calculates resize width from left-edge drag direction', () => {
+    expect(calculatePreviewPanelWidth({ startWidth: 640, startX: 800, currentX: 700 })).toBe(740)
+    expect(calculatePreviewPanelWidth({ startWidth: 640, startX: 800, currentX: 900 })).toBe(540)
+    expect(calculatePreviewPanelWidth({ startWidth: 640, startX: 800, currentX: 1200 })).toBe(480)
+    expect(calculatePreviewPanelWidth({ startWidth: 640, startX: 800, currentX: 200 })).toBe(1100)
   })
 })

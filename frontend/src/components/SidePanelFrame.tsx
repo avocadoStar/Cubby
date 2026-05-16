@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 interface SidePanelFrameProps {
   open: boolean
   width: number
+  resizing?: boolean
   title?: ReactNode
   subtitle?: ReactNode
   actions?: ReactNode
@@ -14,6 +15,7 @@ interface SidePanelFrameProps {
 export default function SidePanelFrame({
   open,
   width,
+  resizing = false,
   title,
   subtitle,
   actions,
@@ -39,7 +41,7 @@ export default function SidePanelFrame({
         width: open ? width : 0,
         borderLeft: open ? '1px solid var(--app-border)' : '1px solid transparent',
         boxShadow: open ? 'var(--shadow)' : 'none',
-        transition: 'width 0.2s ease-out, border-color 0.2s, box-shadow 0.2s',
+        transition: resizing ? 'border-color 0.2s, box-shadow 0.2s' : 'width 0.2s ease-out, border-color 0.2s, box-shadow 0.2s',
       }}
     >
       <div

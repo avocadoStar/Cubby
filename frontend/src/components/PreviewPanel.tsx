@@ -3,6 +3,7 @@ import { ExternalLink, Maximize2, Minimize2, Monitor, Smartphone } from 'lucide-
 import type { Bookmark } from '../types'
 import { api } from '../services/api'
 import SidePanelFrame from './SidePanelFrame'
+import { calculatePreviewPanelWidth, clampPreviewPanelWidth, compatibleMobilePreviewSandbox, previewPanelWidthBounds } from './previewPanelResize'
 
 export interface PreviewPanelProps {
   bookmark: Bookmark | null
@@ -12,24 +13,17 @@ export interface PreviewPanelProps {
 type PreviewMode = 'mobile' | 'desktop'
 
 const previewPanelWidthKey = 'cubby.previewPanel.width'
-const minPanelWidth = 480
-const maxPanelWidth = 1100
 const previewLoadTimeoutMs = 8000
-export const compatibleMobilePreviewSandbox = 'allow-scripts allow-same-origin allow-forms allow-popups'
 
 function openExternalURL(url: string) {
   const opened = window.open(url, '_blank', 'noopener,noreferrer')
   if (opened) opened.opener = null
 }
 
-function clampWidth(width: number) {
-  return Math.min(maxPanelWidth, Math.max(minPanelWidth, width))
-}
-
 function readStoredPanelWidth() {
-  if (typeof window === 'undefined') return minPanelWidth
+  if (typeof window === 'undefined') return previewPanelWidthBounds.min
   const value = Number(window.localStorage.getItem(previewPanelWidthKey))
-  return Number.isFinite(value) ? clampWidth(value) : minPanelWidth
+  return Number.isFinite(value) ? clampPreviewPanelWidth(value) : previewPanelWidthBounds.min
 }
 
 export default function PreviewPanel({ bookmark, onClose }: PreviewPanelProps) {
@@ -40,7 +34,9 @@ export default function PreviewPanel({ bookmark, onClose }: PreviewPanelProps) {
   const [sessionSrc, setSessionSrc] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
   const loadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const finishResizeRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     setMode('mobile')
@@ -115,24 +111,71 @@ export default function PreviewPanel({ bookmark, onClose }: PreviewPanelProps) {
     event.preventDefault()
     const startX = event.clientX
     const startWidth = panelWidth
+    const handle = event.currentTarget
+    const pointerId = event.pointerId
+    const previousCursor = document.body.style.cursor
+    const previousUserSelect = document.body.style.userSelect
+    let finalWidth = startWidth
+    let finished = false
+
+    handle.setPointerCapture(pointerId)
+    setIsResizing(true)
+    document.body.style.cursor = 'ew-resize'
+    document.body.style.userSelect = 'none'
 
     const handleMove = (moveEvent: PointerEvent) => {
-      const nextWidth = clampWidth(startWidth + startX - moveEvent.clientX)
+      if (moveEvent.pointerId !== pointerId) return
+      const nextWidth = calculatePreviewPanelWidth({ startWidth, startX, currentX: moveEvent.clientX })
+      finalWidth = nextWidth
       setPanelWidth(nextWidth)
     }
-    const handleUp = (upEvent: PointerEvent) => {
-      const nextWidth = clampWidth(startWidth + startX - upEvent.clientX)
-      setPanelWidth(nextWidth)
-      window.localStorage.setItem(previewPanelWidthKey, String(nextWidth))
+
+    const finishResize = (currentX?: number) => {
+      if (finished) return
+      finished = true
+      if (typeof currentX === 'number') {
+        finalWidth = calculatePreviewPanelWidth({ startWidth, startX, currentX })
+        setPanelWidth(finalWidth)
+      }
+      handle.removeEventListener('lostpointercapture', handleLostCapture)
+      if (handle.hasPointerCapture(pointerId)) {
+        handle.releasePointerCapture(pointerId)
+      }
       window.removeEventListener('pointermove', handleMove)
       window.removeEventListener('pointerup', handleUp)
+      window.removeEventListener('pointercancel', handleCancel)
+      document.body.style.cursor = previousCursor
+      document.body.style.userSelect = previousUserSelect
+      window.localStorage.setItem(previewPanelWidthKey, String(finalWidth))
+      setIsResizing(false)
+      finishResizeRef.current = null
     }
 
+    const handleUp = (upEvent: PointerEvent) => {
+      if (upEvent.pointerId !== pointerId) return
+      finishResize(upEvent.clientX)
+    }
+    const handleCancel = (cancelEvent: PointerEvent) => {
+      if (cancelEvent.pointerId !== pointerId) return
+      finishResize()
+    }
+    const handleLostCapture = (lostEvent: PointerEvent) => {
+      if (lostEvent.pointerId !== pointerId) return
+      finishResize()
+    }
+
+    finishResizeRef.current = () => finishResize()
     window.addEventListener('pointermove', handleMove)
     window.addEventListener('pointerup', handleUp)
+    window.addEventListener('pointercancel', handleCancel)
+    handle.addEventListener('lostpointercapture', handleLostCapture)
   }
 
-  const width = maximized ? maxPanelWidth : panelWidth
+  useEffect(() => {
+    return () => finishResizeRef.current?.()
+  }, [])
+
+  const width = maximized ? previewPanelWidthBounds.max : panelWidth
 
   const openButton = bookmark ? (
     <button
@@ -187,6 +230,7 @@ export default function PreviewPanel({ bookmark, onClose }: PreviewPanelProps) {
     <SidePanelFrame
       open={open}
       width={width}
+      resizing={isResizing}
       title={bookmark?.title}
       subtitle={bookmark?.url}
       actions={(
@@ -218,6 +262,7 @@ export default function PreviewPanel({ bookmark, onClose }: PreviewPanelProps) {
               sandbox={mode === 'mobile' ? compatibleMobilePreviewSandbox : undefined}
               onLoad={handleFrameLoad}
               onError={handleFrameError}
+              style={{ pointerEvents: isResizing ? 'none' : undefined }}
               className="block w-full h-full border-0 bg-white"
             />
           )}
