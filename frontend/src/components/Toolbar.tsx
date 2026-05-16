@@ -23,7 +23,7 @@ interface ThemeMenuProps {
 export function ThemeMenu({ themeId, onSelectTheme }: ThemeMenuProps) {
   return (
     <div className="absolute right-0 top-full mt-2 z-50 p-3 bg-app-card border border-app-border rounded-card shadow-app-lg w-[200px]">
-      <div className="text-body font-medium mb-2 text-app-text">涓婚</div>
+      <div className="text-body font-medium mb-2 text-app-text">主题</div>
       {themes.map(t => {
         const selected = themeId === t.id
 
