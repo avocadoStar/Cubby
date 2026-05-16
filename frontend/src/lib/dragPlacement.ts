@@ -2,6 +2,7 @@ import type { Folder, Bookmark, BatchMoveItem } from '../types'
 import type { UnifiedSortableItem } from './dndUtils'
 import { computeSortKeyFromNeighbors } from './sortKeys'
 import { computePlacement, getUnifiedSiblings } from './dndUtils'
+import { normalizeOverId, stripDraggablePrefix, isBookmarkDragId } from './dndIds'
 
 type ListItem =
   | { kind: 'folder'; folder: Folder }
@@ -147,7 +148,7 @@ export function computeMultiDragDrop(
   }
 
   const dp = destParentId()
-  const selectedFolderIds = new Set(multiDragIds.filter(sid => !sid.startsWith('bookmark:')))
+  const selectedFolderIds = new Set(multiDragIds.filter(sid => !isBookmarkDragId(sid)))
   const hasSelectedAncestor = (folderId: string) => {
     let current = ctx.folderMap.get(folderId)?.parent_id ?? null
     while (current) {
@@ -157,10 +158,10 @@ export function computeMultiDragDrop(
     return false
   }
   const effectiveDragIds = multiDragIds.filter(sid => {
-    if (sid.startsWith('bookmark:')) return true
+    if (isBookmarkDragId(sid)) return true
     return !hasSelectedAncestor(sid)
   })
-  const draggedIds = new Set(effectiveDragIds.map(sid => sid.startsWith('bookmark:') ? sid.slice('bookmark:'.length) : sid))
+  const draggedIds = new Set(effectiveDragIds.map(sid => stripDraggablePrefix(sid)))
 
   const siblingsExcluding = (pid: string | null, excludeIds: Set<string>) =>
     helpers.siblingsOf(pid, '')
@@ -180,9 +181,9 @@ export function computeMultiDragDrop(
 
   const batchItems: BatchMoveItem[] = []
   for (const selId of effectiveDragIds) {
-    const strippedId = selId.startsWith('bookmark:') ? selId.slice('bookmark:'.length) : selId
+    const strippedId = stripDraggablePrefix(selId)
     const sortKey = helpers.moveSortKey(prevId, nextId)
-    if (selId.startsWith('bookmark:')) {
+    if (isBookmarkDragId(selId)) {
       const bookmark = ctx.bookmarks.find(bk => bk.id === strippedId)
       if (bookmark) {
         batchItems.push({ kind: 'bookmark', id: strippedId, parent_id: dp, prev_id: prevId, next_id: nextId, optimistic_sort_key: sortKey, version: bookmark.version })
@@ -198,12 +199,6 @@ export function computeMultiDragDrop(
   }
 
   return { destParentId: dp, batchItems }
-}
-
-function normalizeOverId(overId: string): string {
-  if (overId.startsWith('droppable:sidebar:')) return overId.slice('droppable:sidebar:'.length)
-  if (overId.startsWith('droppable:')) return overId.slice('droppable:'.length)
-  return overId
 }
 
 function buildDropHelpers(ctx: DropContext, activeId: string) {

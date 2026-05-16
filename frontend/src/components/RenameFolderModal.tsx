@@ -1,25 +1,7 @@
-import { useState, type FocusEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useFolderStore } from '../stores/folderStore'
-import ModalBase from './ModalBase'
-import Button from './Button'
+import FormModal from './FormModal'
 import Input from './Input'
-
-const INPUT_STYLE: React.CSSProperties = {
-  border: 'var(--input-border)',
-  boxShadow: 'var(--input-shadow)',
-  background: 'var(--input-bg)',
-  color: 'var(--app-text)',
-  fontSize: 'var(--fs-body)',
-  borderRadius: 'var(--input-radius)',
-}
-
-function handleFocus(e: FocusEvent<HTMLInputElement>) {
-  e.currentTarget.style.boxShadow = 'var(--input-shadow-focus)'
-}
-
-function handleBlur(e: FocusEvent<HTMLInputElement>) {
-  e.currentTarget.style.boxShadow = 'var(--input-shadow)'
-}
 
 export default function RenameFolderModal({ folderId, onClose }: {
   folderId: string
@@ -27,10 +9,10 @@ export default function RenameFolderModal({ folderId, onClose }: {
 }) {
   const folder = useFolderStore.getState().folderMap.get(folderId)
   const [name, setName] = useState(folder?.name ?? '')
-
   const [saving, setSaving] = useState(false)
 
-  const submit = async () => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     if (!name.trim() || !folder || saving) return
     setSaving(true)
     try {
@@ -44,21 +26,21 @@ export default function RenameFolderModal({ folderId, onClose }: {
   if (!folder) return null
 
   return (
-    <ModalBase title="重命名文件夹" onClose={onClose} width="420px" closeOnEscape>
+    <FormModal
+      title="重命名文件夹"
+      onClose={() => { if (!saving) onClose() }}
+      onSubmit={handleSubmit}
+      submitLabel="保存"
+      submitDisabled={saving || !name.trim()}
+      submitLoading={saving}
+      width="420px"
+    >
       <Input
         autoFocus
         value={name}
         onChange={e => setName(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && submit()}
         className="h-11 px-4 mb-5"
-        inputStyle={INPUT_STYLE}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
       />
-      <div className="flex justify-end gap-2">
-        <Button variant="secondary" onClick={onClose} disabled={saving}>取消</Button>
-        <Button variant="primary" onClick={submit} loading={saving} disabled={!name.trim() || saving}>保存</Button>
-      </div>
-    </ModalBase>
+    </FormModal>
   )
 }

@@ -7,6 +7,7 @@ import { useAuthStore } from '../../stores/authStore'
 import ImportModal from '../ImportModal'
 import MobileActionMenu from './MobileActionMenu'
 import { useAddBookmarkFlow } from '../../hooks/useAddBookmarkFlow'
+import { useCreateFolder } from '../../hooks/useCreateFolder'
 import { exportBookmarks } from '../../hooks/useExportFlow'
 
 export type MobileAddMode = 'bookmark' | 'folder'
@@ -162,29 +163,27 @@ export function MobileAddModal({
 }
 
 export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => void }) {
-  const { selectedId, create } = useFolderStore()
+  const { selectedId } = useFolderStore()
   const { upsertOne } = useBookmarkStore()
   const logout = useAuthStore(s => s.logout)
   const [showMenu, setShowMenu] = useState(false)
   const [showAddBookmark, setShowAddBookmark] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [addMode, setAddMode] = useState<MobileAddMode>('bookmark')
-  const [folderName, setFolderName] = useState('')
-  const [savingFolder, setSavingFolder] = useState(false)
   const addBookmark = useAddBookmarkFlow({
     selectedId,
     upsertOne,
     mergeFetchedTitle: mergeMobileFetchedTitle,
   })
-  const savingAdd = addMode === 'bookmark' ? addBookmark.saving : savingFolder
+  const addFolder = useCreateFolder(selectedId, () => closeAddModal(true))
+  const savingAdd = addMode === 'bookmark' ? addBookmark.saving : addFolder.saving
 
   const closeAddModal = (force = false) => {
     if (savingAdd && !force) return
     addBookmark.reset(true)
     setShowAddBookmark(false)
     setAddMode('bookmark')
-    setFolderName('')
-    setSavingFolder(false)
+    addFolder.reset()
   }
 
   const handleAddModeChange = (mode: MobileAddMode) => {
@@ -202,19 +201,6 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
   const handleAddBookmark = async () => {
     const bookmark = await addBookmark.submit()
     if (bookmark) closeAddModal(true)
-  }
-
-  const handleCreateFolder = async () => {
-    if (savingAdd) return
-    if (!folderName.trim()) return
-    setSavingFolder(true)
-    try {
-      await create(folderName.trim(), selectedId)
-      closeAddModal(true)
-    } catch (e) {
-      setSavingFolder(false)
-      throw e
-    }
   }
 
   const handleExport = exportBookmarks
@@ -261,17 +247,17 @@ export default function MobileNav({ onOpenSettings }: { onOpenSettings: () => vo
           mode={addMode}
           title={addBookmark.title}
           url={addBookmark.url}
-          folderName={folderName}
+          folderName={addFolder.folderName}
           fetchingTitle={addBookmark.fetchingTitle}
           saving={savingAdd}
           duplicateUrlError={addBookmark.duplicateUrlError}
           onModeChange={handleAddModeChange}
           onTitleChange={addBookmark.setTitle}
           onUrlChange={handleUrlChange}
-          onFolderNameChange={setFolderName}
+          onFolderNameChange={addFolder.setFolderName}
           onClose={closeAddModal}
           onSubmitBookmark={handleAddBookmark}
-          onSubmitFolder={handleCreateFolder}
+          onSubmitFolder={addFolder.createFolder}
         />
       )}
 

@@ -4,6 +4,8 @@ import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
 import { useDraggable } from '@dnd-kit/core'
 import { ChevronRight, ChevronDown } from 'lucide-react'
+import { composeDraggableId, composeSidebarDroppableId } from '../lib/dndIds'
+import { getRowStyles } from '../lib/rowStyles'
 
 const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
   const { expandedIds, selectedId, toggleExpand, select } = useFolderStore()
@@ -15,7 +17,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
   const hasChildren = node.has_children
   const [hovered, setHovered] = useState(false)
 
-  const isOver = overId === `droppable:sidebar:${node.id}`
+  const isOver = overId === composeSidebarDroppableId(node.id)
   const isInside = isOver && dropPosition === 'inside'
 
   const {
@@ -24,7 +26,7 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
     setNodeRef,
     isDragging,
   } = useDraggable({
-    id: `sidebar:${node.id}`,
+    id: composeDraggableId('sidebar', node.id),
     data: { node, depth },
   })
 
@@ -66,17 +68,17 @@ const FolderNode = memo(({ node, depth }: { node: Folder; depth: number }) => {
         paddingLeft: 8 + depth * 20,
         paddingRight: 8,
         margin: '0 4px',
-        opacity: isDragging ? 0.3 : 1,
-        background: isInside
-          ? 'var(--accent-light)'
-          : isSelected
-            ? 'var(--accent-light)'
-            : hovered
-              ? 'var(--tree-hover-bg)'
-              : 'transparent',
-        boxShadow: isSelected || isInside ? 'var(--input-shadow)' : hovered ? 'var(--tree-hover-shadow)' : 'none',
-        outline: isInside ? '1px solid var(--app-accent)' : undefined,
-        outlineOffset: -1,
+        ...getRowStyles({
+          isDragging,
+          isSelected,
+          isOverInside: isInside,
+          hovered,
+          cardBg: 'transparent',
+          hoverBg: 'var(--tree-hover-bg)',
+          rowShadow: 'none',
+          hoverShadow: 'var(--tree-hover-shadow)',
+        }),
+        outlineOffset: isInside ? -1 : undefined,
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

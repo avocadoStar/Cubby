@@ -4,7 +4,7 @@ import { api } from '../services/api'
 import { computeSortKeyFromNeighbors } from '../lib/sortKeys'
 import { buildVisibleNodes, getAncestorChain } from '../lib/folderTree'
 import { showMoveError } from '../lib/errorHandler'
-import { useToastStore } from './toastStore'
+import { createOptimisticDelete } from '../lib/optimisticDelete'
 import { addCreatedFolderToMaps, applyOptimisticFolderMoveToMaps, removeFolderFromMaps, setFolderInMap } from './folderStoreHelpers'
 
 interface FolderState {
@@ -131,55 +131,41 @@ export const useFolderStore = create<FolderState>((set, get) => ({
     get().rebuildVisible()
   },
 
-  deleteOne: (id) => {
-    const folder = get().folderMap.get(id)
-    if (!folder) return
-
-    // Remove from childrenMap so it disappears from sidebar immediately
-    set((s) => {
-      return removeFolderFromMaps(s.folderMap, s.childrenMap, id)
-    })
-    get().rebuildVisible()
-
-    let undone = false
-
-    const doUndo = () => {
-      if (undone) return
-      undone = true
+  deleteOne: createOptimisticDelete<Folder>({
+    getItem: (id) => get().folderMap.get(id),
+    applyDeleting: (id) => {
+      set((s) => removeFolderFromMaps(s.folderMap, s.childrenMap, id))
+      get().rebuildVisible()
+    },
+    applyRemove: () => {
+      // already removed in applyDeleting
+    },
+    applyRestore: (_id, folder) => {
+      set((s) => ({ folderMap: setFolderInMap(s.folderMap, folder) }))
+      get().loadChildren(folder.parent_id)
+      get().rebuildVisible()
+    },
+    deleteApi: (id) => api.deleteFolder(id),
+    restoreApi: (id) => api.restoreFolder(id),
+    toastMessage: (f) => `已删除 "${f.name}"`,
+    onApiSuccess: (_id, folder) => {
+      get().loadChildren(folder.parent_id)
+      get().rebuildVisible()
+    },
+    onApiFailure: (id, folder) => {
       api.restoreFolder(id).then((restored) => {
         if (restored) {
-          set((s) => {
-            return { folderMap: setFolderInMap(s.folderMap, restored) }
-          })
-          // Reload parent to refresh children ordering
+          set((s) => ({ folderMap: setFolderInMap(s.folderMap, restored) }))
           get().loadChildren(restored.parent_id)
           get().rebuildVisible()
         }
       }).catch(() => {
-        // Re-add locally if restore fails
-        set((s) => {
-          return { folderMap: setFolderInMap(s.folderMap, folder) }
-        })
-        const parentId = folder.parent_id
-        get().loadChildren(parentId)
+        set((s) => ({ folderMap: setFolderInMap(s.folderMap, folder) }))
+        get().loadChildren(folder.parent_id)
         get().rebuildVisible()
       })
-    }
-
-    // Call delete API immediately
-    api.deleteFolder(id).then(() => {
-      if (undone) return
-      const parentId = folder.parent_id
-      get().loadChildren(parentId)
-      get().rebuildVisible()
-      useToastStore.getState().show({
-        message: `已删除 "${folder.name}"`,
-        onUndo: doUndo,
-      })
-    }).catch(() => {
-      doUndo()
-    })
-  },
+    },
+  }),
 
   moveFolder: async (id, newParentId, prevId, nextId, version, sortKey) => {
     const snapshot = {

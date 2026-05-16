@@ -1,11 +1,13 @@
 import { useState, memo } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { useDndStore } from '../stores/dndStore'
+import { composeMainDroppableId } from '../lib/dndIds'
 import { ChevronRight } from 'lucide-react'
 import type { Folder } from '../types'
 import RowCheckbox from './RowCheckbox'
 import RowDeleteButton from './RowDeleteButton'
 import { t } from '../i18n'
+import { getRowStyles } from '../lib/rowStyles'
 
 interface FolderRowComponentProps {
   folder: Folder
@@ -35,12 +37,7 @@ const FolderRowComponent = memo(function FolderRowComponent({
       data-selected={isFolderSelected ? 'true' : undefined}
       data-dragging={isDragging ? 'true' : undefined}
       className="neumorphic-row flex items-center px-2 h-[38px] rounded-card border-[var(--card-border)] mx-[45px] mb-[var(--card-gap)] touch-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)] select-none cursor-pointer"
-      style={{
-        opacity: isDragging ? 0.3 : 1,
-        boxShadow: isFolderSelected || isInside ? 'var(--input-shadow)' : hovered ? 'var(--card-shadow-hover)' : 'var(--row-shadow)',
-        background: isInside ? 'var(--accent-light)' : isFolderSelected ? 'var(--accent-light)' : hovered ? 'var(--app-hover)' : 'var(--app-card)',
-        outline: isInside ? '1px solid var(--app-accent)' : undefined,
-      }}
+      style={getRowStyles({ isDragging, isSelected: isFolderSelected, isOverInside: isInside, hovered })}
       tabIndex={0}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -87,7 +84,7 @@ export default function DraggableFolderRow({
   const overId = useDndStore((s) => s.overId)
   const dropPosition = useDndStore((s) => s.dropPosition)
   const dndSource = useDndStore((s) => s.source)
-  const isOver = overId === `droppable:${folder.id}`
+  const isOver = overId === composeMainDroppableId(folder.id)
   const isInside = isOver && dropPosition === 'inside' && dndSource === 'main'
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({

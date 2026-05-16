@@ -20,37 +20,24 @@ func (r *moveRepo) BatchMove(items []BatchMoveItem) (*BatchMoveResult, error) {
 	defer tx.Rollback()
 
 	for _, item := range items {
+		var res sql.Result
 		switch item.Kind {
 		case "folder":
-			res, err := tx.Exec(`UPDATE folder SET parent_id=?, sort_key=?, version=version+1, updated_at=datetime('now')
+			res, err = tx.Exec(`UPDATE folder SET parent_id=?, sort_key=?, version=version+1, updated_at=datetime('now')
 				WHERE id=? AND version=? AND deleted_at IS NULL`,
 				item.ParentID, item.SortKey, item.ID, item.Version)
-			if err != nil {
-				return nil, err
-			}
-			affected, err := res.RowsAffected()
-			if err != nil {
-				return nil, err
-			}
-			if affected == 0 {
-				return nil, sql.ErrNoRows
-			}
 		case "bookmark":
-			res, err := tx.Exec(`UPDATE bookmark SET folder_id=?, sort_key=?, version=version+1, updated_at=datetime('now')
+			res, err = tx.Exec(`UPDATE bookmark SET folder_id=?, sort_key=?, version=version+1, updated_at=datetime('now')
 				WHERE id=? AND version=? AND deleted_at IS NULL`,
 				item.ParentID, item.SortKey, item.ID, item.Version)
-			if err != nil {
-				return nil, err
-			}
-			affected, err := res.RowsAffected()
-			if err != nil {
-				return nil, err
-			}
-			if affected == 0 {
-				return nil, sql.ErrNoRows
-			}
 		default:
 			return nil, fmt.Errorf("unsupported move kind %q", item.Kind)
+		}
+		if err != nil {
+			return nil, err
+		}
+		if err := checkRowsAffected(res); err != nil {
+			return nil, err
 		}
 	}
 
@@ -82,25 +69,15 @@ func (r *moveRepo) BatchMove(items []BatchMoveItem) (*BatchMoveResult, error) {
 }
 
 func getFolderTx(tx *sql.Tx, id string) (*model.Folder, error) {
-	var f model.Folder
-	err := tx.QueryRow(`SELECT id,name,parent_id,sort_key,version,
+	row := tx.QueryRow(`SELECT id,name,parent_id,sort_key,version,
 		EXISTS(SELECT 1 FROM folder c WHERE c.parent_id=folder.id AND c.deleted_at IS NULL) as has_children,
 		created_at,updated_at
-		FROM folder WHERE id=? AND deleted_at IS NULL`, id).
-		Scan(&f.ID, &f.Name, &f.ParentID, &f.SortKey, &f.Version, &f.HasChildren, &f.CreatedAt, &f.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &f, nil
+		FROM folder WHERE id=? AND deleted_at IS NULL`, id)
+	return scanFolder(row)
 }
 
 func getBookmarkTx(tx *sql.Tx, id string) (*model.Bookmark, error) {
-	var b model.Bookmark
-	err := tx.QueryRow(`SELECT id,title,url,icon,folder_id,sort_key,version,notes,created_at,updated_at
-		FROM bookmark WHERE id=? AND deleted_at IS NULL`, id).
-		Scan(&b.ID, &b.Title, &b.URL, &b.Icon, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &b, nil
+	row := tx.QueryRow(`SELECT id,title,url,icon,folder_id,sort_key,version,notes,created_at,updated_at
+		FROM bookmark WHERE id=? AND deleted_at IS NULL`, id)
+	return scanBookmark(row)
 }

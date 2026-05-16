@@ -3,10 +3,10 @@ import type { BatchMoveItem, Bookmark } from '../types'
 import { api } from '../services/api'
 import { computeSortKeyFromNeighbors } from '../lib/sortKeys'
 import { useFolderStore } from './folderStore'
-import { useToastStore } from './toastStore'
 import { useSelectionStore } from './selectionStore'
 import { applyOptimisticBatchMoveBookmarkState, applyOptimisticBatchMoveFolderState, reconcileAfterBatchMove } from '../lib/optimisticUpdates'
 import { showMoveError } from '../lib/errorHandler'
+import { createOptimisticDelete } from '../lib/optimisticDelete'
 import {
   removeBookmarkById,
   removeSetValue,
@@ -96,82 +96,33 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
     await folderStore.loadChildren(null)
   },
 
-  deleteOne: (id) => {
-    const bookmark = get().bookmarks.find((b) => b.id === id)
-    if (!bookmark) return
-
-    set((s) => ({
-      deletingIds: new Set(s.deletingIds).add(id),
-    }))
-
-    const sel = useSelectionStore.getState()
-    if (sel.selectedIds.has(id)) {
-      sel.toggleSelect(id)
-    }
-
-    let undoClicked = false
-    let done = false
-    let apiSucceeded = false
-    let animationDone = false
-    let toastShown = false
-    const deleteTimer = globalThis.setTimeout(() => {
-      animationDone = true
-      finishDelete()
-      showDeleteToast()
-    }, DELETE_ANIMATION_MS)
-
-    const finishUndo = () => {
-      globalThis.clearTimeout(deleteTimer)
-      if (undoClicked) return
-      undoClicked = true
+  deleteOne: createOptimisticDelete<Bookmark>({
+    getItem: (id) => get().bookmarks.find((b) => b.id === id),
+    applyDeleting: (id) => {
+      set((s) => ({ deletingIds: new Set(s.deletingIds).add(id) }))
+      const sel = useSelectionStore.getState()
+      if (sel.selectedIds.has(id)) sel.toggleSelect(id)
+    },
+    applyRemove: (id) => {
+      set((s) => ({
+        bookmarks: removeBookmarkById(s.bookmarks, id),
+        deletingIds: removeSetValue(s.deletingIds, id),
+      }))
+    },
+    applyRestore: (id, bookmark) => {
       set((s) => {
         const bookmarks = s.bookmarks.some((b) => b.id === id)
           ? s.bookmarks
           : restoreBookmarkToList(s.bookmarks, bookmark)
         return { bookmarks, deletingIds: removeSetValue(s.deletingIds, id) }
       })
-    }
-
-    const finishDelete = () => {
-      if (undoClicked || done) return
-      done = true
-      set((s) => ({
-        bookmarks: removeBookmarkById(s.bookmarks, id),
-        deletingIds: removeSetValue(s.deletingIds, id),
-      }))
-    }
-
-    const showDeleteToast = () => {
-      if (!apiSucceeded || !animationDone || undoClicked || toastShown) return
-      toastShown = true
-      useToastStore.getState().show({
-        message: `已删除 "${bookmark.title}"`,
-        onUndo: () => {
-          if (undoClicked) return  // prevent double-click
-          undoClicked = true
-          globalThis.clearTimeout(deleteTimer)
-          api.restoreBookmark(id).then((restored) => {
-            if (restored) {
-              set((s) => {
-                return { bookmarks: restoreBookmarkToList(s.bookmarks, restored), deletingIds: removeSetValue(s.deletingIds, id) }
-              })
-            }
-          }).catch(() => {
-            undoClicked = false
-            finishDelete()
-          })
-        },
-      })
-    }
-
-    api.deleteBookmark(id).then(() => {
-      if (undoClicked) return
-      apiSucceeded = true
-      showDeleteToast()
-    }).catch(() => {
-      finishUndo()
-    })
-  },
+    },
+    deleteApi: (id) => api.deleteBookmark(id),
+    restoreApi: (id) => api.restoreBookmark(id),
+    toastMessage: (b) => `已删除 "${b.title}"`,
+    animationMs: DELETE_ANIMATION_MS,
+    onUndoFailure: (_id, _item, proceedWithDelete) => { proceedWithDelete() },
+  }),
 
   updateNotes: async (id, notes) => {
     const previous = get().bookmarks.find((b) => b.id === id)?.notes

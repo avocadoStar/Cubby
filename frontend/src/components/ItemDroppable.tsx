@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import type { Folder } from '../types'
 import type { ListItem } from './MainLayout'
+import { composeMainDroppableId, normalizeOverId } from '../lib/dndIds'
 
 interface ItemDroppableProps {
   item: ListItem
@@ -19,11 +20,11 @@ export default function ItemDroppable({
   children,
 }: ItemDroppableProps) {
   const nodeId = item.kind === 'folder' ? item.folder.id : item.bookmark.id
-  const dropId = `droppable:${nodeId}`
+  const dropId = composeMainDroppableId(nodeId)
 
   const disabled = useMemo(() => {
     if (!activeId || activeId === dropId) return false
-    const activeFolderId = activeId.startsWith('droppable:') ? activeId.slice('droppable:'.length) : activeId
+    const activeFolderId = normalizeOverId(activeId)
     if (activeFolderId === nodeId) return true
 
     let current: string | null = nodeId

@@ -29,11 +29,11 @@ func (r *bookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 	defer rows.Close()
 	var bookmarks []model.Bookmark
 	for rows.Next() {
-		var b model.Bookmark
-		if err := rows.Scan(&b.ID, &b.Title, &b.URL, &b.Icon, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt); err != nil {
+		b, err := scanBookmark(rows)
+		if err != nil {
 			return nil, err
 		}
-		bookmarks = append(bookmarks, b)
+		bookmarks = append(bookmarks, *b)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -42,14 +42,9 @@ func (r *bookmarkRepo) List(folderID *string) ([]model.Bookmark, error) {
 }
 
 func (r *bookmarkRepo) GetByID(id string) (*model.Bookmark, error) {
-	var b model.Bookmark
-	err := r.DB.QueryRow(`SELECT id,title,url,icon,folder_id,sort_key,version,notes,created_at,updated_at
-		FROM bookmark WHERE id=? AND deleted_at IS NULL`, id).
-		Scan(&b.ID, &b.Title, &b.URL, &b.Icon, &b.FolderID, &b.SortKey, &b.Version, &b.Notes, &b.CreatedAt, &b.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &b, nil
+	row := r.DB.QueryRow(`SELECT id,title,url,icon,folder_id,sort_key,version,notes,created_at,updated_at
+		FROM bookmark WHERE id=? AND deleted_at IS NULL`, id)
+	return scanBookmark(row)
 }
 
 func (r *bookmarkRepo) ExistsActiveURL(url string) (bool, error) {
@@ -82,12 +77,8 @@ func (r *bookmarkRepo) Update(id, title, url string, version int) (*model.Bookma
 	if err != nil {
 		return nil, err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
+	if err := checkRowsAffected(res); err != nil {
 		return nil, err
-	}
-	if n == 0 {
-		return nil, sql.ErrNoRows
 	}
 	return r.GetByID(id)
 }
@@ -97,14 +88,7 @@ func (r *bookmarkRepo) SoftDelete(id string) error {
 	if err != nil {
 		return err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
-		return sql.ErrNoRows
-	}
-	return nil
+	return checkRowsAffected(res)
 }
 
 func (r *bookmarkRepo) Restore(id string) (*model.Bookmark, error) {
@@ -112,12 +96,8 @@ func (r *bookmarkRepo) Restore(id string) (*model.Bookmark, error) {
 	if err != nil {
 		return nil, err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
+	if err := checkRowsAffected(res); err != nil {
 		return nil, err
-	}
-	if n == 0 {
-		return nil, sql.ErrNoRows
 	}
 	return r.GetByID(id)
 }
@@ -143,12 +123,8 @@ func (r *bookmarkRepo) Move(id string, folderID *string, sortKey string, version
 	if err != nil {
 		return nil, err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
+	if err := checkRowsAffected(res); err != nil {
 		return nil, err
-	}
-	if n == 0 {
-		return nil, sql.ErrNoRows
 	}
 	return r.GetByID(id)
 }
@@ -158,14 +134,7 @@ func (r *bookmarkRepo) UpdateNotes(id, notes string) error {
 	if err != nil {
 		return err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
-		return sql.ErrNoRows
-	}
-	return nil
+	return checkRowsAffected(res)
 }
 
 func (r *bookmarkRepo) Rebalance(updates []SortKeyUpdate) error {

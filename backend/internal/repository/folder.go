@@ -33,11 +33,11 @@ func (r *folderRepo) List(parentID *string) ([]model.Folder, error) {
 	defer rows.Close()
 	var folders []model.Folder
 	for rows.Next() {
-		var f model.Folder
-		if err := rows.Scan(&f.ID, &f.Name, &f.ParentID, &f.SortKey, &f.Version, &f.HasChildren, &f.CreatedAt, &f.UpdatedAt); err != nil {
+		f, err := scanFolder(rows)
+		if err != nil {
 			return nil, err
 		}
-		folders = append(folders, f)
+		folders = append(folders, *f)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -46,16 +46,11 @@ func (r *folderRepo) List(parentID *string) ([]model.Folder, error) {
 }
 
 func (r *folderRepo) Get(id string) (*model.Folder, error) {
-	var f model.Folder
-	err := r.DB.QueryRow(`SELECT id,name,parent_id,sort_key,version,
+	row := r.DB.QueryRow(`SELECT id,name,parent_id,sort_key,version,
 		EXISTS(SELECT 1 FROM folder c WHERE c.parent_id=folder.id AND c.deleted_at IS NULL) as has_children,
 		created_at,updated_at
-		FROM folder WHERE id=? AND deleted_at IS NULL`, id).
-		Scan(&f.ID, &f.Name, &f.ParentID, &f.SortKey, &f.Version, &f.HasChildren, &f.CreatedAt, &f.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &f, nil
+		FROM folder WHERE id=? AND deleted_at IS NULL`, id)
+	return scanFolder(row)
 }
 
 func (r *folderRepo) Create(name string, parentID *string, sortKey string) (*model.Folder, error) {
@@ -75,12 +70,8 @@ func (r *folderRepo) Update(id, name string, version int) (*model.Folder, error)
 	if err != nil {
 		return nil, err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
+	if err := checkRowsAffected(res); err != nil {
 		return nil, err
-	}
-	if n == 0 {
-		return nil, sql.ErrNoRows
 	}
 	return r.Get(id)
 }
@@ -90,14 +81,7 @@ func (r *folderRepo) SoftDelete(id string) error {
 	if err != nil {
 		return err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
-		return sql.ErrNoRows
-	}
-	return nil
+	return checkRowsAffected(res)
 }
 
 func (r *folderRepo) Restore(id string) (*model.Folder, error) {
@@ -105,12 +89,8 @@ func (r *folderRepo) Restore(id string) (*model.Folder, error) {
 	if err != nil {
 		return nil, err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
+	if err := checkRowsAffected(res); err != nil {
 		return nil, err
-	}
-	if n == 0 {
-		return nil, sql.ErrNoRows
 	}
 	return r.Get(id)
 }
@@ -134,12 +114,8 @@ func (r *folderRepo) RestoreTree(id string) (*model.Folder, error) {
 	if err != nil {
 		return nil, err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
+	if err := checkRowsAffected(res); err != nil {
 		return nil, err
-	}
-	if n == 0 {
-		return nil, sql.ErrNoRows
 	}
 
 	if _, err := tx.Exec(`
@@ -184,12 +160,8 @@ func (r *folderRepo) Move(id string, parentID *string, sortKey string, version i
 	if err != nil {
 		return nil, err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
+	if err := checkRowsAffected(res); err != nil {
 		return nil, err
-	}
-	if n == 0 {
-		return nil, sql.ErrNoRows
 	}
 	return r.Get(id)
 }

@@ -8,6 +8,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { POINTER_SENSOR_CONFIG, calcDropPosition, type UnifiedSortableItem } from '../lib/dndUtils'
+import { stripDraggablePrefix, composeDraggableId, composeMainDroppableId, isSidebarDroppable, isBookmarkDragId } from '../lib/dndIds'
 import { useDndStore } from '../stores/dndStore'
 import { useFolderStore } from '../stores/folderStore'
 import { useBookmarkStore } from '../stores/bookmarkStore'
@@ -44,11 +45,7 @@ export function useDragAndDrop(
     const ev = event.activatorEvent as PointerEvent | MouseEvent
     livePointerRef.current = { x: ev.clientX, y: ev.clientY }
 
-    const id = rawId.startsWith('bookmark:')
-      ? rawId.slice('bookmark:'.length)
-      : rawId.startsWith('sidebar:')
-        ? rawId.slice('sidebar:'.length)
-        : rawId
+    const id = stripDraggablePrefix(rawId)
     const dragData = event.active.data.current
 
     if (dragData && 'node' in dragData) {
@@ -73,11 +70,11 @@ export function useDragAndDrop(
         : selectedIds.has(item.bookmark.id)
       if (isSelected) {
         const fIds = Array.from(selectedFolderIds)
-        const bIds = Array.from(selectedIds).map(bid => `bookmark:${bid}`)
+        const bIds = Array.from(selectedIds).map(bid => composeDraggableId('bookmark', bid))
         const visualOrder = new Map(renderedItems.map((ri, idx) => [ri.id, idx]))
         multiDragRef.current = [...fIds, ...bIds].sort((a, b) => {
-          const ai = visualOrder.get(a.startsWith('bookmark:') ? a.slice('bookmark:'.length) : a) ?? Number.MAX_SAFE_INTEGER
-          const bi = visualOrder.get(b.startsWith('bookmark:') ? b.slice('bookmark:'.length) : b) ?? Number.MAX_SAFE_INTEGER
+          const ai = visualOrder.get(stripDraggablePrefix(a)) ?? Number.MAX_SAFE_INTEGER
+          const bi = visualOrder.get(stripDraggablePrefix(b)) ?? Number.MAX_SAFE_INTEGER
           return ai - bi
         })
       } else {
@@ -113,8 +110,8 @@ export function useDragAndDrop(
     const position = calcDropPosition(rect, livePointerRef.current.y)
 
     const isFolderDropTarget =
-      overId.startsWith('droppable:sidebar:') ||
-      (overId.startsWith('droppable:') && items.some(i => i.kind === 'folder' && `droppable:${i.folder.id}` === overId))
+      isSidebarDroppable(overId) ||
+      (overId.startsWith('droppable:') && items.some(i => i.kind === 'folder' && composeMainDroppableId(i.folder.id) === overId))
     const finalPosition = (position === 'inside' && !isFolderDropTarget) ? 'after' : position
 
     if (finalPosition === 'inside') {
@@ -131,7 +128,7 @@ export function useDragAndDrop(
     const { activeId: dragId, activeItem: dragItem, overId, dropPosition } = dndState
     if (!dragId || !overId || !dropPosition || !dragItem) { clearDrag(); return }
 
-    const itemDragId = dragId.startsWith('bookmark:') ? dragId.slice('bookmark:'.length) : dragId
+    const itemDragId = isBookmarkDragId(dragId) ? stripDraggablePrefix(dragId) : dragId
 
     const draggedItem = items.find(i =>
       i.kind === 'folder' ? i.folder.id === itemDragId : i.bookmark.id === itemDragId

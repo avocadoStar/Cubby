@@ -3,6 +3,7 @@ import { useFolderStore } from '../stores/folderStore'
 import { useDndStore } from '../stores/dndStore'
 import { useSearchStore } from '../stores/searchStore'
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { composeSidebarDroppableId } from '../lib/dndIds'
 import { useDroppable } from '@dnd-kit/core'
 import FolderNode from './FolderNode'
 import { Star, Search } from 'lucide-react'
@@ -69,7 +70,7 @@ function DroppableWrapper({
   }, [activeId, nodeId, folderMap])
 
   const { setNodeRef } = useDroppable({
-    id: `droppable:sidebar:${nodeId}`,
+    id: composeSidebarDroppableId(nodeId),
     data: { nodeId },
     disabled: invalidDrop,
   })
@@ -77,7 +78,7 @@ function DroppableWrapper({
   return (
     <div
       ref={setNodeRef}
-      data-drop-id={`droppable:sidebar:${nodeId}`}
+      data-drop-id={composeSidebarDroppableId(nodeId)}
       className="touch-none"
       style={style}
     >

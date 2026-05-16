@@ -8,6 +8,8 @@ import { Eye } from 'lucide-react'
 import RowCheckbox from './RowCheckbox'
 import RowDeleteButton from './RowDeleteButton'
 import { t } from '../i18n'
+import { composeDraggableId, composeMainDroppableId } from '../lib/dndIds'
+import { getRowStyles } from '../lib/rowStyles'
 
 function openExternalURL(url: string) {
   const opened = window.open(url, '_blank', 'noopener,noreferrer')
@@ -31,7 +33,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes, onOpenPreview }: BookmarkRowP
   const overId = useDndStore((s) => s.overId)
   const dropPosition = useDndStore((s) => s.dropPosition)
   const dndSource = useDndStore((s) => s.source)
-  const isOver = overId === `droppable:bookmark:${bookmark.id}`
+  const isOver = overId === composeMainDroppableId(bookmark.id, 'bookmark')
   const isOverInside = isOver && dropPosition === 'inside' && dndSource === 'main'
 
   const highlight = hovered && !isOverInside && !isSelected
@@ -42,7 +44,7 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes, onOpenPreview }: BookmarkRowP
     setNodeRef,
     isDragging,
   } = useDraggable({
-    id: `bookmark:${bookmark.id}`,
+    id: composeDraggableId('bookmark', bookmark.id),
     data: { kind: 'bookmark', bookmark },
   })
 
@@ -56,17 +58,10 @@ const BookmarkRow = memo(({ bookmark, onOpenNotes, onOpenPreview }: BookmarkRowP
       data-dragging={isDragging ? 'true' : undefined}
       className="bookmark-delete-motion neumorphic-row flex items-center px-2 h-[38px] overflow-hidden rounded-card mx-[45px] mb-[var(--card-gap)] touch-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--app-accent)] select-none cursor-pointer"
       style={{
-        opacity: isDeleting ? 0 : isDragging ? 0.3 : 1,
+        ...getRowStyles({ isDragging, isDeleting, isSelected, isOverInside, isRecentlyChanged, hovered }),
         transform: isDeleting ? 'translateX(10px) scale(0.985)' : 'translateX(0) scale(1)',
         border: highlight ? 'var(--card-border-hover)' : 'var(--card-border)',
-        boxShadow: isSelected || isOverInside ? 'var(--input-shadow)' : hovered ? 'var(--card-shadow-hover)' : 'var(--row-shadow)',
         transition: 'opacity 0.22s ease-out, transform 0.22s ease-out, background 0.2s ease, border-color 0.15s, box-shadow 0.15s',
-        background: isOverInside ? 'var(--accent-light)'
-          : isSelected ? 'var(--accent-light)'
-          : isRecentlyChanged ? 'var(--accent-light)'
-          : hovered ? 'var(--app-hover)'
-          : 'var(--app-card)',
-        outline: isOverInside ? '1px solid var(--app-accent)' : undefined,
         pointerEvents: isDeleting ? 'none' : undefined,
       }}
       onMouseEnter={() => setHovered(true)}
