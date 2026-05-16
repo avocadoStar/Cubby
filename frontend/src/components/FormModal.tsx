@@ -36,7 +36,7 @@ export default function FormModal({
       <form onSubmit={onSubmit}>
         {children}
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose} disabled={cancelDisabled || submitLoading}>取消</Button>
+          <Button variant="secondary" type="button" onClick={onClose} disabled={cancelDisabled || submitLoading}>取消</Button>
           <Button variant="primary" type="submit" loading={submitLoading} disabled={submitDisabled}>{submitLabel}</Button>
         </div>
       </form>
